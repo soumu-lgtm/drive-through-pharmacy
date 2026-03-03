@@ -780,14 +780,12 @@
         async function gasPost(action, data) {
             if (!USE_GAS) return null;
             try {
-                // GASはリダイレクトを返すため、redirect: 'follow'とno-corsモードを使用
                 const res = await fetch(GAS_URL, {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify({ action, ...data })
                 });
-                // no-corsモードではレスポンスが読めないので、成功と仮定
                 return { success: true };
             } catch (e) {
                 console.error('GAS POST error:', e);
@@ -844,8 +842,6 @@
 
         let historyData = [];
 
-        // 患者マスタ（M3 DigiKarからCSVインポート、またはGAS経由で取得予定）
-        // 現在はサンプルデータ。本番運用時はスプレッドシートの「患者マスタ」シートから取得
         let patientData = [
             { id: '90220', name: '薛 悌吉', furigana: 'セツ テイキチ' },
             { id: '90205', name: '臼井 ユキ', furigana: 'ウスイ ユキ' },
@@ -856,7 +852,7 @@
         ];
 
         // ===== 状態管理 =====
-        let currentMode = 'out'; // 'in' or 'out' - デフォルトは出庫（頻度が高い）
+        let currentMode = 'out';
         let selectedMedicine = null;
         let quantity = 1;
         let selectedPatient = null;
@@ -902,37 +898,38 @@
             });
         }
 
+        // コードの正規化（先頭ゼロの有無を吸収）
+        function normalizeCode(code) {
+            return String(parseInt(String(code), 10));
+        }
+
         function onScanSuccess(decodedText) {
-            // QRコードから薬品コードを抽出（型を統一して比較）
-            const medicine = stockData.find(m => String(m.code) === String(decodedText));
+            const normalizedScanned = normalizeCode(decodedText);
+            const medicine = stockData.find(m => normalizeCode(m.code) === normalizedScanned);
+
             if (medicine) {
                 selectMedicine(medicine);
-                // 振動フィードバック
                 if (navigator.vibrate) navigator.vibrate(100);
             } else {
-                showToast('未登録の薬品です: ' + decodedText, 'error');
+                const stockCodes = stockData.slice(0, 3).map(m => normalizeCode(m.code)).join(', ');
+                const debugMsg = `未登録: ${decodedText}\n正規化: ${normalizedScanned}\nデータ数: ${stockData.length}件\n登録コード例: ${stockCodes}`;
+                alert(debugMsg);
             }
         }
 
         function onScanFailure(error) {
-            // スキャン失敗は無視（連続スキャン中）
         }
 
         function selectMedicine(medicine) {
             selectedMedicine = medicine;
-
-            // 結果表示
             document.getElementById('result-name').textContent = medicine.name;
             document.getElementById('result-code').textContent = 'コード: ' + medicine.code;
             document.getElementById('result-stock').textContent = '現在庫: ' + medicine.stock + ' ' + medicine.unit;
             document.getElementById('scan-result').classList.add('show');
-
-            // 数量カード表示
             document.getElementById('quantity-card').style.display = 'block';
             document.getElementById('qty-unit').textContent = medicine.unit;
             quantity = 1;
             document.getElementById('qty-value').value = quantity;
-
             updateSubmitButton();
         }
 
@@ -940,7 +937,6 @@
         function changeQty(delta) {
             quantity = Math.max(1, quantity + delta);
             document.getElementById('qty-value').value = quantity;
-            // 振動フィードバック
             if (navigator.vibrate) navigator.vibrate(30);
         }
 
@@ -958,24 +954,20 @@
         // ===== 患者オートコンプリート =====
         function showPatientAutocomplete(query) {
             const container = document.getElementById('patient-autocomplete');
-
             if (!query || query.length < 1) {
                 container.classList.remove('show');
                 return;
             }
-
             const queryLower = query.toLowerCase();
             const filtered = patientData.filter(p =>
                 p.id.includes(query) ||
                 p.name.includes(query) ||
                 (p.furigana && p.furigana.toLowerCase().includes(queryLower))
-            ).slice(0, 5); // 最大5件表示
-
+            ).slice(0, 5);
             if (filtered.length === 0) {
                 container.classList.remove('show');
                 return;
             }
-
             container.innerHTML = filtered.map(p => `
                 <div class="patient-autocomplete-item" onclick="selectPatientFromAutocomplete('${p.id}', '${p.name}')">
                     <div class="patient-name">${p.name}</div>
@@ -993,7 +985,6 @@
         }
 
         function hidePatientAutocomplete() {
-            // 少し遅延させてクリックイベントが先に処理されるようにする
             setTimeout(() => {
                 document.getElementById('patient-autocomplete').classList.remove('show');
             }, 200);
@@ -1014,22 +1005,19 @@
             const patientInput = document.getElementById('patient-input').value;
             const submitBtn = document.getElementById('submit-btn');
 
-            // ボタンを無効化（二重送信防止）
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span>⏳</span> 送信中...';
 
-            // GAS連携時はAPIを呼び出し
             if (USE_GAS) {
                 let result;
                 if (currentMode === 'in') {
                     result = await gasPost('stockIn', {
                         code: selectedMedicine.code,
                         quantity: quantity,
-                        operator: '担当者', // 実運用時は認証ユーザー名
+                        operator: '担当者',
                         note: ''
                     });
                 } else {
-                    // 数字のみの場合はpatientId、それ以外はpatientNameとして扱う
                     const isNumeric = /^\d+$/.test(patientInput.trim());
                     const patientId = selectedPatient?.id || (isNumeric ? patientInput.trim() : '');
                     const patientName = selectedPatient?.name || (isNumeric ? '' : patientInput.trim());
@@ -1045,8 +1033,8 @@
                 }
 
                 if (result && result.success) {
-                    // ローカルデータも更新
-                    const idx = stockData.findIndex(m => m.code === selectedMedicine.code);
+                    const selectedNormalized = normalizeCode(selectedMedicine.code);
+                    const idx = stockData.findIndex(m => normalizeCode(m.code) === selectedNormalized);
                     if (currentMode === 'in') {
                         stockData[idx].stock += quantity;
                     } else {
@@ -1060,15 +1048,14 @@
                     resetForm();
                 } else {
                     showToast(result?.error || '送信に失敗しました', 'error');
-                    // ボタンを復元
                     submitBtn.disabled = false;
                     setMode(currentMode);
                 }
                 return;
             }
 
-            // ローカルモード（GAS未接続時）
-            const idx = stockData.findIndex(m => m.code === selectedMedicine.code);
+            const selectedNormalizedLocal = normalizeCode(selectedMedicine.code);
+            const idx = stockData.findIndex(m => normalizeCode(m.code) === selectedNormalizedLocal);
             if (currentMode === 'in') {
                 stockData[idx].stock += quantity;
             } else {
@@ -1081,7 +1068,6 @@
                 stockData[idx].stock -= quantity;
             }
 
-            // 履歴追加（数字のみはID、それ以外は名前として表示）
             const isNumericLocal = /^\d+$/.test(patientInput.trim());
             const patientDisplay = currentMode === 'out'
                 ? (isNumericLocal ? `ID:${patientInput.trim()}` : patientInput.trim())
@@ -1097,13 +1083,11 @@
             };
             historyData.unshift(record);
 
-            // 成功通知
             const msg = currentMode === 'in'
                 ? `${selectedMedicine.name} を ${quantity}${selectedMedicine.unit} 入庫しました`
                 : `${selectedMedicine.name} を ${quantity}${selectedMedicine.unit} 出庫しました`;
             showToast(msg, 'success');
 
-            // リセット
             resetForm();
         }
 
@@ -1111,13 +1095,10 @@
             selectedMedicine = null;
             quantity = 1;
             selectedPatient = null;
-
             document.getElementById('scan-result').classList.remove('show');
             document.getElementById('quantity-card').style.display = 'none';
             document.getElementById('patient-input').value = '';
             document.querySelectorAll('.patient-chip').forEach(c => c.classList.remove('selected'));
-
-            // ボタンのテキストを復元
             setMode(currentMode);
             updateSubmitButton();
         }
@@ -1134,10 +1115,8 @@
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-
             document.getElementById('tab-' + tabName).classList.add('active');
             document.querySelectorAll('.nav-item')[['scan', 'stock', 'history'].indexOf(tabName)].classList.add('active');
-
             if (tabName === 'stock') renderStockList();
             if (tabName === 'history') renderHistory();
         }
@@ -1149,7 +1128,6 @@
                 m.name.toLowerCase().includes(filter.toLowerCase()) ||
                 m.code.includes(filter)
             );
-
             container.innerHTML = filtered.map(m => `
                 <div class="stock-item">
                     <div class="stock-info">
@@ -1176,7 +1154,6 @@
                 container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">履歴がありません</div>';
                 return;
             }
-
             container.innerHTML = historyData.map(h => `
                 <div class="history-item">
                     <div class="history-icon ${h.type}">${h.type === 'in' ? '📥' : '📤'}</div>
@@ -1205,7 +1182,6 @@
                 m.name.toLowerCase().includes(filter.toLowerCase()) ||
                 m.code.includes(filter)
             );
-
             container.innerHTML = filtered.map(m => `
                 <div class="medicine-item" onclick="selectFromModal('${m.code}')">
                     <div>
@@ -1222,7 +1198,8 @@
         }
 
         function selectFromModal(code) {
-            const medicine = stockData.find(m => String(m.code) === String(code));
+            const normalizedCode = normalizeCode(code);
+            const medicine = stockData.find(m => normalizeCode(m.code) === normalizedCode);
             if (medicine) {
                 selectMedicine(medicine);
                 closeManualSelect();
@@ -1233,9 +1210,7 @@
         const patientInput = document.getElementById('patient-input');
 
         patientInput.addEventListener('input', function() {
-            // 手入力時は選択済み患者をクリア（手入力の値を優先）
             selectedPatient = null;
-            // オートコンプリート表示
             showPatientAutocomplete(this.value);
             updateSubmitButton();
         });
@@ -1250,23 +1225,12 @@
             }
         });
 
-        // 初期表示
-        setMode(currentMode); // デフォルトモード（出庫）を適用
+        setMode(currentMode);
         renderStockList();
 
-        // GAS接続時はサーバーからデータを取得
         if (USE_GAS) {
             showToast('データを読み込み中...', '');
             loadStockFromGAS();
-        }
-
-        // 接続状態の表示
-        if (!USE_GAS) {
-            console.log('📍 ローカルモードで動作中（GAS未接続）');
-            console.log('GAS連携を有効にするには:');
-            console.log('1. GASをWeb Appとしてデプロイ');
-            console.log('2. GAS_URLにデプロイURLを設定');
-            console.log('3. USE_GASをtrueに変更');
         }
     </script>
 </body>
