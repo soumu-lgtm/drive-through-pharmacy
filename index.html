@@ -798,7 +798,9 @@
 
         // GASから在庫データを取得
         async function loadStockFromGAS() {
+            console.log('=== GASからデータ取得開始 ===');
             const result = await gasGet('getStock');
+            console.log('GAS結果:', result);
             if (result && result.success) {
                 stockData = result.stock.map(s => ({
                     code: s.code,
@@ -807,8 +809,14 @@
                     unit: s.unit,
                     threshold: s.threshold || 10
                 }));
+                console.log('stockData更新完了:', stockData.length, '件');
+                if (stockData.length > 0) {
+                    console.log('最初のコード:', stockData[0].code, typeof stockData[0].code);
+                }
                 renderStockList();
                 showToast('データを同期しました', 'success');
+            } else {
+                console.log('GAS取得失敗、ローカルデータを使用');
             }
         }
 
@@ -902,9 +910,27 @@
             });
         }
 
+        // コードの正規化（先頭ゼロの有無を吸収）
+        function normalizeCode(code) {
+            // 数値に変換して先頭ゼロを除去、文字列に戻す
+            return String(parseInt(String(code), 10));
+        }
+
         function onScanSuccess(decodedText) {
-            // QRコードから薬品コードを抽出（型を統一して比較）
-            const medicine = stockData.find(m => String(m.code) === String(decodedText));
+            // デバッグ出力
+            console.log('=== QRスキャン ===');
+            console.log('読み取り値:', decodedText);
+            console.log('正規化後:', normalizeCode(decodedText));
+            console.log('stockData件数:', stockData.length);
+            if (stockData.length > 0) {
+                console.log('stockData[0].code:', stockData[0].code, '→正規化:', normalizeCode(stockData[0].code));
+            }
+
+            // QRコードから薬品コードを抽出（先頭ゼロの有無を吸収して比較）
+            const normalizedScanned = normalizeCode(decodedText);
+            const medicine = stockData.find(m => normalizeCode(m.code) === normalizedScanned);
+            console.log('マッチ結果:', medicine ? medicine.name : 'なし');
+
             if (medicine) {
                 selectMedicine(medicine);
                 // 振動フィードバック
@@ -1046,7 +1072,8 @@
 
                 if (result && result.success) {
                     // ローカルデータも更新
-                    const idx = stockData.findIndex(m => m.code === selectedMedicine.code);
+                    const selectedNormalized = normalizeCode(selectedMedicine.code);
+                    const idx = stockData.findIndex(m => normalizeCode(m.code) === selectedNormalized);
                     if (currentMode === 'in') {
                         stockData[idx].stock += quantity;
                     } else {
@@ -1068,7 +1095,8 @@
             }
 
             // ローカルモード（GAS未接続時）
-            const idx = stockData.findIndex(m => m.code === selectedMedicine.code);
+            const selectedNormalizedLocal = normalizeCode(selectedMedicine.code);
+            const idx = stockData.findIndex(m => normalizeCode(m.code) === selectedNormalizedLocal);
             if (currentMode === 'in') {
                 stockData[idx].stock += quantity;
             } else {
@@ -1222,7 +1250,8 @@
         }
 
         function selectFromModal(code) {
-            const medicine = stockData.find(m => String(m.code) === String(code));
+            const normalizedCode = normalizeCode(code);
+            const medicine = stockData.find(m => normalizeCode(m.code) === normalizedCode);
             if (medicine) {
                 selectMedicine(medicine);
                 closeManualSelect();
