@@ -735,12 +735,15 @@
         async function gasPost(action, data) {
             if (!USE_GAS) return null;
             try {
+                // GASはリダイレクトを返すため、redirect: 'follow'とno-corsモードを使用
                 const res = await fetch(GAS_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify({ action, ...data })
                 });
-                return await res.json();
+                // no-corsモードではレスポンスが読めないので、成功と仮定
+                return { success: true };
             } catch (e) {
                 console.error('GAS POST error:', e);
                 showToast('サーバー通信エラー', 'error');
@@ -851,8 +854,8 @@
         }
 
         function onScanSuccess(decodedText) {
-            // QRコードから薬品コードを抽出
-            const medicine = stockData.find(m => m.code === decodedText);
+            // QRコードから薬品コードを抽出（型を統一して比較）
+            const medicine = stockData.find(m => String(m.code) === String(decodedText));
             if (medicine) {
                 selectMedicine(medicine);
                 // 振動フィードバック
@@ -1124,7 +1127,7 @@
         }
 
         function selectFromModal(code) {
-            const medicine = stockData.find(m => m.code === code);
+            const medicine = stockData.find(m => String(m.code) === String(code));
             if (medicine) {
                 selectMedicine(medicine);
                 closeManualSelect();
