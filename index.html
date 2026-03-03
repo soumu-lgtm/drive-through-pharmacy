@@ -150,7 +150,7 @@
     <div class="modal-overlay" id="manual-modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">薬品を選択</div><button class="modal-close" onclick="closeManualSelect()">×</button></div><input type="text" class="form-input" id="modal-search" placeholder="薬品名で検索..." oninput="filterModalList()"><div class="medicine-list" id="modal-list"></div></div></div>
     <div class="toast" id="toast"></div>
     <script>
-        const h='https://script.google.com/macros/s/AKfycbzK2lx3UDMxKoOdVJy53HpVSyHhMmJaVaf4Cjh90JUALwLj5aQk8_fN2ncYzVlqPZ-mCg/exec';
+        const GAS_URL='https://script.google.com/macros/s/AKfycbzK2lx3UDMxKoOdVJy53HpVSyHhMmJaVaf4Cjh90JUALwLj5aQk8_fN2ncYzVlqPZ-mCg/exec';
         const USE_GAS=true;
         async function gasGet(action,params={}){if(!USE_GAS)return null;try{const url=new URL(GAS_URL);url.searchParams.append('action',action);Object.entries(params).forEach(([k,v])=>url.searchParams.append(k,v));const res=await fetch(url.toString());return await res.json();}catch(e){console.error('GAS GET error:',e);showToast('サーバー通信エラー: '+e.message,'error');return null;}}
         async function gasPost(action,data){if(!USE_GAS)return null;try{const res=await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action,...data}),redirect:'follow'});const text=await res.text();console.log('GAS response:',text);try{return JSON.parse(text);}catch{if(res.ok||res.redirected){return{success:true,message:'送信完了'};}return{success:false,error:'レスポンス解析エラー'};}}catch(e){console.error('GAS POST error:',e);if(e.message.includes('CORS')||e.message.includes('NetworkError')){return{success:true,message:'送信完了（CORS制限）'};}showToast('通信エラー: '+e.message,'error');return null;}}
