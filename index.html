@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>阮ｬ蜩∝惠蠎ｫ邂｡逅・- 繝峨Λ繧､繝悶せ繝ｫ繝ｼ險ｺ逋・/title>
+    <title>薬品在庫管理 - ドライブスルー診療</title>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <style>
         :root {
@@ -33,7 +33,7 @@
             padding-bottom: 80px;
         }
 
-        /* 繝倥ャ繝繝ｼ */
+        /* ヘッダー */
         .header {
             background: linear-gradient(135deg, var(--primary), var(--primary-dark));
             color: white;
@@ -55,14 +55,14 @@
             margin-top: 4px;
         }
 
-        /* 繝｡繧､繝ｳ繧ｳ繝ｳ繝・Φ繝・*/
+        /* メインコンテンツ */
         .container {
             max-width: 500px;
             margin: 0 auto;
             padding: 16px;
         }
 
-        /* 繧ｫ繝ｼ繝・*/
+        /* カード */
         .card {
             background: var(--card);
             border-radius: 12px;
@@ -81,7 +81,7 @@
             gap: 8px;
         }
 
-        /* 繝｢繝ｼ繝牙・譖ｿ */
+        /* モード切替 */
         .mode-toggle {
             display: flex;
             gap: 8px;
@@ -120,7 +120,7 @@
             font-size: 24px;
         }
 
-        /* QR繝ｪ繝ｼ繝繝ｼ */
+        /* QRリーダー */
         #qr-reader {
             width: 100%;
             border-radius: 8px;
@@ -151,7 +151,7 @@
             margin-top: 12px;
         }
 
-        /* 隱ｭ縺ｿ蜿悶ｊ邨先棡 */
+        /* 読み取り結果 */
         .scan-result {
             display: none;
             background: #f0fdf4;
@@ -194,7 +194,7 @@
             margin-top: 8px;
         }
 
-        /* 蜈･蜉帙ヵ繧ｩ繝ｼ繝 */
+        /* 入力フォーム */
         .form-group {
             margin-bottom: 16px;
         }
@@ -221,7 +221,7 @@
             border-color: var(--primary);
         }
 
-        /* 謨ｰ驥丞・蜉幢ｼ亥､ｧ縺阪ａ・・*/
+        /* 数量入力（大きめ） */
         .quantity-input {
             display: flex;
             align-items: center;
@@ -257,7 +257,7 @@
             color: var(--text-muted);
         }
 
-        /* 謔｣閠・∈謚・*/
+        /* 患者選択 */
         .patient-quick {
             display: flex;
             flex-wrap: wrap;
@@ -287,7 +287,7 @@
             border-color: var(--primary);
         }
 
-        /* 騾∽ｿ｡繝懊ち繝ｳ */
+        /* 送信ボタン */
         .submit-btn {
             width: 100%;
             padding: 16px;
@@ -322,7 +322,7 @@
             transform: scale(0.98);
         }
 
-        /* 螻･豁ｴ */
+        /* 履歴 */
         .history-item {
             display: flex;
             align-items: center;
@@ -381,7 +381,7 @@
             color: var(--danger);
         }
 
-        /* 繝医・繧ｹ繝磯夂衍 */
+        /* トースト通知 */
         .toast {
             position: fixed;
             bottom: 100px;
@@ -410,7 +410,7 @@
             background: var(--danger);
         }
 
-        /* 謇句虚蜈･蜉帙Δ繝ｼ繝繝ｫ */
+        /* 手動入力モーダル */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -464,7 +464,7 @@
             color: var(--text-muted);
         }
 
-        /* 阮ｬ蜩∵､懃ｴ｢繝ｪ繧ｹ繝・*/
+        /* 薬品検索リスト */
         .medicine-list {
             max-height: 300px;
             overflow-y: auto;
@@ -496,7 +496,7 @@
             color: var(--text-muted);
         }
 
-        /* 繝懊ヨ繝繝翫ン */
+        /* ボトムナビ */
         .bottom-nav {
             position: fixed;
             bottom: 0;
@@ -530,7 +530,7 @@
             margin-bottom: 2px;
         }
 
-        /* 繧ｿ繝悶さ繝ｳ繝・Φ繝・*/
+        /* タブコンテンツ */
         .tab-content {
             display: none;
         }
@@ -539,7 +539,7 @@
             display: block;
         }
 
-        /* 蝨ｨ蠎ｫ荳隕ｧ */
+        /* 在庫一覧 */
         .stock-item {
             display: flex;
             justify-content: space-between;
@@ -582,139 +582,141 @@
 </head>
 <body>
     <div class="header">
-        <h1>阮ｬ蜩∝惠蠎ｫ邂｡逅・す繧ｹ繝・Β</h1>
-        <div class="header-sub">隘ｿ譏･蜀・ｧ代・蝨ｨ螳・け繝ｪ繝九ャ繧ｯ</div>
+        <h1>薬品在庫管理システム</h1>
+        <div class="header-sub">西春内科・在宅クリニック</div>
     </div>
 
-    <!-- 繧ｹ繧ｭ繝｣繝ｳ繧ｿ繝・-->
+    <!-- スキャンタブ -->
     <div id="tab-scan" class="tab-content active">
         <div class="container">
-            <!-- 繝｢繝ｼ繝牙・譖ｿ -->
+            <!-- モード切替 -->
             <div class="mode-toggle">
                 <button class="mode-btn active-in" id="btn-in" onclick="setMode('in')">
-                    <span>踏</span>
-                    蜈･蠎ｫ・井ｻ募・・・                </button>
+                    <span>📥</span>
+                    入庫（仕入）
+                </button>
                 <button class="mode-btn" id="btn-out" onclick="setMode('out')">
-                    <span>豆</span>
-                    蜃ｺ蠎ｫ・亥・譁ｹ・・                </button>
+                    <span>📤</span>
+                    出庫（処方）
+                </button>
             </div>
 
-            <!-- QR繧ｹ繧ｭ繝｣繝翫・ -->
+            <!-- QRスキャナー -->
             <div class="card">
-                <div class="card-title">胴 QR繧ｳ繝ｼ繝芽ｪｭ縺ｿ蜿悶ｊ</div>
+                <div class="card-title">📷 QRコード読み取り</div>
                 <div id="qr-reader"></div>
                 <div id="qr-placeholder" class="qr-placeholder">
-                    <div>繧ｫ繝｡繝ｩ縺ｧQR繧ｳ繝ｼ繝峨ｒ繧ｹ繧ｭ繝｣繝ｳ</div>
-                    <button onclick="startScanner()">繧ｫ繝｡繝ｩ繧定ｵｷ蜍・/button>
+                    <div>カメラでQRコードをスキャン</div>
+                    <button onclick="startScanner()">カメラを起動</button>
                     <div style="margin-top: 16px; font-size: 13px; opacity: 0.7;">
-                        縺ｾ縺溘・
-                        <a href="#" onclick="openManualSelect()" style="color: white;">謇句虚縺ｧ阮ｬ蜩√ｒ驕ｸ謚・/a>
+                        または
+                        <a href="#" onclick="openManualSelect()" style="color: white;">手動で薬品を選択</a>
                     </div>
                 </div>
 
-                <!-- 隱ｭ縺ｿ蜿悶ｊ邨先棡 -->
+                <!-- 読み取り結果 -->
                 <div id="scan-result" class="scan-result">
                     <div class="medicine-name" id="result-name">-</div>
-                    <div class="medicine-code" id="result-code">繧ｳ繝ｼ繝・ -</div>
-                    <div class="medicine-stock" id="result-stock">迴ｾ蝨ｨ蠎ｫ: - 蛟・/div>
+                    <div class="medicine-code" id="result-code">コード: -</div>
+                    <div class="medicine-stock" id="result-stock">現在庫: - 個</div>
                 </div>
             </div>
 
-            <!-- 謨ｰ驥丞・蜉・-->
+            <!-- 数量入力 -->
             <div class="card" id="quantity-card" style="display: none;">
-                <div class="card-title">逃 謨ｰ驥・/div>
+                <div class="card-title">📦 数量</div>
                 <div class="quantity-input">
-                    <button class="quantity-btn" onclick="changeQty(-1)">竏・/button>
+                    <button class="quantity-btn" onclick="changeQty(-1)">−</button>
                     <div class="quantity-value">
                         <span id="qty-value">1</span>
-                        <span class="quantity-unit" id="qty-unit">骭</span>
+                        <span class="quantity-unit" id="qty-unit">錠</span>
                     </div>
                     <button class="quantity-btn" onclick="changeQty(1)">+</button>
                 </div>
             </div>
 
-            <!-- 謔｣閠・∈謚橸ｼ亥・蠎ｫ譎ゅ・縺ｿ・・-->
+            <!-- 患者選択（出庫時のみ） -->
             <div class="card" id="patient-card" style="display: none;">
-                <div class="card-title">側 謔｣閠・/div>
-                <input type="text" class="form-input" id="patient-input" placeholder="謔｣閠・分蜿ｷ縺ｾ縺溘・豌丞錐">
+                <div class="card-title">👤 患者</div>
+                <input type="text" class="form-input" id="patient-input" placeholder="患者番号または氏名">
                 <div class="patient-quick" id="patient-quick">
-                    <!-- 譛霑代・謔｣閠・′縺薙％縺ｫ陦ｨ遉ｺ縺輔ｌ繧・-->
+                    <!-- 最近の患者がここに表示される -->
                 </div>
             </div>
 
-            <!-- 騾∽ｿ｡繝懊ち繝ｳ -->
+            <!-- 送信ボタン -->
             <button class="submit-btn in-mode" id="submit-btn" onclick="submitTransaction()" disabled>
-                <span>踏</span>
-                蜈･蠎ｫ繧定ｨ倬鹸
+                <span>📥</span>
+                入庫を記録
             </button>
         </div>
     </div>
 
-    <!-- 蝨ｨ蠎ｫ荳隕ｧ繧ｿ繝・-->
+    <!-- 在庫一覧タブ -->
     <div id="tab-stock" class="tab-content">
         <div class="container">
             <div class="card">
-                <div class="card-title">剥 阮ｬ蜩∵､懃ｴ｢</div>
-                <input type="text" class="form-input" id="stock-search" placeholder="阮ｬ蜩∝錐縺ｧ讀懃ｴ｢..." oninput="filterStock()">
+                <div class="card-title">🔍 薬品検索</div>
+                <input type="text" class="form-input" id="stock-search" placeholder="薬品名で検索..." oninput="filterStock()">
             </div>
             <div id="stock-list">
-                <!-- 蝨ｨ蠎ｫ荳隕ｧ縺後％縺薙↓陦ｨ遉ｺ縺輔ｌ繧・-->
+                <!-- 在庫一覧がここに表示される -->
             </div>
         </div>
     </div>
 
-    <!-- 螻･豁ｴ繧ｿ繝・-->
+    <!-- 履歴タブ -->
     <div id="tab-history" class="tab-content">
         <div class="container">
             <div class="card">
-                <div class="card-title">搭 譛ｬ譌･縺ｮ螻･豁ｴ</div>
+                <div class="card-title">📋 本日の履歴</div>
                 <div id="history-list">
-                    <!-- 螻･豁ｴ縺後％縺薙↓陦ｨ遉ｺ縺輔ｌ繧・-->
+                    <!-- 履歴がここに表示される -->
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 繝懊ヨ繝繝翫ン -->
+    <!-- ボトムナビ -->
     <div class="bottom-nav">
         <div class="nav-item active" onclick="switchTab('scan')">
-            <span>胴</span>
-            繧ｹ繧ｭ繝｣繝ｳ
+            <span>📷</span>
+            スキャン
         </div>
         <div class="nav-item" onclick="switchTab('stock')">
-            <span>逃</span>
-            蝨ｨ蠎ｫ
+            <span>📦</span>
+            在庫
         </div>
         <div class="nav-item" onclick="switchTab('history')">
-            <span>搭</span>
-            螻･豁ｴ
+            <span>📋</span>
+            履歴
         </div>
     </div>
 
-    <!-- 謇句虚驕ｸ謚槭Δ繝ｼ繝繝ｫ -->
+    <!-- 手動選択モーダル -->
     <div class="modal-overlay" id="manual-modal">
         <div class="modal-content">
             <div class="modal-header">
-                <div class="modal-title">阮ｬ蜩√ｒ驕ｸ謚・/div>
-                <button class="modal-close" onclick="closeManualSelect()">ﾃ・/button>
+                <div class="modal-title">薬品を選択</div>
+                <button class="modal-close" onclick="closeManualSelect()">×</button>
             </div>
-            <input type="text" class="form-input" id="modal-search" placeholder="阮ｬ蜩∝錐縺ｧ讀懃ｴ｢..." oninput="filterModalList()">
+            <input type="text" class="form-input" id="modal-search" placeholder="薬品名で検索..." oninput="filterModalList()">
             <div class="medicine-list" id="modal-list">
-                <!-- 阮ｬ蜩√Μ繧ｹ繝医′縺薙％縺ｫ陦ｨ遉ｺ縺輔ｌ繧・-->
+                <!-- 薬品リストがここに表示される -->
             </div>
         </div>
     </div>
 
-    <!-- 繝医・繧ｹ繝・-->
+    <!-- トースト -->
     <div class="toast" id="toast"></div>
 
     <script>
-        // ===== GAS騾｣謳ｺ險ｭ螳・=====
-        // 2026/03/03 繝・・繝ｭ繧､貂医∩
+        // ===== GAS連携設定 =====
+        // 2026/03/03 デプロイ済み
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbyr7seSTnCE8N5-cYZ90VXEeXE389iwXf-5cgnMDBBRqMpZ6g6SoTWOSsTH_rvz1514/exec';
-        const USE_GAS = true; // GAS騾｣謳ｺ譛牙柑
+        const USE_GAS = true; // GAS連携有効
 
-        // ===== GAS API髢｢謨ｰ =====
+        // ===== GAS API関数 =====
         async function gasGet(action, params = {}) {
             if (!USE_GAS) return null;
             try {
@@ -725,7 +727,7 @@
                 return await res.json();
             } catch (e) {
                 console.error('GAS GET error:', e);
-                showToast('繧ｵ繝ｼ繝舌・騾壻ｿ｡繧ｨ繝ｩ繝ｼ', 'error');
+                showToast('サーバー通信エラー', 'error');
                 return null;
             }
         }
@@ -733,22 +735,24 @@
         async function gasPost(action, data) {
             if (!USE_GAS) return null;
             try {
-                // GAS縺ｯ繝ｪ繝繧､繝ｬ繧ｯ繝医ｒ霑斐☆縺溘ａ縲〉edirect: 'follow'縺ｨno-cors繝｢繝ｼ繝峨ｒ菴ｿ逕ｨ
+                // GASはリダイレクトを返すため、redirect: 'follow'とno-corsモードを使用
                 const res = await fetch(GAS_URL, {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify({ action, ...data })
                 });
-                // no-cors繝｢繝ｼ繝峨〒縺ｯ繝ｬ繧ｹ繝昴Φ繧ｹ縺瑚ｪｭ繧√↑縺・・縺ｧ縲∵・蜉溘→莉ｮ螳・                return { success: true };
+                // no-corsモードではレスポンスが読めないので、成功と仮定
+                return { success: true };
             } catch (e) {
                 console.error('GAS POST error:', e);
-                showToast('繧ｵ繝ｼ繝舌・騾壻ｿ｡繧ｨ繝ｩ繝ｼ', 'error');
+                showToast('サーバー通信エラー', 'error');
                 return null;
             }
         }
 
-        // GAS縺九ｉ蝨ｨ蠎ｫ繝・・繧ｿ繧貞叙蠕・        async function loadStockFromGAS() {
+        // GASから在庫データを取得
+        async function loadStockFromGAS() {
             const result = await gasGet('getStock');
             if (result && result.success) {
                 stockData = result.stock.map(s => ({
@@ -759,11 +763,12 @@
                     threshold: s.threshold || 10
                 }));
                 renderStockList();
-                showToast('繝・・繧ｿ繧貞酔譛溘＠縺ｾ縺励◆', 'success');
+                showToast('データを同期しました', 'success');
             }
         }
 
-        // GAS縺九ｉ螻･豁ｴ繧貞叙蠕・        async function loadHistoryFromGAS() {
+        // GASから履歴を取得
+        async function loadHistoryFromGAS() {
             const result = await gasGet('getHistory');
             if (result && result.success) {
                 historyData = result.history.map(h => ({
@@ -778,36 +783,36 @@
             }
         }
 
-        // ===== 繝・・繧ｿ・医・繝ｭ繝医ち繧､繝礼畑繧ｵ繝ｳ繝励Ν / GAS譛ｪ謗･邯壽凾縺ｮ繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ・・=====
+        // ===== データ（プロトタイプ用サンプル / GAS未接続時のフォールバック） =====
         let stockData = [
-            { code: '059000001', name: '繧ｯ繝ｭ繝斐ラ繧ｰ繝ｬ繝ｫ骭75mg縲郡ANIK縲・, stock: 120, unit: '骭', threshold: 30 },
-            { code: '059000002', name: '繝ｩ繝ｳ繧ｽ繝励Λ繧ｾ繝ｼ繝ｫ15mg閻ｸ貅ｶ諤ｧ蜿｣閻泌・蟠ｩ螢企権', stock: 85, unit: '骭', threshold: 20 },
-            { code: '059000003', name: '繧｢繝繝ｭ繧ｸ繝ｳOD骭10mg', stock: 200, unit: '骭', threshold: 50 },
-            { code: '059000004', name: '繝医Λ繧ｼ繝ｳ繧ｿ骭5mg', stock: 45, unit: '骭', threshold: 30 },
-            { code: '059000005', name: '繝ｭ繧ｹ繝舌せ繧ｿ繝√Φ骭5mg縲轡SEP縲・, stock: 150, unit: '骭', threshold: 40 },
-            { code: '059000006', name: '繧ｸ繝｣繝・ぅ繧｢繝ｳ繧ｹ骭10mg', stock: 60, unit: '骭', threshold: 30 },
-            { code: '059000007', name: '繧ｻ繝ｳ繝弱す繝蛾権12mg縲後し繝ｯ繧､縲・, stock: 180, unit: '骭', threshold: 50 },
-            { code: '059000008', name: '繝ｭ繧ｭ繧ｽ繝励Ο繝輔ぉ繝ｳNa繝・・繝・00mg', stock: 25, unit: '譫・, threshold: 30 },
-            { code: '059000009', name: '荳・ｹｴ遲・梛豕ｨ蜈･蝎ｨ逕ｨ豕ｨ蟆・・・郁ｶ・ｾｮ邏ｰ蝙具ｼ・, stock: 100, unit: '譛ｬ', threshold: 50 },
-            { code: '059000010', name: '繝ｩ繧､繧ｾ繝・げ驟榊粋豕ｨ 繝輔Ξ繝・け繧ｹ繧ｿ繝・メ 300蜊倅ｽ・, stock: 8, unit: '繧ｭ繝・ヨ', threshold: 5 },
+            { code: '059000001', name: 'クロピドグレル錠75mg「SANIK」', stock: 120, unit: '錠', threshold: 30 },
+            { code: '059000002', name: 'ランソプラゾール15mg腸溶性口腔内崩壊錠', stock: 85, unit: '錠', threshold: 20 },
+            { code: '059000003', name: 'アムロジンOD錠10mg', stock: 200, unit: '錠', threshold: 50 },
+            { code: '059000004', name: 'トラゼンタ錠5mg', stock: 45, unit: '錠', threshold: 30 },
+            { code: '059000005', name: 'ロスバスタチン錠5mg「DSEP」', stock: 150, unit: '錠', threshold: 40 },
+            { code: '059000006', name: 'ジャディアンス錠10mg', stock: 60, unit: '錠', threshold: 30 },
+            { code: '059000007', name: 'センノシド錠12mg「サワイ」', stock: 180, unit: '錠', threshold: 50 },
+            { code: '059000008', name: 'ロキソプロフェンNaテープ100mg', stock: 25, unit: '枚', threshold: 30 },
+            { code: '059000009', name: '万年筆型注入器用注射針（超微細型）', stock: 100, unit: '本', threshold: 50 },
+            { code: '059000010', name: 'ライゾデグ配合注 フレックスタッチ 300単位', stock: 8, unit: 'キット', threshold: 5 },
         ];
 
         let historyData = [];
 
         let recentPatients = [
-            { id: '90220', name: '阮・謔悟翠' },
-            { id: '90205', name: '閾ｼ莠・繝ｦ繧ｭ' },
-            { id: '90219', name: '髟ｷ驥・蜈蛾寇' },
+            { id: '90220', name: '薛 悌吉' },
+            { id: '90205', name: '臼井 ユキ' },
+            { id: '90219', name: '長野 光雄' },
         ];
 
-        // ===== 迥ｶ諷狗ｮ｡逅・=====
+        // ===== 状態管理 =====
         let currentMode = 'in'; // 'in' or 'out'
         let selectedMedicine = null;
         let quantity = 1;
         let selectedPatient = null;
         let html5QrCode = null;
 
-        // ===== 繝｢繝ｼ繝牙・譖ｿ =====
+        // ===== モード切替 =====
         function setMode(mode) {
             currentMode = mode;
             const btnIn = document.getElementById('btn-in');
@@ -819,20 +824,20 @@
                 btnIn.className = 'mode-btn active-in';
                 btnOut.className = 'mode-btn';
                 submitBtn.className = 'submit-btn in-mode';
-                submitBtn.innerHTML = '<span>踏</span> 蜈･蠎ｫ繧定ｨ倬鹸';
+                submitBtn.innerHTML = '<span>📥</span> 入庫を記録';
                 patientCard.style.display = 'none';
             } else {
                 btnIn.className = 'mode-btn';
                 btnOut.className = 'mode-btn active-out';
                 submitBtn.className = 'submit-btn out-mode';
-                submitBtn.innerHTML = '<span>豆</span> 蜃ｺ蠎ｫ繧定ｨ倬鹸';
+                submitBtn.innerHTML = '<span>📤</span> 出庫を記録';
                 patientCard.style.display = 'block';
                 renderRecentPatients();
             }
             updateSubmitButton();
         }
 
-        // ===== QR繧ｹ繧ｭ繝｣繝翫・ =====
+        // ===== QRスキャナー =====
         function startScanner() {
             document.getElementById('qr-placeholder').style.display = 'none';
             html5QrCode = new Html5Qrcode("qr-reader");
@@ -843,35 +848,37 @@
                 onScanFailure
             ).catch(err => {
                 console.error('Camera error:', err);
-                showToast('繧ｫ繝｡繝ｩ繧定ｵｷ蜍輔〒縺阪∪縺帙ｓ縺ｧ縺励◆', 'error');
+                showToast('カメラを起動できませんでした', 'error');
                 document.getElementById('qr-placeholder').style.display = 'block';
             });
         }
 
         function onScanSuccess(decodedText) {
-            // QR繧ｳ繝ｼ繝峨°繧芽脈蜩√さ繝ｼ繝峨ｒ謚ｽ蜃ｺ・亥梛繧堤ｵｱ荳縺励※豈碑ｼ・ｼ・            const medicine = stockData.find(m => String(m.code) === String(decodedText));
+            // QRコードから薬品コードを抽出（型を統一して比較）
+            const medicine = stockData.find(m => String(m.code) === String(decodedText));
             if (medicine) {
                 selectMedicine(medicine);
-                // 謖ｯ蜍輔ヵ繧｣繝ｼ繝峨ヰ繝・け
+                // 振動フィードバック
                 if (navigator.vibrate) navigator.vibrate(100);
             } else {
-                showToast('譛ｪ逋ｻ骭ｲ縺ｮ阮ｬ蜩√〒縺・ ' + decodedText, 'error');
+                showToast('未登録の薬品です: ' + decodedText, 'error');
             }
         }
 
         function onScanFailure(error) {
-            // 繧ｹ繧ｭ繝｣繝ｳ螟ｱ謨励・辟｡隕厄ｼ磯｣邯壹せ繧ｭ繝｣繝ｳ荳ｭ・・        }
+            // スキャン失敗は無視（連続スキャン中）
+        }
 
         function selectMedicine(medicine) {
             selectedMedicine = medicine;
 
-            // 邨先棡陦ｨ遉ｺ
+            // 結果表示
             document.getElementById('result-name').textContent = medicine.name;
-            document.getElementById('result-code').textContent = '繧ｳ繝ｼ繝・ ' + medicine.code;
-            document.getElementById('result-stock').textContent = '迴ｾ蝨ｨ蠎ｫ: ' + medicine.stock + ' ' + medicine.unit;
+            document.getElementById('result-code').textContent = 'コード: ' + medicine.code;
+            document.getElementById('result-stock').textContent = '現在庫: ' + medicine.stock + ' ' + medicine.unit;
             document.getElementById('scan-result').classList.add('show');
 
-            // 謨ｰ驥上き繝ｼ繝芽｡ｨ遉ｺ
+            // 数量カード表示
             document.getElementById('quantity-card').style.display = 'block';
             document.getElementById('qty-unit').textContent = medicine.unit;
             quantity = 1;
@@ -880,15 +887,15 @@
             updateSubmitButton();
         }
 
-        // ===== 謨ｰ驥乗桃菴・=====
+        // ===== 数量操作 =====
         function changeQty(delta) {
             quantity = Math.max(1, quantity + delta);
             document.getElementById('qty-value').textContent = quantity;
-            // 謖ｯ蜍輔ヵ繧｣繝ｼ繝峨ヰ繝・け
+            // 振動フィードバック
             if (navigator.vibrate) navigator.vibrate(30);
         }
 
-        // ===== 謔｣閠・∈謚・=====
+        // ===== 患者選択 =====
         function renderRecentPatients() {
             const container = document.getElementById('patient-quick');
             container.innerHTML = recentPatients.map(p =>
@@ -900,7 +907,8 @@
             selectedPatient = { id, name };
             document.getElementById('patient-input').value = name;
 
-            // 繝√ャ繝励・繝上う繝ｩ繧､繝・            document.querySelectorAll('.patient-chip').forEach(chip => {
+            // チップのハイライト
+            document.querySelectorAll('.patient-chip').forEach(chip => {
                 chip.classList.remove('selected');
                 if (chip.textContent === name) chip.classList.add('selected');
             });
@@ -908,7 +916,7 @@
             updateSubmitButton();
         }
 
-        // ===== 騾∽ｿ｡繝懊ち繝ｳ迥ｶ諷・=====
+        // ===== 送信ボタン状態 =====
         function updateSubmitButton() {
             const btn = document.getElementById('submit-btn');
             const canSubmit = selectedMedicine &&
@@ -916,23 +924,26 @@
             btn.disabled = !canSubmit;
         }
 
-        // ===== 繝医Λ繝ｳ繧ｶ繧ｯ繧ｷ繝ｧ繝ｳ騾∽ｿ｡ =====
+        // ===== トランザクション送信 =====
         async function submitTransaction() {
             if (!selectedMedicine) return;
 
             const patientInput = document.getElementById('patient-input').value;
             const submitBtn = document.getElementById('submit-btn');
 
-            // 繝懊ち繝ｳ繧堤┌蜉ｹ蛹厄ｼ井ｺ碁㍾騾∽ｿ｡髦ｲ豁｢・・            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span>竢ｳ</span> 騾∽ｿ｡荳ｭ...';
+            // ボタンを無効化（二重送信防止）
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span>⏳</span> 送信中...';
 
-            // GAS騾｣謳ｺ譎ゅ・API繧貞他縺ｳ蜃ｺ縺・            if (USE_GAS) {
+            // GAS連携時はAPIを呼び出し
+            if (USE_GAS) {
                 let result;
                 if (currentMode === 'in') {
                     result = await gasPost('stockIn', {
                         code: selectedMedicine.code,
                         quantity: quantity,
-                        operator: '諡・ｽ楢・, // 螳滄°逕ｨ譎ゅ・隱崎ｨｼ繝ｦ繝ｼ繧ｶ繝ｼ蜷・                        note: ''
+                        operator: '担当者', // 実運用時は認証ユーザー名
+                        note: ''
                     });
                 } else {
                     result = await gasPost('stockOut', {
@@ -940,13 +951,13 @@
                         quantity: quantity,
                         patientId: selectedPatient?.id || '',
                         patientName: patientInput,
-                        operator: '諡・ｽ楢・,
+                        operator: '担当者',
                         note: ''
                     });
                 }
 
                 if (result && result.success) {
-                    // 繝ｭ繝ｼ繧ｫ繝ｫ繝・・繧ｿ繧よ峩譁ｰ
+                    // ローカルデータも更新
                     const idx = stockData.findIndex(m => m.code === selectedMedicine.code);
                     if (currentMode === 'in') {
                         stockData[idx].stock += quantity;
@@ -955,24 +966,26 @@
                     }
 
                     const msg = currentMode === 'in'
-                        ? `${selectedMedicine.name} 繧・${quantity}${selectedMedicine.unit} 蜈･蠎ｫ縺励∪縺励◆`
-                        : `${selectedMedicine.name} 繧・${quantity}${selectedMedicine.unit} 蜃ｺ蠎ｫ縺励∪縺励◆`;
+                        ? `${selectedMedicine.name} を ${quantity}${selectedMedicine.unit} 入庫しました`
+                        : `${selectedMedicine.name} を ${quantity}${selectedMedicine.unit} 出庫しました`;
                     showToast(msg, 'success');
                     resetForm();
                 } else {
-                    showToast(result?.error || '騾∽ｿ｡縺ｫ螟ｱ謨励＠縺ｾ縺励◆', 'error');
-                    // 繝懊ち繝ｳ繧貞ｾｩ蜈・                    submitBtn.disabled = false;
+                    showToast(result?.error || '送信に失敗しました', 'error');
+                    // ボタンを復元
+                    submitBtn.disabled = false;
                     setMode(currentMode);
                 }
                 return;
             }
 
-            // 繝ｭ繝ｼ繧ｫ繝ｫ繝｢繝ｼ繝会ｼ・AS譛ｪ謗･邯壽凾・・            const idx = stockData.findIndex(m => m.code === selectedMedicine.code);
+            // ローカルモード（GAS未接続時）
+            const idx = stockData.findIndex(m => m.code === selectedMedicine.code);
             if (currentMode === 'in') {
                 stockData[idx].stock += quantity;
             } else {
                 if (stockData[idx].stock < quantity) {
-                    showToast('蝨ｨ蠎ｫ縺御ｸ崎ｶｳ縺励※縺・∪縺・, 'error');
+                    showToast('在庫が不足しています', 'error');
                     submitBtn.disabled = false;
                     setMode(currentMode);
                     return;
@@ -980,7 +993,7 @@
                 stockData[idx].stock -= quantity;
             }
 
-            // 螻･豁ｴ霑ｽ蜉
+            // 履歴追加
             const record = {
                 time: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
                 type: currentMode,
@@ -992,13 +1005,13 @@
             };
             historyData.unshift(record);
 
-            // 謌仙粥騾夂衍
+            // 成功通知
             const msg = currentMode === 'in'
-                ? `${selectedMedicine.name} 繧・${quantity}${selectedMedicine.unit} 蜈･蠎ｫ縺励∪縺励◆`
-                : `${selectedMedicine.name} 繧・${quantity}${selectedMedicine.unit} 蜃ｺ蠎ｫ縺励∪縺励◆`;
+                ? `${selectedMedicine.name} を ${quantity}${selectedMedicine.unit} 入庫しました`
+                : `${selectedMedicine.name} を ${quantity}${selectedMedicine.unit} 出庫しました`;
             showToast(msg, 'success');
 
-            // 繝ｪ繧ｻ繝・ヨ
+            // リセット
             resetForm();
         }
 
@@ -1014,7 +1027,7 @@
             updateSubmitButton();
         }
 
-        // ===== 繝医・繧ｹ繝磯夂衍 =====
+        // ===== トースト通知 =====
         function showToast(message, type = '') {
             const toast = document.getElementById('toast');
             toast.textContent = message;
@@ -1022,7 +1035,7 @@
             setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
-        // ===== 繧ｿ繝門・譖ｿ =====
+        // ===== タブ切替 =====
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -1034,7 +1047,7 @@
             if (tabName === 'history') renderHistory();
         }
 
-        // ===== 蝨ｨ蠎ｫ荳隕ｧ =====
+        // ===== 在庫一覧 =====
         function renderStockList(filter = '') {
             const container = document.getElementById('stock-list');
             const filtered = stockData.filter(m =>
@@ -1061,27 +1074,27 @@
             renderStockList(query);
         }
 
-        // ===== 螻･豁ｴ =====
+        // ===== 履歴 =====
         function renderHistory() {
             const container = document.getElementById('history-list');
             if (historyData.length === 0) {
-                container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">螻･豁ｴ縺後≠繧翫∪縺帙ｓ</div>';
+                container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">履歴がありません</div>';
                 return;
             }
 
             container.innerHTML = historyData.map(h => `
                 <div class="history-item">
-                    <div class="history-icon ${h.type}">${h.type === 'in' ? '踏' : '豆'}</div>
+                    <div class="history-icon ${h.type}">${h.type === 'in' ? '📥' : '📤'}</div>
                     <div class="history-content">
                         <div class="history-medicine">${h.medicine}</div>
-                        <div class="history-detail">${h.time}${h.patient ? ' 窶｢ ' + h.patient : ''}</div>
+                        <div class="history-detail">${h.time}${h.patient ? ' • ' + h.patient : ''}</div>
                     </div>
                     <div class="history-qty ${h.type}">${h.type === 'in' ? '+' : '-'}${h.quantity}${h.unit}</div>
                 </div>
             `).join('');
         }
 
-        // ===== 謇句虚驕ｸ謚槭Δ繝ｼ繝繝ｫ =====
+        // ===== 手動選択モーダル =====
         function openManualSelect() {
             document.getElementById('manual-modal').classList.add('show');
             renderModalList();
@@ -1102,7 +1115,7 @@
                 <div class="medicine-item" onclick="selectFromModal('${m.code}')">
                     <div>
                         <div class="medicine-item-name">${m.name}</div>
-                        <div class="medicine-item-stock">蝨ｨ蠎ｫ: ${m.stock}${m.unit}</div>
+                        <div class="medicine-item-stock">在庫: ${m.stock}${m.unit}</div>
                     </div>
                 </div>
             `).join('');
@@ -1121,24 +1134,25 @@
             }
         }
 
-        // ===== 蛻晄悄蛹・=====
+        // ===== 初期化 =====
         document.getElementById('patient-input').addEventListener('input', updateSubmitButton);
 
-        // 蛻晄悄陦ｨ遉ｺ
+        // 初期表示
         renderStockList();
 
-        // GAS謗･邯壽凾縺ｯ繧ｵ繝ｼ繝舌・縺九ｉ繝・・繧ｿ繧貞叙蠕・        if (USE_GAS) {
-            showToast('繝・・繧ｿ繧定ｪｭ縺ｿ霎ｼ縺ｿ荳ｭ...', '');
+        // GAS接続時はサーバーからデータを取得
+        if (USE_GAS) {
+            showToast('データを読み込み中...', '');
             loadStockFromGAS();
         }
 
-        // 謗･邯夂憾諷九・陦ｨ遉ｺ
+        // 接続状態の表示
         if (!USE_GAS) {
-            console.log('桃 繝ｭ繝ｼ繧ｫ繝ｫ繝｢繝ｼ繝峨〒蜍穂ｽ應ｸｭ・・AS譛ｪ謗･邯夲ｼ・);
-            console.log('GAS騾｣謳ｺ繧呈怏蜉ｹ縺ｫ縺吶ｋ縺ｫ縺ｯ:');
-            console.log('1. GAS繧淡eb App縺ｨ縺励※繝・・繝ｭ繧､');
-            console.log('2. GAS_URL縺ｫ繝・・繝ｭ繧､URL繧定ｨｭ螳・);
-            console.log('3. USE_GAS繧稚rue縺ｫ螟画峩');
+            console.log('📍 ローカルモードで動作中（GAS未接続）');
+            console.log('GAS連携を有効にするには:');
+            console.log('1. GASをWeb Appとしてデプロイ');
+            console.log('2. GAS_URLにデプロイURLを設定');
+            console.log('3. USE_GASをtrueに変更');
         }
     </script>
 </body>
