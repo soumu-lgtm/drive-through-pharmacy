@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>薬品在庫管理 - ドライブスルー診療</title>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        :root { --primary: #2563eb; --success: #16a34a; --danger: #dc2626; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f8fafc; }
+        .header { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; padding: 16px 20px; }
+        .header h1 { font-size: 18px; }
+        .container { max-width: 500px; margin: 0 auto; padding: 16px; }
+        .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .btn { padding: 12px 24px; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; }
+        .btn-primary { background: #2563eb; color: white; }
+        #qr-reader { width: 100%; }
+        .result { display: none; background: #f0fdf4; border: 2px solid #16a34a; border-radius: 10px; padding: 16px; margin-top: 12px; }
+        .result.show { display: block; }
+    </style>
+</head>
+<body>
+    <div class="header"><h1>薬品在庫管理</h1><div style="font-size:12px;opacity:0.9">西春内科・在宅クリニック</div></div>
+    <div class="container">
+        <div class="card">
+            <h3>QRコード読み取り</h3>
+            <div id="qr-reader"></div>
+            <button class="btn btn-primary" onclick="startScanner()" style="width:100%;margin-top:12px">カメラを起動</button>
+        </div>
+        <div id="result" class="result">
+            <div id="medicine-name" style="font-size:18px;font-weight:700">-</div>
+            <div id="medicine-code" style="font-size:13px;color:#64748b">コード: -</div>
+        </div>
+    </div>
+    <script>
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbyr7seSTnCE8N5-cYZ90VXEeXE389iwXf-5cgnMDBBRqMpZ6g6SoTWOSsTH_rvz1514/exec';
+        let html5QrCode = null;
+        let stockData = [];
+        
+        async function loadStock() {
+            try {
+                const res = await fetch(GAS_URL + '?action=getStock');
+                const data = await res.json();
+                if (data.success) stockData = data.stock;
+            } catch(e) { console.error(e); }
+        }
+        
+        function startScanner() {
+            html5QrCode = new Html5Qrcode("qr-reader");
+            html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                (code) => {
+                    const med = stockData.find(m => m.code === code);
+                    if (med) {
+                        document.getElementById('medicine-name').textContent = med.name;
+                        document.getElementById('medicine-code').textContent = 'コード: ' + med.code + ' / 在庫: ' + med.currentStock + med.unit;
+                        document.getElementById('result').classList.add('show');
+                        if (navigator.vibrate) navigator.vibrate(100);
+                    }
+                },
+                () => {}
+            );
+        }
+        
+        loadStock();
+    </script>
+</body>
+</html>
