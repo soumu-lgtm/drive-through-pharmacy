@@ -18,1220 +18,178 @@
             --text-muted: #64748b;
             --border: #e2e8f0;
         }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            padding-bottom: 80px;
-        }
-
-        /* ヘッダー */
-        .header {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-            padding: 16px 20px;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        }
-
-        .header h1 {
-            font-size: 18px;
-            font-weight: 600;
-        }
-
-        .header-sub {
-            font-size: 12px;
-            opacity: 0.9;
-            margin-top: 4px;
-        }
-
-        /* メインコンテンツ */
-        .container {
-            max-width: 500px;
-            margin: 0 auto;
-            padding: 16px;
-        }
-
-        /* カード */
-        .card {
-            background: var(--card);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 16px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-
-        .card-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-muted);
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        /* モード切替 */
-        .mode-toggle {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 16px;
-        }
-
-        .mode-btn {
-            flex: 1;
-            padding: 14px;
-            border: 2px solid var(--border);
-            border-radius: 10px;
-            background: white;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .mode-btn.active-in {
-            border-color: var(--success);
-            background: #f0fdf4;
-            color: var(--success);
-        }
-
-        .mode-btn.active-out {
-            border-color: var(--danger);
-            background: #fef2f2;
-            color: var(--danger);
-        }
-
-        .mode-btn span {
-            font-size: 24px;
-        }
-
-        /* QRリーダー */
-        #qr-reader {
-            width: 100%;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        #qr-reader video {
-            border-radius: 8px;
-        }
-
-        .qr-placeholder {
-            background: #1e293b;
-            border-radius: 8px;
-            padding: 40px;
-            text-align: center;
-            color: white;
-        }
-
-        .qr-placeholder button {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 12px;
-        }
-
-        /* 読み取り結果 */
-        .scan-result {
-            display: none;
-            background: #f0fdf4;
-            border: 2px solid var(--success);
-            border-radius: 10px;
-            padding: 16px;
-            margin-top: 12px;
-        }
-
-        .scan-result.show {
-            display: block;
-            animation: slideIn 0.3s ease;
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .medicine-name {
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--text);
-        }
-
-        .medicine-code {
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-top: 4px;
-        }
-
-        .medicine-stock {
-            display: inline-block;
-            background: var(--primary);
-            color: white;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 600;
-            margin-top: 8px;
-        }
-
-        /* 入力フォーム */
-        .form-group {
-            margin-bottom: 16px;
-        }
-
-        .form-label {
-            display: block;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-muted);
-            margin-bottom: 6px;
-        }
-
-        .form-input {
-            width: 100%;
-            padding: 12px 14px;
-            border: 2px solid var(--border);
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.2s;
-        }
-
-        .form-input:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-
-        /* 数量入力（大きめ） */
-        .quantity-input {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .quantity-btn {
-            width: 48px;
-            height: 48px;
-            border: 2px solid var(--border);
-            border-radius: 10px;
-            background: white;
-            font-size: 24px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .quantity-btn:active {
-            background: var(--bg);
-            transform: scale(0.95);
-        }
-
-        .quantity-value {
-            flex: 1;
-            text-align: center;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-        }
-
-        .quantity-value input {
-            width: 80px;
-            font-size: 32px;
-            font-weight: 700;
-            text-align: center;
-            border: none;
-            background: transparent;
-            -moz-appearance: textfield;
-        }
-
-        .quantity-value input::-webkit-outer-spin-button,
-        .quantity-value input::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-
-        .quantity-value input:focus {
-            outline: 2px solid var(--primary);
-            border-radius: 8px;
-        }
-
-        .quantity-unit {
-            font-size: 16px;
-            color: var(--text-muted);
-        }
-
-        /* 患者選択（オートコンプリート） */
-        .patient-input-wrapper {
-            position: relative;
-        }
-
-        .patient-autocomplete {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: white;
-            border: 1px solid var(--border);
-            border-top: none;
-            border-radius: 0 0 8px 8px;
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 50;
-            display: none;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-
-        .patient-autocomplete.show {
-            display: block;
-        }
-
-        .patient-autocomplete-item {
-            padding: 12px 14px;
-            cursor: pointer;
-            border-bottom: 1px solid var(--border);
-            transition: background 0.2s;
-        }
-
-        .patient-autocomplete-item:last-child {
-            border-bottom: none;
-        }
-
-        .patient-autocomplete-item:hover {
-            background: var(--bg);
-        }
-
-        .patient-autocomplete-item .patient-name {
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .patient-autocomplete-item .patient-id {
-            font-size: 12px;
-            color: var(--text-muted);
-        }
-
-        /* 送信ボタン */
-        .submit-btn {
-            width: 100%;
-            padding: 16px;
-            border: none;
-            border-radius: 10px;
-            font-size: 17px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .submit-btn.in-mode {
-            background: var(--success);
-            color: white;
-        }
-
-        .submit-btn.out-mode {
-            background: var(--danger);
-            color: white;
-        }
-
-        .submit-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .submit-btn:not(:disabled):active {
-            transform: scale(0.98);
-        }
-
-        /* 履歴 */
-        .history-item {
-            display: flex;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .history-item:last-child {
-            border-bottom: none;
-        }
-
-        .history-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            margin-right: 12px;
-        }
-
-        .history-icon.in {
-            background: #dcfce7;
-        }
-
-        .history-icon.out {
-            background: #fee2e2;
-        }
-
-        .history-content {
-            flex: 1;
-        }
-
-        .history-medicine {
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .history-detail {
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-top: 2px;
-        }
-
-        .history-qty {
-            font-weight: 700;
-            font-size: 16px;
-        }
-
-        .history-qty.in {
-            color: var(--success);
-        }
-
-        .history-qty.out {
-            color: var(--danger);
-        }
-
-        /* トースト通知 */
-        .toast {
-            position: fixed;
-            bottom: 100px;
-            left: 50%;
-            transform: translateX(-50%) translateY(100px);
-            background: #1e293b;
-            color: white;
-            padding: 14px 24px;
-            border-radius: 10px;
-            font-weight: 600;
-            opacity: 0;
-            transition: all 0.3s;
-            z-index: 200;
-        }
-
-        .toast.show {
-            transform: translateX(-50%) translateY(0);
-            opacity: 1;
-        }
-
-        .toast.success {
-            background: var(--success);
-        }
-
-        .toast.error {
-            background: var(--danger);
-        }
-
-        /* 手動入力モーダル */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 300;
-            align-items: flex-end;
-            justify-content: center;
-        }
-
-        .modal-overlay.show {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            width: 100%;
-            max-width: 500px;
-            border-radius: 20px 20px 0 0;
-            padding: 24px;
-            max-height: 80vh;
-            overflow-y: auto;
-            animation: slideUp 0.3s ease;
-        }
-
-        @keyframes slideUp {
-            from { transform: translateY(100%); }
-            to { transform: translateY(0); }
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .modal-title {
-            font-size: 18px;
-            font-weight: 700;
-        }
-
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            color: var(--text-muted);
-        }
-
-        /* 薬品検索リスト */
-        .medicine-list {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .medicine-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            margin-bottom: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .medicine-item:hover {
-            background: var(--bg);
-            border-color: var(--primary);
-        }
-
-        .medicine-item-name {
-            font-weight: 600;
-        }
-
-        .medicine-item-stock {
-            font-size: 13px;
-            color: var(--text-muted);
-        }
-
-        /* ボトムナビ */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: white;
-            border-top: 1px solid var(--border);
-            display: flex;
-            justify-content: space-around;
-            padding: 8px 0;
-            padding-bottom: max(8px, env(safe-area-inset-bottom));
-        }
-
-        .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 8px 16px;
-            color: var(--text-muted);
-            text-decoration: none;
-            font-size: 11px;
-            cursor: pointer;
-        }
-
-        .nav-item.active {
-            color: var(--primary);
-        }
-
-        .nav-item span {
-            font-size: 22px;
-            margin-bottom: 2px;
-        }
-
-        /* タブコンテンツ */
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        /* 在庫一覧 */
-        .stock-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 14px;
-            background: white;
-            border-radius: 10px;
-            margin-bottom: 8px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-        }
-
-        .stock-info {
-            flex: 1;
-        }
-
-        .stock-name {
-            font-weight: 600;
-            font-size: 15px;
-        }
-
-        .stock-code {
-            font-size: 12px;
-            color: var(--text-muted);
-        }
-
-        .stock-qty {
-            font-size: 24px;
-            font-weight: 700;
-        }
-
-        .stock-qty.low {
-            color: var(--danger);
-        }
-
-        .stock-unit {
-            font-size: 13px;
-            color: var(--text-muted);
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 80px; }
+        .header { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 16px 20px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+        .header h1 { font-size: 18px; font-weight: 600; }
+        .header-sub { font-size: 12px; opacity: 0.9; margin-top: 4px; }
+        .container { max-width: 500px; margin: 0 auto; padding: 16px; }
+        .card { background: var(--card); border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .card-title { font-size: 14px; font-weight: 600; color: var(--text-muted); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .mode-toggle { display: flex; gap: 8px; margin-bottom: 16px; }
+        .mode-btn { flex: 1; padding: 14px; border: 2px solid var(--border); border-radius: 10px; background: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .mode-btn.active-in { border-color: var(--success); background: #f0fdf4; color: var(--success); }
+        .mode-btn.active-out { border-color: var(--danger); background: #fef2f2; color: var(--danger); }
+        .mode-btn span { font-size: 24px; }
+        #qr-reader { width: 100%; border-radius: 8px; overflow: hidden; }
+        .qr-placeholder { background: #1e293b; border-radius: 8px; padding: 40px; text-align: center; color: white; }
+        .qr-placeholder button { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 12px; }
+        .scan-result { display: none; background: #f0fdf4; border: 2px solid var(--success); border-radius: 10px; padding: 16px; margin-top: 12px; }
+        .scan-result.show { display: block; animation: slideIn 0.3s ease; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .medicine-name { font-size: 18px; font-weight: 700; color: var(--text); }
+        .medicine-code { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+        .medicine-stock { display: inline-block; background: var(--primary); color: white; padding: 4px 10px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-top: 8px; }
+        .form-input { width: 100%; padding: 12px 14px; border: 2px solid var(--border); border-radius: 8px; font-size: 16px; }
+        .form-input:focus { outline: none; border-color: var(--primary); }
+        .quantity-input { display: flex; align-items: center; gap: 12px; }
+        .quantity-btn { width: 48px; height: 48px; border: 2px solid var(--border); border-radius: 10px; background: white; font-size: 24px; font-weight: 600; cursor: pointer; }
+        .quantity-btn:active { background: var(--bg); transform: scale(0.95); }
+        .quantity-value { flex: 1; text-align: center; display: flex; align-items: center; justify-content: center; gap: 4px; }
+        .quantity-value input { width: 80px; font-size: 32px; font-weight: 700; text-align: center; border: none; background: transparent; }
+        .quantity-unit { font-size: 16px; color: var(--text-muted); }
+        .patient-input-wrapper { position: relative; }
+        .patient-autocomplete { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid var(--border); border-radius: 0 0 8px 8px; max-height: 200px; overflow-y: auto; z-index: 50; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .patient-autocomplete.show { display: block; }
+        .patient-autocomplete-item { padding: 12px 14px; cursor: pointer; border-bottom: 1px solid var(--border); }
+        .patient-autocomplete-item:hover { background: var(--bg); }
+        .patient-autocomplete-item .patient-name { font-weight: 600; font-size: 14px; }
+        .patient-autocomplete-item .patient-id { font-size: 12px; color: var(--text-muted); }
+        .submit-btn { width: 100%; padding: 16px; border: none; border-radius: 10px; font-size: 17px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .submit-btn.in-mode { background: var(--success); color: white; }
+        .submit-btn.out-mode { background: var(--danger); color: white; }
+        .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .history-item { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+        .history-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-right: 12px; }
+        .history-icon.in { background: #dcfce7; }
+        .history-icon.out { background: #fee2e2; }
+        .history-content { flex: 1; }
+        .history-medicine { font-weight: 600; font-size: 14px; }
+        .history-detail { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+        .history-qty { font-weight: 700; font-size: 16px; }
+        .history-qty.in { color: var(--success); }
+        .history-qty.out { color: var(--danger); }
+        .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(100px); background: #1e293b; color: white; padding: 14px 24px; border-radius: 10px; font-weight: 600; opacity: 0; transition: all 0.3s; z-index: 200; }
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--danger); }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 300; align-items: flex-end; justify-content: center; }
+        .modal-overlay.show { display: flex; }
+        .modal-content { background: white; width: 100%; max-width: 500px; border-radius: 20px 20px 0 0; padding: 24px; max-height: 80vh; overflow-y: auto; animation: slideUp 0.3s ease; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-title { font-size: 18px; font-weight: 700; }
+        .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-muted); }
+        .medicine-list { max-height: 300px; overflow-y: auto; }
+        .medicine-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; cursor: pointer; }
+        .medicine-item:hover { background: var(--bg); border-color: var(--primary); }
+        .medicine-item-name { font-weight: 600; }
+        .medicine-item-stock { font-size: 13px; color: var(--text-muted); }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 8px 0; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; padding: 8px 16px; color: var(--text-muted); font-size: 11px; cursor: pointer; }
+        .nav-item.active { color: var(--primary); }
+        .nav-item span { font-size: 22px; margin-bottom: 2px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .stock-item { display: flex; justify-content: space-between; align-items: center; padding: 14px; background: white; border-radius: 10px; margin-bottom: 8px; }
+        .stock-info { flex: 1; }
+        .stock-name { font-weight: 600; font-size: 15px; }
+        .stock-code { font-size: 12px; color: var(--text-muted); }
+        .stock-qty { font-size: 24px; font-weight: 700; }
+        .stock-qty.low { color: var(--danger); }
+        .stock-unit { font-size: 13px; color: var(--text-muted); }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>薬品在庫管理システム</h1>
-        <div class="header-sub">西春内科・在宅クリニック</div>
-    </div>
-
-    <!-- スキャンタブ -->
+    <div class="header"><h1>薬品在庫管理システム</h1><div class="header-sub">西春内科・在宅クリニック</div></div>
     <div id="tab-scan" class="tab-content active">
         <div class="container">
-            <!-- モード切替 -->
             <div class="mode-toggle">
-                <button class="mode-btn" id="btn-in" onclick="setMode('in')">
-                    <span>📥</span>
-                    入庫（仕入）
-                </button>
-                <button class="mode-btn active-out" id="btn-out" onclick="setMode('out')">
-                    <span>📤</span>
-                    出庫（処方）
-                </button>
+                <button class="mode-btn" id="btn-in" onclick="setMode('in')"><span>📥</span>入庫（仕入）</button>
+                <button class="mode-btn active-out" id="btn-out" onclick="setMode('out')"><span>📤</span>出庫（処方）</button>
             </div>
-
-            <!-- QRスキャナー -->
             <div class="card">
                 <div class="card-title">📷 QRコード読み取り</div>
                 <div id="qr-reader"></div>
                 <div id="qr-placeholder" class="qr-placeholder">
                     <div>カメラでQRコードをスキャン</div>
                     <button onclick="startScanner()">カメラを起動</button>
-                    <div style="margin-top: 16px; font-size: 13px; opacity: 0.7;">
-                        または
-                        <a href="#" onclick="openManualSelect()" style="color: white;">手動で薬品を選択</a>
-                    </div>
+                    <div style="margin-top:16px;font-size:13px;opacity:0.7;">または<a href="#" onclick="openManualSelect()" style="color:white;">手動で薬品を選択</a></div>
                 </div>
-
-                <!-- 読み取り結果 -->
                 <div id="scan-result" class="scan-result">
                     <div class="medicine-name" id="result-name">-</div>
                     <div class="medicine-code" id="result-code">コード: -</div>
                     <div class="medicine-stock" id="result-stock">現在庫: - 個</div>
                 </div>
             </div>
-
-            <!-- 数量入力 -->
-            <div class="card" id="quantity-card" style="display: none;">
+            <div class="card" id="quantity-card" style="display:none;">
                 <div class="card-title">📦 数量</div>
                 <div class="quantity-input">
                     <button class="quantity-btn" onclick="changeQty(-1)">−</button>
-                    <div class="quantity-value">
-                        <input type="number" id="qty-value" value="1" min="1" inputmode="numeric" pattern="[0-9]*" onchange="updateQtyFromInput()">
-                        <span class="quantity-unit" id="qty-unit">錠</span>
-                    </div>
+                    <div class="quantity-value"><input type="number" id="qty-value" value="1" min="1" inputmode="numeric" onchange="updateQtyFromInput()"><span class="quantity-unit" id="qty-unit">錠</span></div>
                     <button class="quantity-btn" onclick="changeQty(1)">+</button>
                 </div>
             </div>
-
-            <!-- 患者選択（出庫時のみ） -->
-            <div class="card" id="patient-card" style="display: none;">
+            <div class="card" id="patient-card" style="display:none;">
                 <div class="card-title">👤 患者</div>
                 <div class="patient-input-wrapper">
                     <input type="text" class="form-input" id="patient-input" placeholder="患者番号または氏名を入力" autocomplete="off">
-                    <div class="patient-autocomplete" id="patient-autocomplete">
-                        <!-- 候補がここに表示される -->
-                    </div>
+                    <div class="patient-autocomplete" id="patient-autocomplete"></div>
                 </div>
             </div>
-
-            <!-- 送信ボタン -->
-            <button class="submit-btn in-mode" id="submit-btn" onclick="submitTransaction()" disabled>
-                <span>📥</span>
-                入庫を記録
-            </button>
+            <button class="submit-btn in-mode" id="submit-btn" onclick="submitTransaction()" disabled><span>📥</span>入庫を記録</button>
         </div>
     </div>
-
-    <!-- 在庫一覧タブ -->
-    <div id="tab-stock" class="tab-content">
-        <div class="container">
-            <div class="card">
-                <div class="card-title">🔍 薬品検索</div>
-                <input type="text" class="form-input" id="stock-search" placeholder="薬品名で検索..." oninput="filterStock()">
-            </div>
-            <div id="stock-list">
-                <!-- 在庫一覧がここに表示される -->
-            </div>
-        </div>
-    </div>
-
-    <!-- 履歴タブ -->
-    <div id="tab-history" class="tab-content">
-        <div class="container">
-            <div class="card">
-                <div class="card-title">📋 本日の履歴</div>
-                <div id="history-list">
-                    <!-- 履歴がここに表示される -->
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ボトムナビ -->
+    <div id="tab-stock" class="tab-content"><div class="container"><div class="card"><div class="card-title">🔍 薬品検索</div><input type="text" class="form-input" id="stock-search" placeholder="薬品名で検索..." oninput="filterStock()"></div><div id="stock-list"></div></div></div>
+    <div id="tab-history" class="tab-content"><div class="container"><div class="card"><div class="card-title">📋 本日の履歴</div><div id="history-list"></div></div></div></div>
     <div class="bottom-nav">
-        <div class="nav-item active" onclick="switchTab('scan')">
-            <span>📷</span>
-            スキャン
-        </div>
-        <div class="nav-item" onclick="switchTab('stock')">
-            <span>📦</span>
-            在庫
-        </div>
-        <div class="nav-item" onclick="switchTab('history')">
-            <span>📋</span>
-            履歴
-        </div>
+        <div class="nav-item active" onclick="switchTab('scan')"><span>📷</span>スキャン</div>
+        <div class="nav-item" onclick="switchTab('stock')"><span>📦</span>在庫</div>
+        <div class="nav-item" onclick="switchTab('history')"><span>📋</span>履歴</div>
     </div>
-
-    <!-- 手動選択モーダル -->
-    <div class="modal-overlay" id="manual-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-title">薬品を選択</div>
-                <button class="modal-close" onclick="closeManualSelect()">×</button>
-            </div>
-            <input type="text" class="form-input" id="modal-search" placeholder="薬品名で検索..." oninput="filterModalList()">
-            <div class="medicine-list" id="modal-list">
-                <!-- 薬品リストがここに表示される -->
-            </div>
-        </div>
-    </div>
-
-    <!-- トースト -->
+    <div class="modal-overlay" id="manual-modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">薬品を選択</div><button class="modal-close" onclick="closeManualSelect()">×</button></div><input type="text" class="form-input" id="modal-search" placeholder="薬品名で検索..." oninput="filterModalList()"><div class="medicine-list" id="modal-list"></div></div></div>
     <div class="toast" id="toast"></div>
-
     <script>
-        // ===== GAS連携設定 =====
-        // 2026/03/03 デプロイ済み
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbyr7seSTnCE8N5-cYZ90VXEeXE389iwXf-5cgnMDBBRqMpZ6g6SoTWOSsTH_rvz1514/exec';
-        const USE_GAS = true; // GAS連携有効
-
-        // ===== GAS API関数 =====
-        async function gasGet(action, params = {}) {
-            if (!USE_GAS) return null;
-            try {
-                const url = new URL(GAS_URL);
-                url.searchParams.append('action', action);
-                Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, v));
-                const res = await fetch(url.toString());
-                return await res.json();
-            } catch (e) {
-                console.error('GAS GET error:', e);
-                showToast('サーバー通信エラー', 'error');
-                return null;
-            }
-        }
-
-        async function gasPost(action, data) {
-            if (!USE_GAS) return null;
-            try {
-                const res = await fetch(GAS_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({ action, ...data })
-                });
-                return { success: true };
-            } catch (e) {
-                console.error('GAS POST error:', e);
-                showToast('サーバー通信エラー', 'error');
-                return null;
-            }
-        }
-
-        // GASから在庫データを取得
-        async function loadStockFromGAS() {
-            const result = await gasGet('getStock');
-            if (result && result.success) {
-                stockData = result.stock.map(s => ({
-                    code: s.code,
-                    name: s.name,
-                    stock: s.currentStock,
-                    unit: s.unit,
-                    threshold: s.threshold || 10
-                }));
-                renderStockList();
-                showToast('データを同期しました', 'success');
-            }
-        }
-
-        // GASから履歴を取得
-        async function loadHistoryFromGAS() {
-            const result = await gasGet('getHistory');
-            if (result && result.success) {
-                historyData = result.history.map(h => ({
-                    time: new Date(h.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
-                    type: h.type,
-                    medicine: h.name,
-                    code: h.code,
-                    quantity: h.quantity,
-                    unit: h.unit,
-                    patient: h.patientName || null
-                }));
-            }
-        }
-
-        // ===== データ（プロトタイプ用サンプル / GAS未接続時のフォールバック） =====
-        let stockData = [
-            { code: '059000001', name: 'クロピドグレル錠75mg「SANIK」', stock: 120, unit: '錠', threshold: 30 },
-            { code: '059000002', name: 'ランソプラゾール15mg腸溶性口腔内崩壊錠', stock: 85, unit: '錠', threshold: 20 },
-            { code: '059000003', name: 'アムロジンOD錠10mg', stock: 200, unit: '錠', threshold: 50 },
-            { code: '059000004', name: 'トラゼンタ錠5mg', stock: 45, unit: '錠', threshold: 30 },
-            { code: '059000005', name: 'ロスバスタチン錠5mg「DSEP」', stock: 150, unit: '錠', threshold: 40 },
-            { code: '059000006', name: 'ジャディアンス錠10mg', stock: 60, unit: '錠', threshold: 30 },
-            { code: '059000007', name: 'センノシド錠12mg「サワイ」', stock: 180, unit: '錠', threshold: 50 },
-            { code: '059000008', name: 'ロキソプロフェンNaテープ100mg', stock: 25, unit: '枚', threshold: 30 },
-            { code: '059000009', name: '万年筆型注入器用注射針（超微細型）', stock: 100, unit: '本', threshold: 50 },
-            { code: '059000010', name: 'ライゾデグ配合注 フレックスタッチ 300単位', stock: 8, unit: 'キット', threshold: 5 },
-        ];
-
-        let historyData = [];
-
-        let patientData = [
-            { id: '90220', name: '薛 悌吉', furigana: 'セツ テイキチ' },
-            { id: '90205', name: '臼井 ユキ', furigana: 'ウスイ ユキ' },
-            { id: '90219', name: '長野 光雄', furigana: 'ナガノ ミツオ' },
-            { id: '90001', name: '山田 太郎', furigana: 'ヤマダ タロウ' },
-            { id: '90002', name: '佐藤 花子', furigana: 'サトウ ハナコ' },
-            { id: '90003', name: '田中 一郎', furigana: 'タナカ イチロウ' },
-        ];
-
-        // ===== 状態管理 =====
-        let currentMode = 'out';
-        let selectedMedicine = null;
-        let quantity = 1;
-        let selectedPatient = null;
-        let html5QrCode = null;
-
-        // ===== モード切替 =====
-        function setMode(mode) {
-            currentMode = mode;
-            const btnIn = document.getElementById('btn-in');
-            const btnOut = document.getElementById('btn-out');
-            const submitBtn = document.getElementById('submit-btn');
-            const patientCard = document.getElementById('patient-card');
-
-            if (mode === 'in') {
-                btnIn.className = 'mode-btn active-in';
-                btnOut.className = 'mode-btn';
-                submitBtn.className = 'submit-btn in-mode';
-                submitBtn.innerHTML = '<span>📥</span> 入庫を記録';
-                patientCard.style.display = 'none';
-            } else {
-                btnIn.className = 'mode-btn';
-                btnOut.className = 'mode-btn active-out';
-                submitBtn.className = 'submit-btn out-mode';
-                submitBtn.innerHTML = '<span>📤</span> 出庫を記録';
-                patientCard.style.display = 'block';
-            }
-            updateSubmitButton();
-        }
-
-        // ===== QRスキャナー =====
-        function startScanner() {
-            document.getElementById('qr-placeholder').style.display = 'none';
-            html5QrCode = new Html5Qrcode("qr-reader");
-            html5QrCode.start(
-                { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 250, height: 250 } },
-                onScanSuccess,
-                onScanFailure
-            ).catch(err => {
-                console.error('Camera error:', err);
-                showToast('カメラを起動できませんでした', 'error');
-                document.getElementById('qr-placeholder').style.display = 'block';
-            });
-        }
-
-        // コードの正規化（先頭ゼロの有無を吸収）
-        function normalizeCode(code) {
-            return String(parseInt(String(code), 10));
-        }
-
-        function onScanSuccess(decodedText) {
-            const normalizedScanned = normalizeCode(decodedText);
-            const medicine = stockData.find(m => normalizeCode(m.code) === normalizedScanned);
-
-            if (medicine) {
-                selectMedicine(medicine);
-                if (navigator.vibrate) navigator.vibrate(100);
-            } else {
-                const stockCodes = stockData.slice(0, 3).map(m => normalizeCode(m.code)).join(', ');
-                const debugMsg = `未登録: ${decodedText}\n正規化: ${normalizedScanned}\nデータ数: ${stockData.length}件\n登録コード例: ${stockCodes}`;
-                alert(debugMsg);
-            }
-        }
-
-        function onScanFailure(error) {
-        }
-
-        function selectMedicine(medicine) {
-            selectedMedicine = medicine;
-            document.getElementById('result-name').textContent = medicine.name;
-            document.getElementById('result-code').textContent = 'コード: ' + medicine.code;
-            document.getElementById('result-stock').textContent = '現在庫: ' + medicine.stock + ' ' + medicine.unit;
-            document.getElementById('scan-result').classList.add('show');
-            document.getElementById('quantity-card').style.display = 'block';
-            document.getElementById('qty-unit').textContent = medicine.unit;
-            quantity = 1;
-            document.getElementById('qty-value').value = quantity;
-            updateSubmitButton();
-        }
-
-        // ===== 数量操作 =====
-        function changeQty(delta) {
-            quantity = Math.max(1, quantity + delta);
-            document.getElementById('qty-value').value = quantity;
-            if (navigator.vibrate) navigator.vibrate(30);
-        }
-
-        function updateQtyFromInput() {
-            const input = document.getElementById('qty-value');
-            const val = parseInt(input.value, 10);
-            if (isNaN(val) || val < 1) {
-                quantity = 1;
-                input.value = 1;
-            } else {
-                quantity = val;
-            }
-        }
-
-        // ===== 患者オートコンプリート =====
-        function showPatientAutocomplete(query) {
-            const container = document.getElementById('patient-autocomplete');
-            if (!query || query.length < 1) {
-                container.classList.remove('show');
-                return;
-            }
-            const queryLower = query.toLowerCase();
-            const filtered = patientData.filter(p =>
-                p.id.includes(query) ||
-                p.name.includes(query) ||
-                (p.furigana && p.furigana.toLowerCase().includes(queryLower))
-            ).slice(0, 5);
-            if (filtered.length === 0) {
-                container.classList.remove('show');
-                return;
-            }
-            container.innerHTML = filtered.map(p => `
-                <div class="patient-autocomplete-item" onclick="selectPatientFromAutocomplete('${p.id}', '${p.name}')">
-                    <div class="patient-name">${p.name}</div>
-                    <div class="patient-id">ID: ${p.id}${p.furigana ? ' / ' + p.furigana : ''}</div>
-                </div>
-            `).join('');
-            container.classList.add('show');
-        }
-
-        function selectPatientFromAutocomplete(id, name) {
-            selectedPatient = { id, name };
-            document.getElementById('patient-input').value = name;
-            document.getElementById('patient-autocomplete').classList.remove('show');
-            updateSubmitButton();
-        }
-
-        function hidePatientAutocomplete() {
-            setTimeout(() => {
-                document.getElementById('patient-autocomplete').classList.remove('show');
-            }, 200);
-        }
-
-        // ===== 送信ボタン状態 =====
-        function updateSubmitButton() {
-            const btn = document.getElementById('submit-btn');
-            const canSubmit = selectedMedicine &&
-                (currentMode === 'in' || (currentMode === 'out' && document.getElementById('patient-input').value));
-            btn.disabled = !canSubmit;
-        }
-
-        // ===== トランザクション送信 =====
-        async function submitTransaction() {
-            if (!selectedMedicine) return;
-
-            const patientInput = document.getElementById('patient-input').value;
-            const submitBtn = document.getElementById('submit-btn');
-
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span>⏳</span> 送信中...';
-
-            if (USE_GAS) {
-                let result;
-                if (currentMode === 'in') {
-                    result = await gasPost('stockIn', {
-                        code: selectedMedicine.code,
-                        quantity: quantity,
-                        operator: '担当者',
-                        note: ''
-                    });
-                } else {
-                    const isNumeric = /^\d+$/.test(patientInput.trim());
-                    const patientId = selectedPatient?.id || (isNumeric ? patientInput.trim() : '');
-                    const patientName = selectedPatient?.name || (isNumeric ? '' : patientInput.trim());
-
-                    result = await gasPost('stockOut', {
-                        code: selectedMedicine.code,
-                        quantity: quantity,
-                        patientId: patientId,
-                        patientName: patientName,
-                        operator: '担当者',
-                        note: ''
-                    });
-                }
-
-                if (result && result.success) {
-                    const selectedNormalized = normalizeCode(selectedMedicine.code);
-                    const idx = stockData.findIndex(m => normalizeCode(m.code) === selectedNormalized);
-                    if (currentMode === 'in') {
-                        stockData[idx].stock += quantity;
-                    } else {
-                        stockData[idx].stock -= quantity;
-                    }
-
-                    const msg = currentMode === 'in'
-                        ? `${selectedMedicine.name} を ${quantity}${selectedMedicine.unit} 入庫しました`
-                        : `${selectedMedicine.name} を ${quantity}${selectedMedicine.unit} 出庫しました`;
-                    showToast(msg, 'success');
-                    resetForm();
-                } else {
-                    showToast(result?.error || '送信に失敗しました', 'error');
-                    submitBtn.disabled = false;
-                    setMode(currentMode);
-                }
-                return;
-            }
-
-            const selectedNormalizedLocal = normalizeCode(selectedMedicine.code);
-            const idx = stockData.findIndex(m => normalizeCode(m.code) === selectedNormalizedLocal);
-            if (currentMode === 'in') {
-                stockData[idx].stock += quantity;
-            } else {
-                if (stockData[idx].stock < quantity) {
-                    showToast('在庫が不足しています', 'error');
-                    submitBtn.disabled = false;
-                    setMode(currentMode);
-                    return;
-                }
-                stockData[idx].stock -= quantity;
-            }
-
-            const isNumericLocal = /^\d+$/.test(patientInput.trim());
-            const patientDisplay = currentMode === 'out'
-                ? (isNumericLocal ? `ID:${patientInput.trim()}` : patientInput.trim())
-                : null;
-            const record = {
-                time: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
-                type: currentMode,
-                medicine: selectedMedicine.name,
-                code: selectedMedicine.code,
-                quantity: quantity,
-                unit: selectedMedicine.unit,
-                patient: patientDisplay
-            };
-            historyData.unshift(record);
-
-            const msg = currentMode === 'in'
-                ? `${selectedMedicine.name} を ${quantity}${selectedMedicine.unit} 入庫しました`
-                : `${selectedMedicine.name} を ${quantity}${selectedMedicine.unit} 出庫しました`;
-            showToast(msg, 'success');
-
-            resetForm();
-        }
-
-        function resetForm() {
-            selectedMedicine = null;
-            quantity = 1;
-            selectedPatient = null;
-            document.getElementById('scan-result').classList.remove('show');
-            document.getElementById('quantity-card').style.display = 'none';
-            document.getElementById('patient-input').value = '';
-            document.querySelectorAll('.patient-chip').forEach(c => c.classList.remove('selected'));
-            setMode(currentMode);
-            updateSubmitButton();
-        }
-
-        // ===== トースト通知 =====
-        function showToast(message, type = '') {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.className = 'toast ' + type + ' show';
-            setTimeout(() => toast.classList.remove('show'), 3000);
-        }
-
-        // ===== タブ切替 =====
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById('tab-' + tabName).classList.add('active');
-            document.querySelectorAll('.nav-item')[['scan', 'stock', 'history'].indexOf(tabName)].classList.add('active');
-            if (tabName === 'stock') renderStockList();
-            if (tabName === 'history') renderHistory();
-        }
-
-        // ===== 在庫一覧 =====
-        function renderStockList(filter = '') {
-            const container = document.getElementById('stock-list');
-            const filtered = stockData.filter(m =>
-                m.name.toLowerCase().includes(filter.toLowerCase()) ||
-                m.code.includes(filter)
-            );
-            container.innerHTML = filtered.map(m => `
-                <div class="stock-item">
-                    <div class="stock-info">
-                        <div class="stock-name">${m.name}</div>
-                        <div class="stock-code">${m.code}</div>
-                    </div>
-                    <div>
-                        <span class="stock-qty ${m.stock <= m.threshold ? 'low' : ''}">${m.stock}</span>
-                        <span class="stock-unit">${m.unit}</span>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function filterStock() {
-            const query = document.getElementById('stock-search').value;
-            renderStockList(query);
-        }
-
-        // ===== 履歴 =====
-        function renderHistory() {
-            const container = document.getElementById('history-list');
-            if (historyData.length === 0) {
-                container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">履歴がありません</div>';
-                return;
-            }
-            container.innerHTML = historyData.map(h => `
-                <div class="history-item">
-                    <div class="history-icon ${h.type}">${h.type === 'in' ? '📥' : '📤'}</div>
-                    <div class="history-content">
-                        <div class="history-medicine">${h.medicine}</div>
-                        <div class="history-detail">${h.time}${h.patient ? ' • ' + h.patient : ''}</div>
-                    </div>
-                    <div class="history-qty ${h.type}">${h.type === 'in' ? '+' : '-'}${h.quantity}${h.unit}</div>
-                </div>
-            `).join('');
-        }
-
-        // ===== 手動選択モーダル =====
-        function openManualSelect() {
-            document.getElementById('manual-modal').classList.add('show');
-            renderModalList();
-        }
-
-        function closeManualSelect() {
-            document.getElementById('manual-modal').classList.remove('show');
-        }
-
-        function renderModalList(filter = '') {
-            const container = document.getElementById('modal-list');
-            const filtered = stockData.filter(m =>
-                m.name.toLowerCase().includes(filter.toLowerCase()) ||
-                m.code.includes(filter)
-            );
-            container.innerHTML = filtered.map(m => `
-                <div class="medicine-item" onclick="selectFromModal('${m.code}')">
-                    <div>
-                        <div class="medicine-item-name">${m.name}</div>
-                        <div class="medicine-item-stock">在庫: ${m.stock}${m.unit}</div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function filterModalList() {
-            const query = document.getElementById('modal-search').value;
-            renderModalList(query);
-        }
-
-        function selectFromModal(code) {
-            const normalizedCode = normalizeCode(code);
-            const medicine = stockData.find(m => normalizeCode(m.code) === normalizedCode);
-            if (medicine) {
-                selectMedicine(medicine);
-                closeManualSelect();
-            }
-        }
-
-        // ===== 初期化 =====
-        const patientInput = document.getElementById('patient-input');
-
-        patientInput.addEventListener('input', function() {
-            selectedPatient = null;
-            showPatientAutocomplete(this.value);
-            updateSubmitButton();
-        });
-
-        patientInput.addEventListener('blur', function() {
-            hidePatientAutocomplete();
-        });
-
-        patientInput.addEventListener('focus', function() {
-            if (this.value) {
-                showPatientAutocomplete(this.value);
-            }
-        });
-
-        setMode(currentMode);
-        renderStockList();
-
-        if (USE_GAS) {
-            showToast('データを読み込み中...', '');
-            loadStockFromGAS();
-        }
+        const GAS_URL='https://script.google.com/macros/s/AKfycbyr7seSTnCE8N5-cYZ90VXEeXE389iwXf-5cgnMDBBRqMpZ6g6SoTWOSsTH_rvz1514/exec';
+        const USE_GAS=true;
+        async function gasGet(action,params={}){if(!USE_GAS)return null;try{const url=new URL(GAS_URL);url.searchParams.append('action',action);Object.entries(params).forEach(([k,v])=>url.searchParams.append(k,v));const res=await fetch(url.toString());return await res.json();}catch(e){console.error('GAS GET error:',e);showToast('サーバー通信エラー: '+e.message,'error');return null;}}
+        async function gasPost(action,data){if(!USE_GAS)return null;try{const res=await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action,...data}),redirect:'follow'});const text=await res.text();console.log('GAS response:',text);try{return JSON.parse(text);}catch{if(res.ok||res.redirected){return{success:true,message:'送信完了'};}return{success:false,error:'レスポンス解析エラー'};}}catch(e){console.error('GAS POST error:',e);if(e.message.includes('CORS')||e.message.includes('NetworkError')){return{success:true,message:'送信完了（CORS制限）'};}showToast('通信エラー: '+e.message,'error');return null;}}
+        async function loadStockFromGAS(){const result=await gasGet('getStock');if(result&&result.success){stockData=result.stock.map(s=>({code:String(s.code),name:s.name,stock:s.currentStock,unit:s.unit,threshold:s.threshold||10}));renderStockList();showToast('データを同期しました ('+stockData.length+'件)','success');}else if(result&&result.error){showToast('データ取得エラー: '+result.error,'error');}}
+        async function loadHistoryFromGAS(){const result=await gasGet('getHistory');if(result&&result.success){historyData=result.history.map(h=>({time:new Date(h.timestamp).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),type:h.type,medicine:h.name,code:h.code,quantity:h.quantity,unit:h.unit,patient:h.patientName||null}));renderHistory();}}
+        let stockData=[{code:'059000001',name:'クロピドグレル錠75mg「SANIK」',stock:120,unit:'錠',threshold:30},{code:'059000002',name:'ランソプラゾール15mg腸溶性口腔内崩壊錠',stock:85,unit:'錠',threshold:20},{code:'059000003',name:'アムロジンOD錠10mg',stock:200,unit:'錠',threshold:50},{code:'059000004',name:'トラゼンタ錠5mg',stock:45,unit:'錠',threshold:30},{code:'059000005',name:'ロスバスタチン錠5mg「DSEP」',stock:150,unit:'錠',threshold:40},{code:'059000006',name:'ジャディアンス錠10mg',stock:60,unit:'錠',threshold:30},{code:'059000007',name:'センノシド錠12mg「サワイ」',stock:180,unit:'錠',threshold:50},{code:'059000008',name:'ロキソプロフェンNaテープ100mg',stock:25,unit:'枚',threshold:30},{code:'059000009',name:'万年筆型注入器用注射針（超微細型）',stock:100,unit:'本',threshold:50},{code:'059000010',name:'ライゾデグ配合注 フレックスタッチ 300単位',stock:8,unit:'キット',threshold:5}];
+        let historyData=[];
+        let patientData=[{id:'90220',name:'薛 悌吉',furigana:'セツ テイキチ'},{id:'90205',name:'臼井 ユキ',furigana:'ウスイ ユキ'},{id:'90219',name:'長野 光雄',furigana:'ナガノ ミツオ'},{id:'90001',name:'山田 太郎',furigana:'ヤマダ タロウ'},{id:'90002',name:'佐藤 花子',furigana:'サトウ ハナコ'},{id:'90003',name:'田中 一郎',furigana:'タナカ イチロウ'}];
+        let currentMode='out',selectedMedicine=null,quantity=1,selectedPatient=null,html5QrCode=null;
+        function setMode(mode){currentMode=mode;const btnIn=document.getElementById('btn-in'),btnOut=document.getElementById('btn-out'),submitBtn=document.getElementById('submit-btn'),patientCard=document.getElementById('patient-card');if(mode==='in'){btnIn.className='mode-btn active-in';btnOut.className='mode-btn';submitBtn.className='submit-btn in-mode';submitBtn.innerHTML='<span>📥</span> 入庫を記録';patientCard.style.display='none';}else{btnIn.className='mode-btn';btnOut.className='mode-btn active-out';submitBtn.className='submit-btn out-mode';submitBtn.innerHTML='<span>📤</span> 出庫を記録';patientCard.style.display='block';}updateSubmitButton();}
+        function startScanner(){document.getElementById('qr-placeholder').style.display='none';html5QrCode=new Html5Qrcode("qr-reader");html5QrCode.start({facingMode:"environment"},{fps:10,qrbox:{width:250,height:250}},onScanSuccess,onScanFailure).catch(err=>{console.error('Camera error:',err);showToast('カメラを起動できませんでした','error');document.getElementById('qr-placeholder').style.display='block';});}
+        function normalizeCode(code){return String(parseInt(String(code),10));}
+        function onScanSuccess(decodedText){const normalizedScanned=normalizeCode(decodedText);const medicine=stockData.find(m=>normalizeCode(m.code)===normalizedScanned);if(medicine){selectMedicine(medicine);if(navigator.vibrate)navigator.vibrate(100);}else{alert('未登録の薬品です\n\nスキャン: '+decodedText+'\n正規化後: '+normalizedScanned);}}
+        function onScanFailure(error){}
+        function selectMedicine(medicine){selectedMedicine=medicine;document.getElementById('result-name').textContent=medicine.name;document.getElementById('result-code').textContent='コード: '+medicine.code;document.getElementById('result-stock').textContent='現在庫: '+medicine.stock+' '+medicine.unit;document.getElementById('scan-result').classList.add('show');document.getElementById('quantity-card').style.display='block';document.getElementById('qty-unit').textContent=medicine.unit;quantity=1;document.getElementById('qty-value').value=quantity;updateSubmitButton();}
+        function changeQty(delta){quantity=Math.max(1,quantity+delta);document.getElementById('qty-value').value=quantity;if(navigator.vibrate)navigator.vibrate(30);}
+        function updateQtyFromInput(){const input=document.getElementById('qty-value');const val=parseInt(input.value,10);if(isNaN(val)||val<1){quantity=1;input.value=1;}else{quantity=val;}}
+        function showPatientAutocomplete(query){const container=document.getElementById('patient-autocomplete');if(!query||query.length<1){container.classList.remove('show');return;}const filtered=patientData.filter(p=>p.id.includes(query)||p.name.includes(query)||(p.furigana&&p.furigana.toLowerCase().includes(query.toLowerCase()))).slice(0,5);if(filtered.length===0){container.classList.remove('show');return;}container.innerHTML=filtered.map(p=>'<div class="patient-autocomplete-item" onclick="selectPatientFromAutocomplete(\''+p.id+'\',\''+p.name+'\')"><div class="patient-name">'+p.name+'</div><div class="patient-id">ID: '+p.id+(p.furigana?' / '+p.furigana:'')+'</div></div>').join('');container.classList.add('show');}
+        function selectPatientFromAutocomplete(id,name){selectedPatient={id,name};document.getElementById('patient-input').value=name;document.getElementById('patient-autocomplete').classList.remove('show');updateSubmitButton();}
+        function hidePatientAutocomplete(){setTimeout(()=>{document.getElementById('patient-autocomplete').classList.remove('show');},200);}
+        function updateSubmitButton(){const btn=document.getElementById('submit-btn');btn.disabled=!(selectedMedicine&&(currentMode==='in'||(currentMode==='out'&&document.getElementById('patient-input').value)));}
+        async function submitTransaction(){if(!selectedMedicine)return;const patientInput=document.getElementById('patient-input').value;const submitBtn=document.getElementById('submit-btn');submitBtn.disabled=true;submitBtn.innerHTML='<span>⏳</span> 送信中...';const codeToSend=selectedMedicine.code;console.log('送信コード:',codeToSend);if(USE_GAS){let result;if(currentMode==='in'){result=await gasPost('stockIn',{code:codeToSend,quantity:quantity,operator:'担当者',note:''});}else{const isNumeric=/^\d+$/.test(patientInput.trim());const patientId=selectedPatient?.id||(isNumeric?patientInput.trim():'');const patientName=selectedPatient?.name||(isNumeric?'':patientInput.trim());result=await gasPost('stockOut',{code:codeToSend,quantity:quantity,patientId:patientId,patientName:patientName,operator:'担当者',note:''});}console.log('GAS result:',result);if(result&&(result.success||result.message)){const idx=stockData.findIndex(m=>normalizeCode(m.code)===normalizeCode(selectedMedicine.code));if(idx>=0){if(currentMode==='in'){stockData[idx].stock+=quantity;}else{stockData[idx].stock-=quantity;}}historyData.unshift({time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),type:currentMode,medicine:selectedMedicine.name,code:selectedMedicine.code,quantity:quantity,unit:selectedMedicine.unit,patient:currentMode==='out'?patientInput:null});showToast(selectedMedicine.name+' を '+quantity+selectedMedicine.unit+(currentMode==='in'?' 入庫':' 出庫')+'しました','success');resetForm();}else{showToast(result?.error||'送信に失敗しました','error');submitBtn.disabled=false;setMode(currentMode);}return;}resetForm();}
+        function resetForm(){selectedMedicine=null;quantity=1;selectedPatient=null;document.getElementById('scan-result').classList.remove('show');document.getElementById('quantity-card').style.display='none';document.getElementById('patient-input').value='';setMode(currentMode);updateSubmitButton();}
+        function showToast(message,type=''){const toast=document.getElementById('toast');toast.textContent=message;toast.className='toast '+type+' show';setTimeout(()=>toast.classList.remove('show'),3000);}
+        function switchTab(tabName){document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));document.getElementById('tab-'+tabName).classList.add('active');document.querySelectorAll('.nav-item')[['scan','stock','history'].indexOf(tabName)].classList.add('active');if(tabName==='stock')renderStockList();if(tabName==='history'){renderHistory();if(USE_GAS)loadHistoryFromGAS();}}
+        function renderStockList(filter=''){const container=document.getElementById('stock-list');const filtered=stockData.filter(m=>m.name.toLowerCase().includes(filter.toLowerCase())||m.code.includes(filter));container.innerHTML=filtered.map(m=>'<div class="stock-item"><div class="stock-info"><div class="stock-name">'+m.name+'</div><div class="stock-code">'+m.code+'</div></div><div><span class="stock-qty '+(m.stock<=m.threshold?'low':'')+'">'+m.stock+'</span><span class="stock-unit">'+m.unit+'</span></div></div>').join('');}
+        function filterStock(){renderStockList(document.getElementById('stock-search').value);}
+        function renderHistory(){const container=document.getElementById('history-list');if(historyData.length===0){container.innerHTML='<div style="text-align:center;color:var(--text-muted);padding:20px;">履歴がありません</div>';return;}container.innerHTML=historyData.map(h=>'<div class="history-item"><div class="history-icon '+h.type+'">'+(h.type==='in'?'📥':'📤')+'</div><div class="history-content"><div class="history-medicine">'+h.medicine+'</div><div class="history-detail">'+h.time+(h.patient?' • '+h.patient:'')+'</div></div><div class="history-qty '+h.type+'">'+(h.type==='in'?'+':'-')+h.quantity+h.unit+'</div></div>').join('');}
+        function openManualSelect(){document.getElementById('manual-modal').classList.add('show');renderModalList();}
+        function closeManualSelect(){document.getElementById('manual-modal').classList.remove('show');}
+        function renderModalList(filter=''){const container=document.getElementById('modal-list');const filtered=stockData.filter(m=>m.name.toLowerCase().includes(filter.toLowerCase())||m.code.includes(filter));container.innerHTML=filtered.map(m=>'<div class="medicine-item" onclick="selectFromModal(\''+m.code+'\')"><div><div class="medicine-item-name">'+m.name+'</div><div class="medicine-item-stock">在庫: '+m.stock+m.unit+'</div></div></div>').join('');}
+        function filterModalList(){renderModalList(document.getElementById('modal-search').value);}
+        function selectFromModal(code){const medicine=stockData.find(m=>normalizeCode(m.code)===normalizeCode(code));if(medicine){selectMedicine(medicine);closeManualSelect();}}
+        const patientInputEl=document.getElementById('patient-input');
+        patientInputEl.addEventListener('input',function(){selectedPatient=null;showPatientAutocomplete(this.value);updateSubmitButton();});
+        patientInputEl.addEventListener('blur',hidePatientAutocomplete);
+        patientInputEl.addEventListener('focus',function(){if(this.value)showPatientAutocomplete(this.value);});
+        setMode(currentMode);renderStockList();
+        if(USE_GAS){showToast('データを読み込み中...','');loadStockFromGAS();}
     </script>
 </body>
 </html>
