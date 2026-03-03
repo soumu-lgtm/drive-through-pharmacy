@@ -280,34 +280,54 @@
             color: var(--text-muted);
         }
 
-        /* 患者選択 */
-        .patient-quick {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 8px;
+        /* 患者選択（オートコンプリート） */
+        .patient-input-wrapper {
+            position: relative;
         }
 
-        .patient-chip {
-            padding: 8px 14px;
-            background: var(--bg);
+        .patient-autocomplete {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
             border: 1px solid var(--border);
-            border-radius: 20px;
-            font-size: 13px;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 50;
+            display: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .patient-autocomplete.show {
+            display: block;
+        }
+
+        .patient-autocomplete-item {
+            padding: 12px 14px;
             cursor: pointer;
-            transition: all 0.2s;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.2s;
         }
 
-        .patient-chip:hover {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
+        .patient-autocomplete-item:last-child {
+            border-bottom: none;
         }
 
-        .patient-chip.selected {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
+        .patient-autocomplete-item:hover {
+            background: var(--bg);
+        }
+
+        .patient-autocomplete-item .patient-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .patient-autocomplete-item .patient-id {
+            font-size: 12px;
+            color: var(--text-muted);
         }
 
         /* 送信ボタン */
@@ -661,9 +681,11 @@
             <!-- 患者選択（出庫時のみ） -->
             <div class="card" id="patient-card" style="display: none;">
                 <div class="card-title">👤 患者</div>
-                <input type="text" class="form-input" id="patient-input" placeholder="患者番号または氏名">
-                <div class="patient-quick" id="patient-quick">
-                    <!-- 最近の患者がここに表示される -->
+                <div class="patient-input-wrapper">
+                    <input type="text" class="form-input" id="patient-input" placeholder="患者番号または氏名を入力" autocomplete="off">
+                    <div class="patient-autocomplete" id="patient-autocomplete">
+                        <!-- 候補がここに表示される -->
+                    </div>
                 </div>
             </div>
 
@@ -822,10 +844,15 @@
 
         let historyData = [];
 
-        let recentPatients = [
-            { id: '90220', name: '薛 悌吉' },
-            { id: '90205', name: '臼井 ユキ' },
-            { id: '90219', name: '長野 光雄' },
+        // 患者マスタ（M3 DigiKarからCSVインポート、またはGAS経由で取得予定）
+        // 現在はサンプルデータ。本番運用時はスプレッドシートの「患者マスタ」シートから取得
+        let patientData = [
+            { id: '90220', name: '薛 悌吉', furigana: 'セツ テイキチ' },
+            { id: '90205', name: '臼井 ユキ', furigana: 'ウスイ ユキ' },
+            { id: '90219', name: '長野 光雄', furigana: 'ナガノ ミツオ' },
+            { id: '90001', name: '山田 太郎', furigana: 'ヤマダ タロウ' },
+            { id: '90002', name: '佐藤 花子', furigana: 'サトウ ハナコ' },
+            { id: '90003', name: '田中 一郎', furigana: 'タナカ イチロウ' },
         ];
 
         // ===== 状態管理 =====
@@ -855,7 +882,6 @@
                 submitBtn.className = 'submit-btn out-mode';
                 submitBtn.innerHTML = '<span>📤</span> 出庫を記録';
                 patientCard.style.display = 'block';
-                renderRecentPatients();
             }
             updateSubmitButton();
         }
@@ -929,25 +955,48 @@
             }
         }
 
-        // ===== 患者選択 =====
-        function renderRecentPatients() {
-            const container = document.getElementById('patient-quick');
-            container.innerHTML = recentPatients.map(p =>
-                `<div class="patient-chip" onclick="selectPatient('${p.id}', '${p.name}')">${p.name}</div>`
-            ).join('');
+        // ===== 患者オートコンプリート =====
+        function showPatientAutocomplete(query) {
+            const container = document.getElementById('patient-autocomplete');
+
+            if (!query || query.length < 1) {
+                container.classList.remove('show');
+                return;
+            }
+
+            const queryLower = query.toLowerCase();
+            const filtered = patientData.filter(p =>
+                p.id.includes(query) ||
+                p.name.includes(query) ||
+                (p.furigana && p.furigana.toLowerCase().includes(queryLower))
+            ).slice(0, 5); // 最大5件表示
+
+            if (filtered.length === 0) {
+                container.classList.remove('show');
+                return;
+            }
+
+            container.innerHTML = filtered.map(p => `
+                <div class="patient-autocomplete-item" onclick="selectPatientFromAutocomplete('${p.id}', '${p.name}')">
+                    <div class="patient-name">${p.name}</div>
+                    <div class="patient-id">ID: ${p.id}${p.furigana ? ' / ' + p.furigana : ''}</div>
+                </div>
+            `).join('');
+            container.classList.add('show');
         }
 
-        function selectPatient(id, name) {
+        function selectPatientFromAutocomplete(id, name) {
             selectedPatient = { id, name };
             document.getElementById('patient-input').value = name;
-
-            // チップのハイライト
-            document.querySelectorAll('.patient-chip').forEach(chip => {
-                chip.classList.remove('selected');
-                if (chip.textContent === name) chip.classList.add('selected');
-            });
-
+            document.getElementById('patient-autocomplete').classList.remove('show');
             updateSubmitButton();
+        }
+
+        function hidePatientAutocomplete() {
+            // 少し遅延させてクリックイベントが先に処理されるようにする
+            setTimeout(() => {
+                document.getElementById('patient-autocomplete').classList.remove('show');
+            }, 200);
         }
 
         // ===== 送信ボタン状態 =====
@@ -1181,11 +1230,24 @@
         }
 
         // ===== 初期化 =====
-        document.getElementById('patient-input').addEventListener('input', function() {
+        const patientInput = document.getElementById('patient-input');
+
+        patientInput.addEventListener('input', function() {
             // 手入力時は選択済み患者をクリア（手入力の値を優先）
             selectedPatient = null;
-            document.querySelectorAll('.patient-chip').forEach(c => c.classList.remove('selected'));
+            // オートコンプリート表示
+            showPatientAutocomplete(this.value);
             updateSubmitButton();
+        });
+
+        patientInput.addEventListener('blur', function() {
+            hidePatientAutocomplete();
+        });
+
+        patientInput.addEventListener('focus', function() {
+            if (this.value) {
+                showPatientAutocomplete(this.value);
+            }
         });
 
         // 初期表示
