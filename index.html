@@ -248,8 +248,31 @@
         .quantity-value {
             flex: 1;
             text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .quantity-value input {
+            width: 80px;
             font-size: 32px;
             font-weight: 700;
+            text-align: center;
+            border: none;
+            background: transparent;
+            -moz-appearance: textfield;
+        }
+
+        .quantity-value input::-webkit-outer-spin-button,
+        .quantity-value input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .quantity-value input:focus {
+            outline: 2px solid var(--primary);
+            border-radius: 8px;
         }
 
         .quantity-unit {
@@ -591,11 +614,11 @@
         <div class="container">
             <!-- モード切替 -->
             <div class="mode-toggle">
-                <button class="mode-btn active-in" id="btn-in" onclick="setMode('in')">
+                <button class="mode-btn" id="btn-in" onclick="setMode('in')">
                     <span>📥</span>
                     入庫（仕入）
                 </button>
-                <button class="mode-btn" id="btn-out" onclick="setMode('out')">
+                <button class="mode-btn active-out" id="btn-out" onclick="setMode('out')">
                     <span>📤</span>
                     出庫（処方）
                 </button>
@@ -628,7 +651,7 @@
                 <div class="quantity-input">
                     <button class="quantity-btn" onclick="changeQty(-1)">−</button>
                     <div class="quantity-value">
-                        <span id="qty-value">1</span>
+                        <input type="number" id="qty-value" value="1" min="1" inputmode="numeric" pattern="[0-9]*" onchange="updateQtyFromInput()">
                         <span class="quantity-unit" id="qty-unit">錠</span>
                     </div>
                     <button class="quantity-btn" onclick="changeQty(1)">+</button>
@@ -806,7 +829,7 @@
         ];
 
         // ===== 状態管理 =====
-        let currentMode = 'in'; // 'in' or 'out'
+        let currentMode = 'out'; // 'in' or 'out' - デフォルトは出庫（頻度が高い）
         let selectedMedicine = null;
         let quantity = 1;
         let selectedPatient = null;
@@ -882,7 +905,7 @@
             document.getElementById('quantity-card').style.display = 'block';
             document.getElementById('qty-unit').textContent = medicine.unit;
             quantity = 1;
-            document.getElementById('qty-value').textContent = quantity;
+            document.getElementById('qty-value').value = quantity;
 
             updateSubmitButton();
         }
@@ -890,9 +913,20 @@
         // ===== 数量操作 =====
         function changeQty(delta) {
             quantity = Math.max(1, quantity + delta);
-            document.getElementById('qty-value').textContent = quantity;
+            document.getElementById('qty-value').value = quantity;
             // 振動フィードバック
             if (navigator.vibrate) navigator.vibrate(30);
+        }
+
+        function updateQtyFromInput() {
+            const input = document.getElementById('qty-value');
+            const val = parseInt(input.value, 10);
+            if (isNaN(val) || val < 1) {
+                quantity = 1;
+                input.value = 1;
+            } else {
+                quantity = val;
+            }
         }
 
         // ===== 患者選択 =====
@@ -1147,7 +1181,12 @@
         }
 
         // ===== 初期化 =====
-        document.getElementById('patient-input').addEventListener('input', updateSubmitButton);
+        document.getElementById('patient-input').addEventListener('input', function() {
+            // 手入力時は選択済み患者をクリア（手入力の値を優先）
+            selectedPatient = null;
+            document.querySelectorAll('.patient-chip').forEach(c => c.classList.remove('selected'));
+            updateSubmitButton();
+        });
 
         // 初期表示
         renderStockList();
