@@ -946,11 +946,16 @@
                         note: ''
                     });
                 } else {
+                    // 数字のみの場合はpatientId、それ以外はpatientNameとして扱う
+                    const isNumeric = /^\d+$/.test(patientInput.trim());
+                    const patientId = selectedPatient?.id || (isNumeric ? patientInput.trim() : '');
+                    const patientName = selectedPatient?.name || (isNumeric ? '' : patientInput.trim());
+
                     result = await gasPost('stockOut', {
                         code: selectedMedicine.code,
                         quantity: quantity,
-                        patientId: selectedPatient?.id || '',
-                        patientName: patientInput,
+                        patientId: patientId,
+                        patientName: patientName,
                         operator: '担当者',
                         note: ''
                     });
@@ -993,7 +998,11 @@
                 stockData[idx].stock -= quantity;
             }
 
-            // 履歴追加
+            // 履歴追加（数字のみはID、それ以外は名前として表示）
+            const isNumericLocal = /^\d+$/.test(patientInput.trim());
+            const patientDisplay = currentMode === 'out'
+                ? (isNumericLocal ? `ID:${patientInput.trim()}` : patientInput.trim())
+                : null;
             const record = {
                 time: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
                 type: currentMode,
@@ -1001,7 +1010,7 @@
                 code: selectedMedicine.code,
                 quantity: quantity,
                 unit: selectedMedicine.unit,
-                patient: currentMode === 'out' ? patientInput : null
+                patient: patientDisplay
             };
             historyData.unshift(record);
 
@@ -1024,6 +1033,9 @@
             document.getElementById('quantity-card').style.display = 'none';
             document.getElementById('patient-input').value = '';
             document.querySelectorAll('.patient-chip').forEach(c => c.classList.remove('selected'));
+
+            // ボタンのテキストを復元
+            setMode(currentMode);
             updateSubmitButton();
         }
 
