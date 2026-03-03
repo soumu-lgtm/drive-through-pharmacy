@@ -19,573 +19,185 @@
             --border: #e2e8f0;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            padding-bottom: 80px;
-        }
-        .header {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-            padding: 16px 20px;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 80px; }
+        .header { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 16px 20px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
         .header h1 { font-size: 18px; font-weight: 600; }
         .header-sub { font-size: 12px; opacity: 0.9; margin-top: 4px; }
         .container { max-width: 500px; margin: 0 auto; padding: 16px; }
-        .card {
-            background: var(--card);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 16px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        .card-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-muted);
-            margin-bottom: 12px;
-        }
+        .card { background: var(--card); border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .card-title { font-size: 14px; font-weight: 600; color: var(--text-muted); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
         .mode-toggle { display: flex; gap: 8px; margin-bottom: 16px; }
-        .mode-btn {
-            flex: 1;
-            padding: 14px;
-            border: 2px solid var(--border);
-            border-radius: 10px;
-            background: white;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-        }
+        .mode-btn { flex: 1; padding: 14px; border: 2px solid var(--border); border-radius: 10px; background: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 4px; }
         .mode-btn.active-in { border-color: var(--success); background: #f0fdf4; color: var(--success); }
         .mode-btn.active-out { border-color: var(--danger); background: #fef2f2; color: var(--danger); }
         .mode-btn span { font-size: 24px; }
         #qr-reader { width: 100%; border-radius: 8px; overflow: hidden; }
-        .qr-placeholder {
-            background: #1e293b;
-            border-radius: 8px;
-            padding: 40px;
-            text-align: center;
-            color: white;
-        }
-        .qr-placeholder button {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 12px;
-        }
-        .scan-result {
-            display: none;
-            background: #f0fdf4;
-            border: 2px solid var(--success);
-            border-radius: 10px;
-            padding: 16px;
-            margin-top: 12px;
-        }
-        .scan-result.show { display: block; }
-        .medicine-name { font-size: 18px; font-weight: 700; }
+        #qr-reader video { border-radius: 8px; }
+        .qr-placeholder { background: #1e293b; border-radius: 8px; padding: 40px; text-align: center; color: white; }
+        .qr-placeholder button { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 12px; }
+        .scan-result { display: none; background: #f0fdf4; border: 2px solid var(--success); border-radius: 10px; padding: 16px; margin-top: 12px; }
+        .scan-result.show { display: block; animation: slideIn 0.3s ease; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .medicine-name { font-size: 18px; font-weight: 700; color: var(--text); }
         .medicine-code { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
-        .medicine-stock {
-            display: inline-block;
-            background: var(--primary);
-            color: white;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 13px;
-            margin-top: 8px;
-        }
-        .form-input {
-            width: 100%;
-            padding: 12px 14px;
-            border: 2px solid var(--border);
-            border-radius: 8px;
-            font-size: 16px;
-        }
+        .medicine-stock { display: inline-block; background: var(--primary); color: white; padding: 4px 10px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-top: 8px; }
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+        .form-input { width: 100%; padding: 12px 14px; border: 2px solid var(--border); border-radius: 8px; font-size: 16px; transition: border-color 0.2s; }
         .form-input:focus { outline: none; border-color: var(--primary); }
         .quantity-input { display: flex; align-items: center; gap: 12px; }
-        .quantity-btn {
-            width: 48px;
-            height: 48px;
-            border: 2px solid var(--border);
-            border-radius: 10px;
-            background: white;
-            font-size: 24px;
-            cursor: pointer;
-        }
+        .quantity-btn { width: 48px; height: 48px; border: 2px solid var(--border); border-radius: 10px; background: white; font-size: 24px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .quantity-btn:active { background: var(--bg); transform: scale(0.95); }
         .quantity-value { flex: 1; text-align: center; font-size: 32px; font-weight: 700; }
         .quantity-unit { font-size: 16px; color: var(--text-muted); }
-        .submit-btn {
-            width: 100%;
-            padding: 16px;
-            border: none;
-            border-radius: 10px;
-            font-size: 17px;
-            font-weight: 700;
-            cursor: pointer;
-        }
+        .patient-quick { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+        .patient-chip { padding: 8px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 20px; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+        .patient-chip:hover, .patient-chip.selected { background: var(--primary); color: white; border-color: var(--primary); }
+        .submit-btn { width: 100%; padding: 16px; border: none; border-radius: 10px; font-size: 17px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .submit-btn.in-mode { background: var(--success); color: white; }
         .submit-btn.out-mode { background: var(--danger); color: white; }
-        .submit-btn:disabled { opacity: 0.5; }
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: white;
-            border-top: 1px solid var(--border);
-            display: flex;
-            justify-content: space-around;
-            padding: 8px 0;
-            padding-bottom: max(8px, env(safe-area-inset-bottom));
-        }
-        .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 8px 16px;
-            color: var(--text-muted);
-            font-size: 11px;
-            cursor: pointer;
-        }
-        .nav-item.active { color: var(--primary); }
-        .nav-item span { font-size: 22px; margin-bottom: 2px; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .stock-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 14px;
-            background: white;
-            border-radius: 10px;
-            margin-bottom: 8px;
-        }
-        .stock-name { font-weight: 600; font-size: 15px; }
-        .stock-code { font-size: 12px; color: var(--text-muted); }
-        .stock-qty { font-size: 24px; font-weight: 700; }
-        .stock-qty.low { color: var(--danger); }
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 300;
-            align-items: flex-end;
-        }
-        .modal-overlay.show { display: flex; }
-        .modal-content {
-            background: white;
-            width: 100%;
-            max-width: 500px;
-            margin: 0 auto;
-            border-radius: 20px 20px 0 0;
-            padding: 24px;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .modal-title { font-size: 18px; font-weight: 700; }
-        .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; }
-        .medicine-list { max-height: 300px; overflow-y: auto; }
-        .medicine-item {
-            padding: 12px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            margin-bottom: 8px;
-            cursor: pointer;
-        }
-        .medicine-item:hover { background: var(--bg); border-color: var(--primary); }
-        .toast {
-            position: fixed;
-            bottom: 100px;
-            left: 50%;
-            transform: translateX(-50%) translateY(100px);
-            background: #1e293b;
-            color: white;
-            padding: 14px 24px;
-            border-radius: 10px;
-            font-weight: 600;
-            opacity: 0;
-            transition: all 0.3s;
-            z-index: 200;
-        }
-        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
-        .toast.success { background: var(--success); }
-        .toast.error { background: var(--danger); }
-        .history-item {
-            display: flex;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid var(--border);
-        }
-        .history-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            margin-right: 12px;
-        }
+        .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .submit-btn:not(:disabled):active { transform: scale(0.98); }
+        .history-item { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+        .history-item:last-child { border-bottom: none; }
+        .history-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-right: 12px; }
         .history-icon.in { background: #dcfce7; }
         .history-icon.out { background: #fee2e2; }
         .history-content { flex: 1; }
         .history-medicine { font-weight: 600; font-size: 14px; }
-        .history-detail { font-size: 12px; color: var(--text-muted); }
+        .history-detail { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
         .history-qty { font-weight: 700; font-size: 16px; }
         .history-qty.in { color: var(--success); }
         .history-qty.out { color: var(--danger); }
+        .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(100px); background: #1e293b; color: white; padding: 14px 24px; border-radius: 10px; font-weight: 600; opacity: 0; transition: all 0.3s; z-index: 200; }
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--danger); }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 300; align-items: flex-end; justify-content: center; }
+        .modal-overlay.show { display: flex; }
+        .modal-content { background: white; width: 100%; max-width: 500px; border-radius: 20px 20px 0 0; padding: 24px; max-height: 80vh; overflow-y: auto; animation: slideUp 0.3s ease; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-title { font-size: 18px; font-weight: 700; }
+        .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-muted); }
+        .medicine-list { max-height: 300px; overflow-y: auto; }
+        .medicine-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; }
+        .medicine-item:hover { background: var(--bg); border-color: var(--primary); }
+        .medicine-item-name { font-weight: 600; }
+        .medicine-item-stock { font-size: 13px; color: var(--text-muted); }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 8px 0; padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+        .nav-item { display: flex; flex-direction: column; align-items: center; padding: 8px 16px; color: var(--text-muted); text-decoration: none; font-size: 11px; cursor: pointer; }
+        .nav-item.active { color: var(--primary); }
+        .nav-item span { font-size: 22px; margin-bottom: 2px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .stock-item { display: flex; justify-content: space-between; align-items: center; padding: 14px; background: white; border-radius: 10px; margin-bottom: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .stock-info { flex: 1; }
+        .stock-name { font-weight: 600; font-size: 15px; }
+        .stock-code { font-size: 12px; color: var(--text-muted); }
+        .stock-qty { font-size: 24px; font-weight: 700; }
+        .stock-qty.low { color: var(--danger); }
+        .stock-unit { font-size: 13px; color: var(--text-muted); }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>薬品在庫管理システム</h1>
-        <div class="header-sub">西春内科・在宅クリニック</div>
-    </div>
-
+    <div class="header"><h1>薬品在庫管理システム</h1><div class="header-sub">西春内科・在宅クリニック</div></div>
     <div id="tab-scan" class="tab-content active">
         <div class="container">
             <div class="mode-toggle">
-                <button class="mode-btn active-in" id="btn-in" onclick="setMode('in')">
-                    <span>📥</span>入庫
-                </button>
-                <button class="mode-btn" id="btn-out" onclick="setMode('out')">
-                    <span>📤</span>出庫
-                </button>
+                <button class="mode-btn active-in" id="btn-in" onclick="setMode('in')"><span>📥</span>入庫（仕入）</button>
+                <button class="mode-btn" id="btn-out" onclick="setMode('out')"><span>📤</span>出庫（処方）</button>
             </div>
-
             <div class="card">
                 <div class="card-title">📷 QRコード読み取り</div>
                 <div id="qr-reader"></div>
                 <div id="qr-placeholder" class="qr-placeholder">
                     <div>カメラでQRコードをスキャン</div>
                     <button onclick="startScanner()">カメラを起動</button>
-                    <div style="margin-top: 16px; font-size: 13px; opacity: 0.7;">
-                        または <a href="#" onclick="openManualSelect()" style="color: white;">手動で薬品を選択</a>
-                    </div>
+                    <div style="margin-top: 16px; font-size: 13px; opacity: 0.7;">または<a href="#" onclick="openManualSelect()" style="color: white;">手動で薬品を選択</a></div>
                 </div>
                 <div id="scan-result" class="scan-result">
                     <div class="medicine-name" id="result-name">-</div>
                     <div class="medicine-code" id="result-code">コード: -</div>
-                    <div class="medicine-stock" id="result-stock">現在庫: -</div>
+                    <div class="medicine-stock" id="result-stock">現在庫: - 個</div>
                 </div>
             </div>
-
             <div class="card" id="quantity-card" style="display: none;">
                 <div class="card-title">📦 数量</div>
                 <div class="quantity-input">
                     <button class="quantity-btn" onclick="changeQty(-1)">−</button>
-                    <div class="quantity-value">
-                        <span id="qty-value">1</span>
-                        <span class="quantity-unit" id="qty-unit">錠</span>
-                    </div>
+                    <div class="quantity-value"><span id="qty-value">1</span><span class="quantity-unit" id="qty-unit">錠</span></div>
                     <button class="quantity-btn" onclick="changeQty(1)">+</button>
                 </div>
             </div>
-
             <div class="card" id="patient-card" style="display: none;">
                 <div class="card-title">👤 患者</div>
                 <input type="text" class="form-input" id="patient-input" placeholder="患者番号または氏名">
+                <div class="patient-quick" id="patient-quick"></div>
             </div>
-
-            <button class="submit-btn in-mode" id="submit-btn" onclick="submitTransaction()" disabled>
-                <span>📥</span> 入庫を記録
-            </button>
+            <button class="submit-btn in-mode" id="submit-btn" onclick="submitTransaction()" disabled><span>📥</span>入庫を記録</button>
         </div>
     </div>
-
     <div id="tab-stock" class="tab-content">
         <div class="container">
-            <div class="card">
-                <div class="card-title">🔍 薬品検索</div>
-                <input type="text" class="form-input" id="stock-search" placeholder="薬品名で検索..." oninput="filterStock()">
-            </div>
+            <div class="card"><div class="card-title">🔍 薬品検索</div><input type="text" class="form-input" id="stock-search" placeholder="薬品名で検索..." oninput="filterStock()"></div>
             <div id="stock-list"></div>
         </div>
     </div>
-
     <div id="tab-history" class="tab-content">
-        <div class="container">
-            <div class="card">
-                <div class="card-title">📋 本日の履歴</div>
-                <div id="history-list"></div>
-            </div>
-        </div>
+        <div class="container"><div class="card"><div class="card-title">📋 本日の履歴</div><div id="history-list"></div></div></div>
     </div>
-
     <div class="bottom-nav">
         <div class="nav-item active" onclick="switchTab('scan')"><span>📷</span>スキャン</div>
         <div class="nav-item" onclick="switchTab('stock')"><span>📦</span>在庫</div>
         <div class="nav-item" onclick="switchTab('history')"><span>📋</span>履歴</div>
     </div>
-
     <div class="modal-overlay" id="manual-modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-title">薬品を選択</div>
-                <button class="modal-close" onclick="closeManualSelect()">×</button>
-            </div>
+            <div class="modal-header"><div class="modal-title">薬品を選択</div><button class="modal-close" onclick="closeManualSelect()">×</button></div>
             <input type="text" class="form-input" id="modal-search" placeholder="薬品名で検索..." oninput="filterModalList()">
             <div class="medicine-list" id="modal-list"></div>
         </div>
     </div>
-
     <div class="toast" id="toast"></div>
-
     <script>
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbyr7seSTnCE8N5-cYZ90VXEeXE389iwXf-5cgnMDBBRqMpZ6g6SoTWOSsTH_rvz1514/exec';
         const USE_GAS = true;
-
+        async function gasGet(action, params = {}) { if (!USE_GAS) return null; try { const url = new URL(GAS_URL); url.searchParams.append('action', action); Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, v)); const res = await fetch(url.toString()); return await res.json(); } catch (e) { console.error('GAS GET error:', e); showToast('サーバー通信エラー', 'error'); return null; } }
+        async function gasPost(action, data) { if (!USE_GAS) return null; try { const res = await fetch(GAS_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, ...data }) }); return await res.json(); } catch (e) { console.error('GAS POST error:', e); showToast('サーバー通信エラー', 'error'); return null; } }
+        async function loadStockFromGAS() { const result = await gasGet('getStock'); if (result && result.success) { stockData = result.stock.map(s => ({ code: s.code, name: s.name, stock: s.currentStock, unit: s.unit, threshold: s.threshold || 10 })); renderStockList(); showToast('データを同期しました', 'success'); } }
         let stockData = [];
         let historyData = [];
+        let recentPatients = [{ id: '90220', name: '薛 悌吉' }, { id: '90205', name: '臼井 ユキ' }, { id: '90219', name: '長野 光雄' }];
         let currentMode = 'in';
         let selectedMedicine = null;
         let quantity = 1;
+        let selectedPatient = null;
         let html5QrCode = null;
-
-        async function gasGet(action) {
-            if (!USE_GAS) return null;
-            try {
-                const res = await fetch(GAS_URL + '?action=' + action);
-                return await res.json();
-            } catch (e) {
-                console.error(e);
-                return null;
-            }
-        }
-
-        async function gasPost(action, data) {
-            if (!USE_GAS) return null;
-            try {
-                const res = await fetch(GAS_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action, ...data })
-                });
-                return await res.json();
-            } catch (e) {
-                console.error(e);
-                return null;
-            }
-        }
-
-        async function loadStock() {
-            const result = await gasGet('getStock');
-            if (result && result.success) {
-                stockData = result.stock.map(s => ({
-                    code: s.code,
-                    name: s.name,
-                    stock: s.currentStock,
-                    unit: s.unit,
-                    threshold: s.threshold || 10
-                }));
-                renderStockList();
-                showToast('データを同期しました', 'success');
-            }
-        }
-
-        function setMode(mode) {
-            currentMode = mode;
-            document.getElementById('btn-in').className = mode === 'in' ? 'mode-btn active-in' : 'mode-btn';
-            document.getElementById('btn-out').className = mode === 'out' ? 'mode-btn active-out' : 'mode-btn';
-            document.getElementById('submit-btn').className = 'submit-btn ' + mode + '-mode';
-            document.getElementById('submit-btn').innerHTML = mode === 'in' ? '📥 入庫を記録' : '📤 出庫を記録';
-            document.getElementById('patient-card').style.display = mode === 'out' ? 'block' : 'none';
-            updateSubmitButton();
-        }
-
-        function startScanner() {
-            document.getElementById('qr-placeholder').style.display = 'none';
-            html5QrCode = new Html5Qrcode("qr-reader");
-            html5QrCode.start(
-                { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 250, height: 250 } },
-                onScanSuccess,
-                () => {}
-            ).catch(err => {
-                showToast('カメラを起動できませんでした', 'error');
-                document.getElementById('qr-placeholder').style.display = 'block';
-            });
-        }
-
-        function onScanSuccess(code) {
-            const medicine = stockData.find(m => m.code === code);
-            if (medicine) {
-                selectMedicine(medicine);
-                if (navigator.vibrate) navigator.vibrate(100);
-            } else {
-                showToast('未登録: ' + code, 'error');
-            }
-        }
-
-        function selectMedicine(medicine) {
-            selectedMedicine = medicine;
-            document.getElementById('result-name').textContent = medicine.name;
-            document.getElementById('result-code').textContent = 'コード: ' + medicine.code;
-            document.getElementById('result-stock').textContent = '現在庫: ' + medicine.stock + ' ' + medicine.unit;
-            document.getElementById('scan-result').classList.add('show');
-            document.getElementById('quantity-card').style.display = 'block';
-            document.getElementById('qty-unit').textContent = medicine.unit;
-            quantity = 1;
-            document.getElementById('qty-value').textContent = quantity;
-            updateSubmitButton();
-        }
-
-        function changeQty(delta) {
-            quantity = Math.max(1, quantity + delta);
-            document.getElementById('qty-value').textContent = quantity;
-        }
-
-        function updateSubmitButton() {
-            const btn = document.getElementById('submit-btn');
-            const canSubmit = selectedMedicine && (currentMode === 'in' || document.getElementById('patient-input').value);
-            btn.disabled = !canSubmit;
-        }
-
-        async function submitTransaction() {
-            if (!selectedMedicine) return;
-            const btn = document.getElementById('submit-btn');
-            btn.disabled = true;
-            btn.innerHTML = '⏳ 送信中...';
-
-            let result;
-            if (currentMode === 'in') {
-                result = await gasPost('stockIn', { code: selectedMedicine.code, quantity });
-            } else {
-                result = await gasPost('stockOut', {
-                    code: selectedMedicine.code,
-                    quantity,
-                    patientName: document.getElementById('patient-input').value
-                });
-            }
-
-            if (result && result.success) {
-                showToast(selectedMedicine.name + ' を ' + quantity + selectedMedicine.unit + (currentMode === 'in' ? ' 入庫' : ' 出庫'), 'success');
-                resetForm();
-                loadStock();
-            } else {
-                showToast(result?.error || '送信失敗', 'error');
-                btn.disabled = false;
-                setMode(currentMode);
-            }
-        }
-
-        function resetForm() {
-            selectedMedicine = null;
-            quantity = 1;
-            document.getElementById('scan-result').classList.remove('show');
-            document.getElementById('quantity-card').style.display = 'none';
-            document.getElementById('patient-input').value = '';
-            setMode(currentMode);
-        }
-
-        function showToast(msg, type) {
-            const toast = document.getElementById('toast');
-            toast.textContent = msg;
-            toast.className = 'toast ' + type + ' show';
-            setTimeout(() => toast.classList.remove('show'), 3000);
-        }
-
-        function switchTab(name) {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById('tab-' + name).classList.add('active');
-            document.querySelectorAll('.nav-item')[['scan', 'stock', 'history'].indexOf(name)].classList.add('active');
-            if (name === 'stock') renderStockList();
-            if (name === 'history') renderHistory();
-        }
-
-        function renderStockList(filter = '') {
-            const list = document.getElementById('stock-list');
-            const filtered = stockData.filter(m => m.name.includes(filter) || m.code.includes(filter));
-            list.innerHTML = filtered.map(m => `
-                <div class="stock-item" onclick="selectFromStock('${m.code}')">
-                    <div><div class="stock-name">${m.name}</div><div class="stock-code">${m.code}</div></div>
-                    <div><span class="stock-qty ${m.stock <= m.threshold ? 'low' : ''}">${m.stock}</span> ${m.unit}</div>
-                </div>
-            `).join('');
-        }
-
-        function selectFromStock(code) {
-            const med = stockData.find(m => m.code === code);
-            if (med) { selectMedicine(med); switchTab('scan'); }
-        }
-
-        function filterStock() {
-            renderStockList(document.getElementById('stock-search').value);
-        }
-
-        function renderHistory() {
-            const list = document.getElementById('history-list');
-            if (historyData.length === 0) {
-                list.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px">履歴がありません</div>';
-                return;
-            }
-            list.innerHTML = historyData.map(h => `
-                <div class="history-item">
-                    <div class="history-icon ${h.type}">${h.type === 'in' ? '📥' : '📤'}</div>
-                    <div class="history-content">
-                        <div class="history-medicine">${h.medicine}</div>
-                        <div class="history-detail">${h.time}${h.patient ? ' • ' + h.patient : ''}</div>
-                    </div>
-                    <div class="history-qty ${h.type}">${h.type === 'in' ? '+' : '-'}${h.quantity}${h.unit}</div>
-                </div>
-            `).join('');
-        }
-
-        function openManualSelect() {
-            document.getElementById('manual-modal').classList.add('show');
-            renderModalList();
-        }
-
-        function closeManualSelect() {
-            document.getElementById('manual-modal').classList.remove('show');
-        }
-
-        function renderModalList(filter = '') {
-            const list = document.getElementById('modal-list');
-            const filtered = stockData.filter(m => m.name.includes(filter) || m.code.includes(filter));
-            list.innerHTML = filtered.map(m => `
-                <div class="medicine-item" onclick="selectFromModal('${m.code}')">
-                    <div style="font-weight:600">${m.name}</div>
-                    <div style="font-size:13px;color:var(--text-muted)">在庫: ${m.stock}${m.unit}</div>
-                </div>
-            `).join('');
-        }
-
-        function filterModalList() {
-            renderModalList(document.getElementById('modal-search').value);
-        }
-
-        function selectFromModal(code) {
-            const med = stockData.find(m => m.code === code);
-            if (med) { selectMedicine(med); closeManualSelect(); }
-        }
-
+        function setMode(mode) { currentMode = mode; const btnIn = document.getElementById('btn-in'); const btnOut = document.getElementById('btn-out'); const submitBtn = document.getElementById('submit-btn'); const patientCard = document.getElementById('patient-card'); if (mode === 'in') { btnIn.className = 'mode-btn active-in'; btnOut.className = 'mode-btn'; submitBtn.className = 'submit-btn in-mode'; submitBtn.innerHTML = '<span>📥</span> 入庫を記録'; patientCard.style.display = 'none'; } else { btnIn.className = 'mode-btn'; btnOut.className = 'mode-btn active-out'; submitBtn.className = 'submit-btn out-mode'; submitBtn.innerHTML = '<span>📤</span> 出庫を記録'; patientCard.style.display = 'block'; renderRecentPatients(); } updateSubmitButton(); }
+        function startScanner() { document.getElementById('qr-placeholder').style.display = 'none'; html5QrCode = new Html5Qrcode("qr-reader"); html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onScanSuccess, onScanFailure).catch(err => { console.error('Camera error:', err); showToast('カメラを起動できませんでした', 'error'); document.getElementById('qr-placeholder').style.display = 'block'; }); }
+        function onScanSuccess(decodedText) { const medicine = stockData.find(m => String(m.code) === String(decodedText)); if (medicine) { selectMedicine(medicine); if (navigator.vibrate) navigator.vibrate(100); } else { showToast('未登録の薬品です: ' + decodedText, 'error'); } }
+        function onScanFailure(error) {}
+        function selectMedicine(medicine) { selectedMedicine = medicine; document.getElementById('result-name').textContent = medicine.name; document.getElementById('result-code').textContent = 'コード: ' + medicine.code; document.getElementById('result-stock').textContent = '現在庫: ' + medicine.stock + ' ' + medicine.unit; document.getElementById('scan-result').classList.add('show'); document.getElementById('quantity-card').style.display = 'block'; document.getElementById('qty-unit').textContent = medicine.unit; quantity = 1; document.getElementById('qty-value').textContent = quantity; updateSubmitButton(); }
+        function changeQty(delta) { quantity = Math.max(1, quantity + delta); document.getElementById('qty-value').textContent = quantity; if (navigator.vibrate) navigator.vibrate(30); }
+        function renderRecentPatients() { const container = document.getElementById('patient-quick'); container.innerHTML = recentPatients.map(p => `<div class="patient-chip" onclick="selectPatient('${p.id}', '${p.name}')">${p.name}</div>`).join(''); }
+        function selectPatient(id, name) { selectedPatient = { id, name }; document.getElementById('patient-input').value = name; document.querySelectorAll('.patient-chip').forEach(chip => { chip.classList.remove('selected'); if (chip.textContent === name) chip.classList.add('selected'); }); updateSubmitButton(); }
+        function updateSubmitButton() { const btn = document.getElementById('submit-btn'); const canSubmit = selectedMedicine && (currentMode === 'in' || (currentMode === 'out' && document.getElementById('patient-input').value)); btn.disabled = !canSubmit; }
+        async function submitTransaction() { if (!selectedMedicine) return; const patientInput = document.getElementById('patient-input').value; const submitBtn = document.getElementById('submit-btn'); submitBtn.disabled = true; submitBtn.innerHTML = '<span>⏳</span> 送信中...'; if (USE_GAS) { let result; if (currentMode === 'in') { result = await gasPost('stockIn', { code: selectedMedicine.code, quantity: quantity, operator: '担当者', note: '' }); } else { result = await gasPost('stockOut', { code: selectedMedicine.code, quantity: quantity, patientId: selectedPatient?.id || '', patientName: patientInput, operator: '担当者', note: '' }); } if (result && result.success) { const idx = stockData.findIndex(m => String(m.code) === String(selectedMedicine.code)); if (currentMode === 'in') { stockData[idx].stock += quantity; } else { stockData[idx].stock -= quantity; } const msg = currentMode === 'in' ? `${selectedMedicine.name} を ${quantity}${selectedMedicine.unit} 入庫しました` : `${selectedMedicine.name} を ${quantity}${selectedMedicine.unit} 出庫しました`; showToast(msg, 'success'); resetForm(); } else { showToast(result?.error || '送信に失敗しました', 'error'); submitBtn.disabled = false; setMode(currentMode); } return; } }
+        function resetForm() { selectedMedicine = null; quantity = 1; selectedPatient = null; document.getElementById('scan-result').classList.remove('show'); document.getElementById('quantity-card').style.display = 'none'; document.getElementById('patient-input').value = ''; document.querySelectorAll('.patient-chip').forEach(c => c.classList.remove('selected')); setMode(currentMode); updateSubmitButton(); }
+        function showToast(message, type = '') { const toast = document.getElementById('toast'); toast.textContent = message; toast.className = 'toast ' + type + ' show'; setTimeout(() => toast.classList.remove('show'), 3000); }
+        function switchTab(tabName) { document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('tab-' + tabName).classList.add('active'); document.querySelectorAll('.nav-item')[['scan', 'stock', 'history'].indexOf(tabName)].classList.add('active'); if (tabName === 'stock') renderStockList(); if (tabName === 'history') renderHistory(); }
+        function renderStockList(filter = '') { const container = document.getElementById('stock-list'); const filtered = stockData.filter(m => m.name.toLowerCase().includes(filter.toLowerCase()) || String(m.code).includes(filter)); container.innerHTML = filtered.map(m => `<div class="stock-item"><div class="stock-info"><div class="stock-name">${m.name}</div><div class="stock-code">${m.code}</div></div><div><span class="stock-qty ${m.stock <= m.threshold ? 'low' : ''}">${m.stock}</span><span class="stock-unit">${m.unit}</span></div></div>`).join(''); }
+        function filterStock() { const query = document.getElementById('stock-search').value; renderStockList(query); }
+        function renderHistory() { const container = document.getElementById('history-list'); if (historyData.length === 0) { container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">履歴がありません</div>'; return; } container.innerHTML = historyData.map(h => `<div class="history-item"><div class="history-icon ${h.type}">${h.type === 'in' ? '📥' : '📤'}</div><div class="history-content"><div class="history-medicine">${h.medicine}</div><div class="history-detail">${h.time}${h.patient ? ' • ' + h.patient : ''}</div></div><div class="history-qty ${h.type}">${h.type === 'in' ? '+' : '-'}${h.quantity}${h.unit}</div></div>`).join(''); }
+        function openManualSelect() { document.getElementById('manual-modal').classList.add('show'); renderModalList(); }
+        function closeManualSelect() { document.getElementById('manual-modal').classList.remove('show'); }
+        function renderModalList(filter = '') { const container = document.getElementById('modal-list'); const filtered = stockData.filter(m => m.name.toLowerCase().includes(filter.toLowerCase()) || String(m.code).includes(filter)); container.innerHTML = filtered.map(m => `<div class="medicine-item" onclick="selectFromModal('${m.code}')"><div><div class="medicine-item-name">${m.name}</div><div class="medicine-item-stock">在庫: ${m.stock}${m.unit}</div></div></div>`).join(''); }
+        function filterModalList() { const query = document.getElementById('modal-search').value; renderModalList(query); }
+        function selectFromModal(code) { const medicine = stockData.find(m => String(m.code) === String(code)); if (medicine) { selectMedicine(medicine); closeManualSelect(); } }
         document.getElementById('patient-input').addEventListener('input', updateSubmitButton);
-        if (USE_GAS) loadStock();
+        renderStockList();
+        if (USE_GAS) { showToast('データを読み込み中...', ''); loadStockFromGAS(); }
     </script>
 </body>
-    </html>
+</html>
