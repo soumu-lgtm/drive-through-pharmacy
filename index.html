@@ -917,26 +917,19 @@
         }
 
         function onScanSuccess(decodedText) {
-            // デバッグ出力
-            console.log('=== QRスキャン ===');
-            console.log('読み取り値:', decodedText);
-            console.log('正規化後:', normalizeCode(decodedText));
-            console.log('stockData件数:', stockData.length);
-            if (stockData.length > 0) {
-                console.log('stockData[0].code:', stockData[0].code, '→正規化:', normalizeCode(stockData[0].code));
-            }
-
             // QRコードから薬品コードを抽出（先頭ゼロの有無を吸収して比較）
             const normalizedScanned = normalizeCode(decodedText);
             const medicine = stockData.find(m => normalizeCode(m.code) === normalizedScanned);
-            console.log('マッチ結果:', medicine ? medicine.name : 'なし');
 
             if (medicine) {
                 selectMedicine(medicine);
                 // 振動フィードバック
                 if (navigator.vibrate) navigator.vibrate(100);
             } else {
-                showToast('未登録の薬品です: ' + decodedText, 'error');
+                // デバッグ情報を画面に表示
+                const stockCodes = stockData.slice(0, 3).map(m => normalizeCode(m.code)).join(', ');
+                const debugMsg = `未登録: ${decodedText}\n正規化: ${normalizedScanned}\nデータ数: ${stockData.length}件\n登録コード例: ${stockCodes}`;
+                alert(debugMsg);
             }
         }
 
