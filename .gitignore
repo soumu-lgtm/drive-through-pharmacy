@@ -4,6 +4,13 @@
 gas_v01_backup.txt
 github_paste.txt
 
+# Archive (v0.2/v0.3 backups, not tracked)
+archive/
+
+# Legacy files (replaced by demo.html)
+index_demo.html
+index_demo_v02.html
+
 # Screenshots & generated images
 screenshots/
 qr_codes/
