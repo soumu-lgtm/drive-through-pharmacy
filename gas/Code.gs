@@ -1,11 +1,14 @@
 /**
- * 薬品在庫管理システム - Google Apps Script
+ * 薬品在庫管理システム - Google Apps Script v0.1
  * ドライブスルー診療プロジェクト
  *
- * スプレッドシートID: [新規作成後にここに記入]
+ * スプレッドシートID: 13AId0dOUOrrZLnFnZi_V4NcOo5OT9pkaFr1UJPIK02c
+ * GASプロジェクト: https://script.google.com/home/projects/1vVktinccj0Hm43dt_bEjCPIhXbIwVyhppdCQr87a1cweCGyayYJh55Nv/edit
  */
 
 // ===== 設定 =====
+const SPREADSHEET_ID = '13AId0dOUOrrZLnFnZi_V4NcOo5OT9pkaFr1UJPIK02c';
+
 const SHEET_NAMES = {
   MEDICINE_MASTER: '薬品マスタ',
   STOCK_IN: '入庫履歴',
@@ -13,6 +16,23 @@ const SHEET_NAMES = {
   CURRENT_STOCK: '在庫サマリー',
   PATIENT_MASTER: '患者マスタ'
 };
+
+/**
+ * スプレッドシートを取得（独立プロジェクト対応）
+ * 注: GASが独立プロジェクトのため getActiveSpreadsheet() は使えない
+ */
+function getSpreadsheet() {
+  return SpreadsheetApp.openById(SPREADSHEET_ID);
+}
+
+/**
+ * コードを正規化（先頭ゼロを除去して数値として比較可能にする）
+ * QRコード: 59000001 (8桁) と スプレッドシート: 059000001 (9桁) を一致させる
+ */
+function normalizeCode(code) {
+  if (!code) return '';
+  return String(parseInt(String(code), 10));
+}
 
 // ===== Web App エンドポイント =====
 
@@ -75,7 +95,7 @@ function doPost(e) {
  * 薬品一覧を取得
  */
 function getMedicineList() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEET_NAMES.MEDICINE_MASTER);
 
   if (!sheet) {
@@ -83,12 +103,11 @@ function getMedicineList() {
   }
 
   const data = sheet.getDataRange().getValues();
-  const headers = data[0];
   const medicines = [];
 
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
-    if (row[0]) { // コードがある行のみ
+    if (row[0]) {
       medicines.push({
         code: row[0],
         name: row[1],
@@ -108,7 +127,7 @@ function getMedicineList() {
  * 現在の在庫数を取得
  */
 function getCurrentStock() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEET_NAMES.CURRENT_STOCK);
 
   if (!sheet) {
@@ -143,7 +162,7 @@ function getCurrentStock() {
 function recordStockIn(data) {
   const { code, quantity, operator, note } = data;
 
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEET_NAMES.STOCK_IN);
 
   if (!sheet) {
@@ -175,7 +194,7 @@ function recordStockIn(data) {
 function recordStockOut(data) {
   const { code, quantity, patientId, patientName, operator, note } = data;
 
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEET_NAMES.STOCK_OUT);
 
   if (!sheet) {
@@ -213,23 +232,24 @@ function recordStockOut(data) {
  * 在庫サマリーを更新
  */
 function updateCurrentStock(code, delta) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEET_NAMES.CURRENT_STOCK);
 
   if (!sheet) return;
 
   const data = sheet.getDataRange().getValues();
+  const normalizedInput = normalizeCode(code);
 
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === code) {
+    if (normalizeCode(data[i][0]) === normalizedInput) {
       const currentStock = data[i][2] || 0;
       const newStock = currentStock + delta;
       const now = new Date();
 
-      sheet.getRange(i + 1, 3).setValue(newStock); // 在庫数
+      sheet.getRange(i + 1, 3).setValue(newStock);
       sheet.getRange(i + 1, 6).setValue(
         Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy-MM-dd HH:mm:ss')
-      ); // 最終更新日時
+      );
 
       return;
     }
@@ -255,7 +275,7 @@ function updateCurrentStock(code, delta) {
  * 履歴を取得
  */
 function getHistory(dateStr) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   const inSheet = ss.getSheetByName(SHEET_NAMES.STOCK_IN);
   const outSheet = ss.getSheetByName(SHEET_NAMES.STOCK_OUT);
 
@@ -318,8 +338,9 @@ function getHistory(dateStr) {
  */
 function getMedicineByCode(code) {
   const result = getMedicineList();
+  const normalizedInput = normalizeCode(code);
   if (result.medicines) {
-    return result.medicines.find(m => m.code === code);
+    return result.medicines.find(m => normalizeCode(m.code) === normalizedInput);
   }
   return null;
 }
@@ -345,8 +366,9 @@ function getUnit(code) {
  */
 function getStockByCode(code) {
   const result = getCurrentStock();
+  const normalizedInput = normalizeCode(code);
   if (result.stock) {
-    const item = result.stock.find(s => s.code === code);
+    const item = result.stock.find(s => normalizeCode(s.code) === normalizedInput);
     return item ? item.currentStock : 0;
   }
   return 0;
@@ -359,7 +381,7 @@ function getStockByCode(code) {
  * メニューから一度だけ実行
  */
 function initializeSheets() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
 
   // 薬品マスタシート
   let sheet = ss.getSheetByName(SHEET_NAMES.MEDICINE_MASTER);
@@ -400,7 +422,7 @@ function initializeSheets() {
  * サンプルデータを投入
  */
 function insertSampleData() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   const masterSheet = ss.getSheetByName(SHEET_NAMES.MEDICINE_MASTER);
   const stockSheet = ss.getSheetByName(SHEET_NAMES.CURRENT_STOCK);
 
@@ -430,12 +452,10 @@ function insertSampleData() {
     ['059000010', 'ライゾデグ配合注 フレックスタッチ 300単位', 8, 'キット', 5, ''],
   ];
 
-  // マスタデータ投入
   if (masterSheet) {
     sampleMedicines.forEach(row => masterSheet.appendRow(row));
   }
 
-  // 在庫データ投入
   if (stockSheet) {
     sampleStock.forEach(row => stockSheet.appendRow(row));
   }
@@ -445,27 +465,26 @@ function insertSampleData() {
 
 // ===== 患者マスタ機能 =====
 
-// 患者マスタの列インデックス（M3 DigiKar CSVそのまま貼り付け対応）
 const PATIENT_COLS = {
-  ID: 0,           // A列: 患者番号
-  NAME: 1,         // B列: 患者氏名
-  FURIGANA: 2,     // C列: カナ氏名
-  GENDER: 3,       // D列: 性別
-  BIRTH_DATE: 4,   // E列: 生年月日
-  AGE: 5,          // F列: 年齢
-  LAST_VISIT: 6,   // G列: 前回受診日
-  ZIP: 7,          // H列: 郵便番号
-  ADDRESS: 8,      // I列: 患者住所
-  PHONE1: 9,       // J列: 患者電話番号1
-  PHONE2: 10,      // K列: 患者電話番号2
-  NORMALIZED: 11   // L列: 正規化氏名（自動生成）
+  ID: 0,
+  NAME: 1,
+  FURIGANA: 2,
+  GENDER: 3,
+  BIRTH_DATE: 4,
+  AGE: 5,
+  LAST_VISIT: 6,
+  ZIP: 7,
+  ADDRESS: 8,
+  PHONE1: 9,
+  PHONE2: 10,
+  NORMALIZED: 11
 };
 
 /**
  * 患者一覧を取得
  */
 function getPatientList() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEET_NAMES.PATIENT_MASTER);
 
   if (!sheet) {
@@ -477,7 +496,7 @@ function getPatientList() {
 
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
-    if (row[PATIENT_COLS.ID]) { // IDがある行のみ
+    if (row[PATIENT_COLS.ID]) {
       patients.push({
         id: String(row[PATIENT_COLS.ID]),
         name: row[PATIENT_COLS.NAME],
@@ -494,11 +513,9 @@ function getPatientList() {
 
 /**
  * 名前を正規化（空白除去）
- * 空白なし、半角スペース、全角スペースすべてに対応
  */
 function normalizeNameForSearch(name) {
   if (!name) return '';
-  // 全角スペース、半角スペース、その他の空白をすべて除去
   return name.replace(/[\s　]+/g, '');
 }
 
@@ -506,37 +523,33 @@ function normalizeNameForSearch(name) {
  * 患者マスタシートを初期化
  */
 function initializePatientMasterSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   let sheet = ss.getSheetByName(SHEET_NAMES.PATIENT_MASTER);
 
   if (!sheet) {
     sheet = ss.insertSheet(SHEET_NAMES.PATIENT_MASTER);
   } else {
-    // 既存データをクリア（ヘッダー以外）
     const lastRow = sheet.getLastRow();
     if (lastRow > 1) {
       sheet.deleteRows(2, lastRow - 1);
     }
   }
 
-  // ヘッダー設定
   sheet.getRange(1, 1, 1, 6).setValues([['患者ID', '患者氏名', 'フリガナ', '性別', '生年月日', '正規化氏名']]);
   sheet.getRange(1, 1, 1, 6).setBackground('#9c27b0').setFontColor('#ffffff').setFontWeight('bold');
 
-  // 列幅設定
-  sheet.setColumnWidth(1, 80);  // 患者ID
-  sheet.setColumnWidth(2, 150); // 患者氏名
-  sheet.setColumnWidth(3, 150); // フリガナ
-  sheet.setColumnWidth(4, 60);  // 性別
-  sheet.setColumnWidth(5, 100); // 生年月日
-  sheet.setColumnWidth(6, 120); // 正規化氏名
+  sheet.setColumnWidth(1, 80);
+  sheet.setColumnWidth(2, 150);
+  sheet.setColumnWidth(3, 150);
+  sheet.setColumnWidth(4, 60);
+  sheet.setColumnWidth(5, 100);
+  sheet.setColumnWidth(6, 120);
 
   return sheet;
 }
 
 /**
  * Google DriveのCSVファイルから患者マスタをインポート
- * ファイル名で検索してインポート
  */
 function importPatientMasterFromDrive() {
   const ui = SpreadsheetApp.getUi();
@@ -547,9 +560,7 @@ function importPatientMasterFromDrive() {
     ui.ButtonSet.OK_CANCEL
   );
 
-  if (response.getSelectedButton() !== ui.Button.OK) {
-    return;
-  }
+  if (response.getSelectedButton() !== ui.Button.OK) return;
 
   const fileName = response.getResponseText().trim();
   if (!fileName) {
@@ -558,7 +569,6 @@ function importPatientMasterFromDrive() {
   }
 
   try {
-    // ファイルを検索
     const files = DriveApp.getFilesByName(fileName);
     if (!files.hasNext()) {
       ui.alert('ファイルが見つかりません: ' + fileName);
@@ -566,7 +576,7 @@ function importPatientMasterFromDrive() {
     }
 
     const file = files.next();
-    const csvText = file.getBlob().getDataAsString('Shift_JIS'); // M3のCSVはShift-JIS
+    const csvText = file.getBlob().getDataAsString('Shift_JIS');
 
     const result = importPatientMasterFromCSVText(csvText);
     ui.alert(result.message);
@@ -577,8 +587,7 @@ function importPatientMasterFromDrive() {
 }
 
 /**
- * CSVテキストから患者マスタをインポート
- * 手動でCSVの内容を貼り付けて実行
+ * CSVテキストから患者マスタをインポート（手動貼り付け）
  */
 function importPatientMasterFromText() {
   const ui = SpreadsheetApp.getUi();
@@ -589,9 +598,7 @@ function importPatientMasterFromText() {
     ui.ButtonSet.OK_CANCEL
   );
 
-  if (response.getSelectedButton() !== ui.Button.OK) {
-    return;
-  }
+  if (response.getSelectedButton() !== ui.Button.OK) return;
 
   const csvText = response.getResponseText();
   if (!csvText) {
@@ -607,7 +614,7 @@ function importPatientMasterFromText() {
  * CSVテキストから患者マスタをインポート（内部処理）
  */
 function importPatientMasterFromCSVText(csvText) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   let sheet = ss.getSheetByName(SHEET_NAMES.PATIENT_MASTER);
 
   if (!sheet) {
@@ -618,7 +625,6 @@ function importPatientMasterFromCSVText(csvText) {
   let importCount = 0;
   let skipCount = 0;
 
-  // 既存データを取得してマップ作成
   const existingData = sheet.getDataRange().getValues();
   const existingIds = new Set();
   for (let i = 1; i < existingData.length; i++) {
@@ -629,11 +635,10 @@ function importPatientMasterFromCSVText(csvText) {
 
   const newRows = [];
 
-  for (let i = 1; i < lines.length; i++) { // ヘッダーをスキップ
+  for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
 
-    // CSV解析（カンマ区切り、クォート対応）
     const cols = parseCSVLine(line);
     if (cols.length < 5) continue;
 
@@ -645,7 +650,6 @@ function importPatientMasterFromCSVText(csvText) {
 
     if (!patientId || !patientName) continue;
 
-    // 重複チェック
     if (existingIds.has(patientId)) {
       skipCount++;
       continue;
@@ -657,7 +661,6 @@ function importPatientMasterFromCSVText(csvText) {
     importCount++;
   }
 
-  // 一括追加
   if (newRows.length > 0) {
     const lastRow = sheet.getLastRow();
     sheet.getRange(lastRow + 1, 1, newRows.length, 6).setValues(newRows);
@@ -696,22 +699,15 @@ function parseCSVLine(line) {
 
 /**
  * 出庫履歴の患者IDを自動補完
- * 患者名が入力されているが患者IDが空の行を対象に、患者マスタから照合
  */
 function fillMissingPatientIds() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   const outSheet = ss.getSheetByName(SHEET_NAMES.STOCK_OUT);
   const patientSheet = ss.getSheetByName(SHEET_NAMES.PATIENT_MASTER);
 
-  if (!outSheet) {
-    return { error: '出庫履歴シートが見つかりません' };
-  }
-  if (!patientSheet) {
-    return { error: '患者マスタシートが見つかりません' };
-  }
+  if (!outSheet) return { error: '出庫履歴シートが見つかりません' };
+  if (!patientSheet) return { error: '患者マスタシートが見つかりません' };
 
-  // 患者マスタの正規化名マップを作成
-  // 正規化名 → [{id, name}, ...]
   const patientData = patientSheet.getDataRange().getValues();
   const patientMap = new Map();
 
@@ -721,7 +717,6 @@ function fillMissingPatientIds() {
 
     const id = String(row[PATIENT_COLS.ID]);
     const name = row[PATIENT_COLS.NAME];
-    // L列（NORMALIZED）があればそれを使用、なければ動的に計算
     const normalizedName = row[PATIENT_COLS.NORMALIZED] || normalizeNameForSearch(name);
 
     if (!patientMap.has(normalizedName)) {
@@ -730,30 +725,25 @@ function fillMissingPatientIds() {
     patientMap.get(normalizedName).push({ id, name });
   }
 
-  // 出庫履歴を処理
   const outData = outSheet.getDataRange().getValues();
   let updateCount = 0;
   let multiMatchCount = 0;
   const updates = [];
 
-  // 出庫履歴: 日時, コード, 薬品名, 数量, 単位, 患者ID(col6), 患者名(col7), 担当者, 備考
   for (let i = 1; i < outData.length; i++) {
     const row = outData[i];
     const patientId = row[5];
     const patientName = row[6];
 
-    // 患者名があって患者IDが空の場合のみ処理
     if (patientName && !patientId) {
       const normalizedSearch = normalizeNameForSearch(patientName);
       const matches = patientMap.get(normalizedSearch);
 
       if (matches && matches.length > 0) {
         if (matches.length === 1) {
-          // 一意に特定できた場合
           updates.push({ row: i + 1, col: 6, value: matches[0].id });
           updateCount++;
         } else {
-          // 複数候補がある場合（同姓同名・重複登録）
           const ids = matches.map(m => m.id).join(',');
           updates.push({ row: i + 1, col: 6, value: ids });
           multiMatchCount++;
@@ -763,7 +753,6 @@ function fillMissingPatientIds() {
     }
   }
 
-  // 一括更新
   updates.forEach(update => {
     outSheet.getRange(update.row, update.col).setValue(update.value);
   });
@@ -776,10 +765,9 @@ function fillMissingPatientIds() {
 
 /**
  * 患者マスタの正規化氏名（L列）を一括生成
- * CSVを貼り付けた後に実行
  */
 function generateNormalizedNames() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEET_NAMES.PATIENT_MASTER);
 
   if (!sheet) {
@@ -788,10 +776,8 @@ function generateNormalizedNames() {
   }
 
   const lastRow = sheet.getLastRow();
-  const lastCol = sheet.getLastColumn();
 
-  // L列（12列目）のヘッダーを設定
-  const normalizedCol = PATIENT_COLS.NORMALIZED + 1; // 1-indexed = 12
+  const normalizedCol = PATIENT_COLS.NORMALIZED + 1;
   sheet.getRange(1, normalizedCol).setValue('正規化氏名');
   sheet.getRange(1, normalizedCol).setBackground('#9c27b0').setFontColor('#ffffff').setFontWeight('bold');
 
@@ -800,13 +786,8 @@ function generateNormalizedNames() {
     return;
   }
 
-  // B列（患者氏名）を取得
   const names = sheet.getRange(2, PATIENT_COLS.NAME + 1, lastRow - 1, 1).getValues();
-
-  // 正規化した名前を生成
   const normalizedNames = names.map(row => [normalizeNameForSearch(row[0])]);
-
-  // L列に一括書き込み
   sheet.getRange(2, normalizedCol, lastRow - 1, 1).setValues(normalizedNames);
 
   SpreadsheetApp.getUi().alert(`正規化氏名を ${lastRow - 1} 件生成しました`);
@@ -816,7 +797,6 @@ function generateNormalizedNames() {
  * 毎日朝9時のトリガーを設定
  */
 function setupDailyPatientIdTrigger() {
-  // 既存のトリガーを削除
   const triggers = ScriptApp.getProjectTriggers();
   triggers.forEach(trigger => {
     if (trigger.getHandlerFunction() === 'fillMissingPatientIds') {
@@ -824,7 +804,6 @@ function setupDailyPatientIdTrigger() {
     }
   });
 
-  // 新しいトリガーを作成（毎日朝9時）
   ScriptApp.newTrigger('fillMissingPatientIds')
     .timeBased()
     .everyDays(1)

@@ -1,0 +1,20 @@
+# Temp files
+*.zip
+*.backup
+gas_v01_backup.txt
+github_paste.txt
+
+# Screenshots & generated images
+screenshots/
+qr_codes/
+
+# Python scripts (dev tools)
+*.py
+*.ps1
+
+# Data files (patient CSV etc.)
+data/
+
+# OS
+Thumbs.db
+.DS_Store

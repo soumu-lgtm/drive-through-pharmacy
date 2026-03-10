@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>薬品在庫管理 - ドライブスルー診療</title>
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <title>薬品在庫管理 - デモ版（QRクリック選択）</title>
+    <!-- QRコード生成ライブラリ -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <style>
         :root {
             --primary: #2563eb;
@@ -55,9 +56,21 @@
             margin-top: 4px;
         }
 
+        .demo-badge {
+            display: inline-block;
+            background: var(--warning);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
         /* メインコンテンツ */
         .container {
-            max-width: 500px;
+            max-width: 600px;
             margin: 0 auto;
             padding: 16px;
         }
@@ -120,35 +133,88 @@
             font-size: 24px;
         }
 
-        /* QRリーダー */
-        #qr-reader {
-            width: 100%;
-            border-radius: 8px;
-            overflow: hidden;
+        /* QRコードグリッド（デモ用） */
+        .qr-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 8px;
         }
 
-        #qr-reader video {
-            border-radius: 8px;
-        }
-
-        .qr-placeholder {
-            background: #1e293b;
-            border-radius: 8px;
-            padding: 40px;
-            text-align: center;
-            color: white;
-        }
-
-        .qr-placeholder button {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
+        .qr-item {
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
             cursor: pointer;
-            margin-top: 12px;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .qr-item:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .qr-item.selected {
+            border-color: var(--success);
+            background: #f0fdf4;
+            box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);
+        }
+
+        .qr-item canvas {
+            display: block;
+            margin: 0 auto 8px;
+        }
+
+        .qr-item-name {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text);
+            line-height: 1.3;
+            height: 2.6em;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .qr-item-code {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .qr-item-stock {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--primary);
+            margin-top: 4px;
+        }
+
+        .qr-item-stock.low {
+            color: var(--danger);
+        }
+
+        /* 検索フィルター */
+        .qr-filter {
+            margin-bottom: 12px;
+        }
+
+        .qr-filter input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .qr-filter input:focus {
+            outline: none;
+            border-color: var(--primary);
         }
 
         /* 読み取り結果 */
@@ -455,92 +521,6 @@
             background: var(--danger);
         }
 
-        /* 手動入力モーダル */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 300;
-            align-items: flex-end;
-            justify-content: center;
-        }
-
-        .modal-overlay.show {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            width: 100%;
-            max-width: 500px;
-            border-radius: 20px 20px 0 0;
-            padding: 24px;
-            max-height: 80vh;
-            overflow-y: auto;
-            animation: slideUp 0.3s ease;
-        }
-
-        @keyframes slideUp {
-            from { transform: translateY(100%); }
-            to { transform: translateY(0); }
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .modal-title {
-            font-size: 18px;
-            font-weight: 700;
-        }
-
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            color: var(--text-muted);
-        }
-
-        /* 薬品検索リスト */
-        .medicine-list {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .medicine-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            margin-bottom: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .medicine-item:hover {
-            background: var(--bg);
-            border-color: var(--primary);
-        }
-
-        .medicine-item-name {
-            font-weight: 600;
-        }
-
-        .medicine-item-stock {
-            font-size: 13px;
-            color: var(--text-muted);
-        }
-
         /* ボトムナビ */
         .bottom-nav {
             position: fixed;
@@ -627,8 +607,8 @@
 </head>
 <body>
     <div class="header">
-        <h1>薬品在庫管理システム</h1>
-        <div class="header-sub">西春内科・在宅クリニック</div>
+        <h1>薬品在庫管理システム <span class="demo-badge">DEMO</span></h1>
+        <div class="header-sub">西春内科・在宅クリニック（クリック選択デモ版）</div>
     </div>
 
     <!-- スキャンタブ -->
@@ -646,17 +626,14 @@
                 </button>
             </div>
 
-            <!-- QRスキャナー -->
+            <!-- QRコード選択グリッド（デモ用） -->
             <div class="card">
-                <div class="card-title">📷 QRコード読み取り</div>
-                <div id="qr-reader"></div>
-                <div id="qr-placeholder" class="qr-placeholder">
-                    <div>カメラでQRコードをスキャン</div>
-                    <button onclick="startScanner()">カメラを起動</button>
-                    <div style="margin-top: 16px; font-size: 13px; opacity: 0.7;">
-                        または
-                        <a href="#" onclick="openManualSelect()" style="color: white;">手動で薬品を選択</a>
-                    </div>
+                <div class="card-title">🎯 薬品QRコードを選択（デモ用）</div>
+                <div class="qr-filter">
+                    <input type="text" id="qr-filter-input" placeholder="薬品名で絞り込み..." oninput="filterQRGrid()">
+                </div>
+                <div class="qr-grid" id="qr-grid">
+                    <!-- QRコードがここに生成される -->
                 </div>
 
                 <!-- 読み取り結果 -->
@@ -727,8 +704,8 @@
     <!-- ボトムナビ -->
     <div class="bottom-nav">
         <div class="nav-item active" onclick="switchTab('scan')">
-            <span>📷</span>
-            スキャン
+            <span>🎯</span>
+            選択
         </div>
         <div class="nav-item" onclick="switchTab('stock')">
             <span>📦</span>
@@ -737,20 +714,6 @@
         <div class="nav-item" onclick="switchTab('history')">
             <span>📋</span>
             履歴
-        </div>
-    </div>
-
-    <!-- 手動選択モーダル -->
-    <div class="modal-overlay" id="manual-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-title">薬品を選択</div>
-                <button class="modal-close" onclick="closeManualSelect()">×</button>
-            </div>
-            <input type="text" class="form-input" id="modal-search" placeholder="薬品名で検索..." oninput="filterModalList()">
-            <div class="medicine-list" id="modal-list">
-                <!-- 薬品リストがここに表示される -->
-            </div>
         </div>
     </div>
 
@@ -781,33 +744,17 @@
         async function gasPost(action, data) {
             if (!USE_GAS) return null;
             try {
-                // GASはリダイレクトするのでJSONP形式で送信
-                const url = new URL(GAS_URL);
-                url.searchParams.append('action', action);
-                Object.entries(data).forEach(([k, v]) => {
-                    if (v !== undefined && v !== null) {
-                        url.searchParams.append(k, v);
-                    }
-                });
-
-                // GETリクエストとして送信（GAS Web AppはGETでも処理可能にする必要あり）
-                // まずPOSTを試す
                 const res = await fetch(GAS_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify({ action, ...data }),
                     redirect: 'follow'
                 });
-
-                // レスポンスを読み取る
                 const text = await res.text();
                 console.log('GAS response:', text);
-
                 try {
                     return JSON.parse(text);
                 } catch {
-                    // JSONでない場合はリダイレクト等の可能性
-                    // 成功と見なす（GASの仕様）
                     if (res.ok || res.redirected) {
                         return { success: true, message: '送信完了（レスポンス確認不可）' };
                     }
@@ -815,7 +762,6 @@
                 }
             } catch (e) {
                 console.error('GAS POST error:', e);
-                // CORSエラーの場合、リクエスト自体は届いている可能性
                 if (e.message.includes('CORS') || e.message.includes('NetworkError')) {
                     return { success: true, message: '送信完了（CORS制限によりレスポンス確認不可）' };
                 }
@@ -836,6 +782,7 @@
                     threshold: s.threshold || 10
                 }));
                 renderStockList();
+                renderQRGrid(); // QRグリッドも更新
                 showToast('データを同期しました (' + stockData.length + '件)', 'success');
             } else if (result && result.error) {
                 showToast('データ取得エラー: ' + result.error, 'error');
@@ -889,7 +836,7 @@
         let selectedMedicine = null;
         let quantity = 1;
         let selectedPatient = null;
-        let html5QrCode = null;
+        let selectedQRItem = null;
 
         // ===== モード切替 =====
         function setMode(mode) {
@@ -915,42 +862,91 @@
             updateSubmitButton();
         }
 
-        // ===== QRスキャナー =====
-        function startScanner() {
-            document.getElementById('qr-placeholder').style.display = 'none';
-            html5QrCode = new Html5Qrcode("qr-reader");
-            html5QrCode.start(
-                { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 250, height: 250 } },
-                onScanSuccess,
-                onScanFailure
-            ).catch(err => {
-                console.error('Camera error:', err);
-                showToast('カメラを起動できませんでした', 'error');
-                document.getElementById('qr-placeholder').style.display = 'block';
+        // ===== QRコードグリッド生成（デモ用） =====
+        function renderQRGrid(filter = '') {
+            const container = document.getElementById('qr-grid');
+            const filtered = stockData.filter(m =>
+                m.name.toLowerCase().includes(filter.toLowerCase()) ||
+                m.code.includes(filter)
+            );
+
+            container.innerHTML = '';
+
+            filtered.forEach(medicine => {
+                const item = document.createElement('div');
+                item.className = 'qr-item';
+                item.dataset.code = medicine.code;
+                item.onclick = () => selectQRItem(medicine.code);
+
+                // QRコード用canvas
+                const canvas = document.createElement('canvas');
+                canvas.id = 'qr-' + medicine.code;
+                item.appendChild(canvas);
+
+                // 薬品名
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'qr-item-name';
+                nameDiv.textContent = medicine.name;
+                item.appendChild(nameDiv);
+
+                // コード
+                const codeDiv = document.createElement('div');
+                codeDiv.className = 'qr-item-code';
+                codeDiv.textContent = medicine.code;
+                item.appendChild(codeDiv);
+
+                // 在庫数
+                const stockDiv = document.createElement('div');
+                stockDiv.className = 'qr-item-stock' + (medicine.stock <= medicine.threshold ? ' low' : '');
+                stockDiv.textContent = '在庫: ' + medicine.stock + medicine.unit;
+                item.appendChild(stockDiv);
+
+                container.appendChild(item);
+
+                // QRコード生成
+                QRCode.toCanvas(canvas, medicine.code.replace(/^0+/, ''), {
+                    width: 80,
+                    margin: 1,
+                    color: {
+                        dark: '#1e293b',
+                        light: '#ffffff'
+                    }
+                }, function(error) {
+                    if (error) console.error('QR generation error:', error);
+                });
             });
+        }
+
+        function filterQRGrid() {
+            const query = document.getElementById('qr-filter-input').value;
+            renderQRGrid(query);
+            // 選択状態を維持
+            if (selectedMedicine) {
+                const item = document.querySelector(`.qr-item[data-code="${selectedMedicine.code}"]`);
+                if (item) item.classList.add('selected');
+            }
+        }
+
+        function selectQRItem(code) {
+            // 前の選択を解除
+            document.querySelectorAll('.qr-item.selected').forEach(el => el.classList.remove('selected'));
+
+            const normalizedCode = normalizeCode(code);
+            const medicine = stockData.find(m => normalizeCode(m.code) === normalizedCode);
+
+            if (medicine) {
+                // 新しい選択をハイライト
+                const item = document.querySelector(`.qr-item[data-code="${medicine.code}"]`);
+                if (item) item.classList.add('selected');
+
+                selectMedicine(medicine);
+                if (navigator.vibrate) navigator.vibrate(50);
+            }
         }
 
         // コードの正規化（先頭ゼロの有無を吸収）
         function normalizeCode(code) {
             return String(parseInt(String(code), 10));
-        }
-
-        function onScanSuccess(decodedText) {
-            const normalizedScanned = normalizeCode(decodedText);
-            const medicine = stockData.find(m => normalizeCode(m.code) === normalizedScanned);
-
-            if (medicine) {
-                selectMedicine(medicine);
-                if (navigator.vibrate) navigator.vibrate(100);
-            } else {
-                const stockCodes = stockData.slice(0, 3).map(m => `${m.code}→${normalizeCode(m.code)}`).join(', ');
-                const debugMsg = `未登録の薬品です\n\nスキャン: ${decodedText}\n正規化後: ${normalizedScanned}\n\nデータ数: ${stockData.length}件\n登録コード例:\n${stockCodes}`;
-                alert(debugMsg);
-            }
-        }
-
-        function onScanFailure(error) {
         }
 
         function selectMedicine(medicine) {
@@ -1041,7 +1037,6 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span>⏳</span> 送信中...';
 
-            // 送信用コード（元のコードを使用）
             const codeToSend = selectedMedicine.code;
             console.log('送信コード:', codeToSend);
 
@@ -1072,7 +1067,6 @@
                 console.log('GAS result:', result);
 
                 if (result && (result.success || result.message)) {
-                    // ローカルデータも更新
                     const selectedNormalized = normalizeCode(selectedMedicine.code);
                     const idx = stockData.findIndex(m => normalizeCode(m.code) === selectedNormalized);
                     if (idx >= 0) {
@@ -1083,7 +1077,6 @@
                         }
                     }
 
-                    // 履歴に追加
                     const record = {
                         time: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
                         type: currentMode,
@@ -1100,6 +1093,7 @@
                         : `${selectedMedicine.name} を ${quantity}${selectedMedicine.unit} 出庫しました`;
                     showToast(msg, 'success');
                     resetForm();
+                    renderQRGrid(); // 在庫数を更新
                 } else {
                     showToast(result?.error || '送信に失敗しました', 'error');
                     submitBtn.disabled = false;
@@ -1144,6 +1138,7 @@
             showToast(msg, 'success');
 
             resetForm();
+            renderQRGrid(); // 在庫数を更新
         }
 
         function resetForm() {
@@ -1153,7 +1148,7 @@
             document.getElementById('scan-result').classList.remove('show');
             document.getElementById('quantity-card').style.display = 'none';
             document.getElementById('patient-input').value = '';
-            document.querySelectorAll('.patient-chip').forEach(c => c.classList.remove('selected'));
+            document.querySelectorAll('.qr-item.selected').forEach(el => el.classList.remove('selected'));
             setMode(currentMode);
             updateSubmitButton();
         }
@@ -1224,46 +1219,6 @@
             `).join('');
         }
 
-        // ===== 手動選択モーダル =====
-        function openManualSelect() {
-            document.getElementById('manual-modal').classList.add('show');
-            renderModalList();
-        }
-
-        function closeManualSelect() {
-            document.getElementById('manual-modal').classList.remove('show');
-        }
-
-        function renderModalList(filter = '') {
-            const container = document.getElementById('modal-list');
-            const filtered = stockData.filter(m =>
-                m.name.toLowerCase().includes(filter.toLowerCase()) ||
-                m.code.includes(filter)
-            );
-            container.innerHTML = filtered.map(m => `
-                <div class="medicine-item" onclick="selectFromModal('${m.code}')">
-                    <div>
-                        <div class="medicine-item-name">${m.name}</div>
-                        <div class="medicine-item-stock">在庫: ${m.stock}${m.unit}</div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function filterModalList() {
-            const query = document.getElementById('modal-search').value;
-            renderModalList(query);
-        }
-
-        function selectFromModal(code) {
-            const normalizedCode = normalizeCode(code);
-            const medicine = stockData.find(m => normalizeCode(m.code) === normalizedCode);
-            if (medicine) {
-                selectMedicine(medicine);
-                closeManualSelect();
-            }
-        }
-
         // ===== 初期化 =====
         const patientInput = document.getElementById('patient-input');
 
@@ -1285,6 +1240,7 @@
 
         setMode(currentMode);
         renderStockList();
+        renderQRGrid(); // QRグリッドを初期化
 
         if (USE_GAS) {
             showToast('データを読み込み中...', '');
