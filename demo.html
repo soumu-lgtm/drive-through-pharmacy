@@ -521,6 +521,95 @@
             background: var(--danger);
         }
 
+        /* バッチ登録リスト */
+        .add-to-list-btn {
+            width: 100%;
+            padding: 14px;
+            border: 2px dashed var(--primary);
+            border-radius: 10px;
+            background: #eff6ff;
+            color: var(--primary);
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 12px;
+            transition: all 0.2s;
+        }
+
+        .add-to-list-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            border-color: var(--border);
+            background: var(--bg);
+            color: var(--text-muted);
+        }
+
+        .add-to-list-btn:not(:disabled):active {
+            transform: scale(0.98);
+            background: #dbeafe;
+        }
+
+        .batch-card {
+            border: 2px solid var(--primary);
+            background: #eff6ff;
+        }
+
+        .batch-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .batch-item:last-child {
+            border-bottom: none;
+        }
+
+        .batch-item-info {
+            flex: 1;
+        }
+
+        .batch-item-name {
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .batch-item-detail {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .batch-item-qty {
+            font-weight: 700;
+            font-size: 15px;
+            margin-right: 10px;
+        }
+
+        .batch-item-qty.in {
+            color: var(--success);
+        }
+
+        .batch-item-qty.out {
+            color: var(--danger);
+        }
+
+        .batch-remove-btn {
+            width: 30px;
+            height: 30px;
+            border: none;
+            background: #fee2e2;
+            color: var(--danger);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .batch-remove-btn:active {
+            transform: scale(0.9);
+        }
+
         /* ボトムナビ */
         .bottom-nav {
             position: fixed;
@@ -668,10 +757,20 @@
                 </div>
             </div>
 
-            <!-- 送信ボタン -->
-            <button class="submit-btn in-mode" id="submit-btn" onclick="submitTransaction()" disabled>
-                <span>📥</span>
-                入庫を記録
+            <!-- リストに追加ボタン -->
+            <button class="add-to-list-btn" id="add-to-list-btn" onclick="addToBatch()" disabled>
+                ＋ リストに追加して続ける
+            </button>
+
+            <!-- バッチリスト -->
+            <div class="card batch-card" id="batch-card" style="display: none;">
+                <div class="card-title">📋 登録リスト（<span id="batch-count">0</span>件）</div>
+                <div id="batch-list"></div>
+            </div>
+
+            <!-- 一括登録ボタン -->
+            <button class="submit-btn in-mode" id="submit-btn" onclick="submitAll()" style="display: none;" disabled>
+                📥 まとめて入庫
             </button>
         </div>
     </div>
@@ -837,29 +936,30 @@
         let quantity = 1;
         let selectedPatient = null;
         let selectedQRItem = null;
+        let batchItems = [];
 
         // ===== モード切替 =====
         function setMode(mode) {
+            // モード変更時にバッチをクリア（入庫/出庫の混在を防ぐ）
+            if (batchItems.length > 0 && batchItems[0].mode !== mode) {
+                batchItems = [];
+                renderBatchList();
+            }
             currentMode = mode;
             const btnIn = document.getElementById('btn-in');
             const btnOut = document.getElementById('btn-out');
-            const submitBtn = document.getElementById('submit-btn');
             const patientCard = document.getElementById('patient-card');
 
             if (mode === 'in') {
                 btnIn.className = 'mode-btn active-in';
                 btnOut.className = 'mode-btn';
-                submitBtn.className = 'submit-btn in-mode';
-                submitBtn.innerHTML = '<span>📥</span> 入庫を記録';
                 patientCard.style.display = 'none';
             } else {
                 btnIn.className = 'mode-btn';
                 btnOut.className = 'mode-btn active-out';
-                submitBtn.className = 'submit-btn out-mode';
-                submitBtn.innerHTML = '<span>📤</span> 出庫を記録';
                 patientCard.style.display = 'block';
             }
-            updateSubmitButton();
+            updateActionButtons();
         }
 
         // ===== QRコードグリッド生成（デモ用） =====
@@ -959,7 +1059,7 @@
             document.getElementById('qty-unit').textContent = medicine.unit;
             quantity = 1;
             document.getElementById('qty-value').value = quantity;
-            updateSubmitButton();
+            updateActionButtons();
         }
 
         // ===== 数量操作 =====
@@ -1010,7 +1110,7 @@
             selectedPatient = { id, name };
             document.getElementById('patient-input').value = name;
             document.getElementById('patient-autocomplete').classList.remove('show');
-            updateSubmitButton();
+            updateActionButtons();
         }
 
         function hidePatientAutocomplete() {
@@ -1019,126 +1119,177 @@
             }, 200);
         }
 
-        // ===== 送信ボタン状態 =====
-        function updateSubmitButton() {
-            const btn = document.getElementById('submit-btn');
-            const canSubmit = selectedMedicine &&
-                (currentMode === 'in' || (currentMode === 'out' && document.getElementById('patient-input').value));
-            btn.disabled = !canSubmit;
-        }
-
-        // ===== トランザクション送信 =====
-        async function submitTransaction() {
-            if (!selectedMedicine) return;
-
-            const patientInput = document.getElementById('patient-input').value;
+        // ===== ボタン状態管理 =====
+        function updateActionButtons() {
+            const addBtn = document.getElementById('add-to-list-btn');
             const submitBtn = document.getElementById('submit-btn');
 
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span>⏳</span> 送信中...';
+            // 追加ボタン: 薬品選択済み（＋出庫時は患者入力済み）で有効
+            const canAdd = selectedMedicine &&
+                (currentMode === 'in' || (currentMode === 'out' && document.getElementById('patient-input').value));
+            addBtn.disabled = !canAdd;
 
-            const codeToSend = selectedMedicine.code;
-            console.log('送信コード:', codeToSend);
+            // 一括登録ボタン: バッチに1件以上あれば表示
+            const totalItems = batchItems.length;
+            if (totalItems > 0) {
+                submitBtn.style.display = 'flex';
+                submitBtn.disabled = false;
+                const modeLabel = currentMode === 'in' ? '入庫' : '出庫';
+                submitBtn.className = `submit-btn ${currentMode === 'in' ? 'in-mode' : 'out-mode'}`;
+                submitBtn.innerHTML = `${currentMode === 'in' ? '📥' : '📤'} まとめて${modeLabel}（${totalItems}件）`;
+            } else {
+                submitBtn.style.display = 'none';
+            }
+        }
 
-            if (USE_GAS) {
-                let result;
-                if (currentMode === 'in') {
-                    result = await gasPost('stockIn', {
-                        code: codeToSend,
-                        quantity: quantity,
-                        operator: '担当者',
-                        note: ''
-                    });
-                } else {
-                    const isNumeric = /^\d+$/.test(patientInput.trim());
-                    const patientId = selectedPatient?.id || (isNumeric ? patientInput.trim() : '');
-                    const patientName = selectedPatient?.name || (isNumeric ? '' : patientInput.trim());
+        // ===== バッチ登録機能 =====
+        function addToBatch() {
+            if (!selectedMedicine) return;
 
-                    result = await gasPost('stockOut', {
-                        code: codeToSend,
-                        quantity: quantity,
-                        patientId: patientId,
-                        patientName: patientName,
-                        operator: '担当者',
-                        note: ''
-                    });
-                }
+            const patientInputEl = document.getElementById('patient-input');
+            const patientInputVal = patientInputEl.value;
+            if (currentMode === 'out' && !patientInputVal) return;
 
-                console.log('GAS result:', result);
+            const item = {
+                mode: currentMode,
+                medicine: { ...selectedMedicine },
+                quantity: quantity,
+                patient: currentMode === 'out' ? {
+                    id: selectedPatient?.id || '',
+                    name: patientInputVal
+                } : null
+            };
 
-                if (result && (result.success || result.message)) {
-                    const selectedNormalized = normalizeCode(selectedMedicine.code);
-                    const idx = stockData.findIndex(m => normalizeCode(m.code) === selectedNormalized);
-                    if (idx >= 0) {
-                        if (currentMode === 'in') {
-                            stockData[idx].stock += quantity;
-                        } else {
-                            stockData[idx].stock -= quantity;
-                        }
-                    }
+            batchItems.push(item);
+            renderBatchList();
 
-                    const record = {
-                        time: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
-                        type: currentMode,
-                        medicine: selectedMedicine.name,
-                        code: selectedMedicine.code,
-                        quantity: quantity,
-                        unit: selectedMedicine.unit,
-                        patient: currentMode === 'out' ? patientInput : null
-                    };
-                    historyData.unshift(record);
+            // 選択をリセットして次の薬品入力へ
+            selectedMedicine = null;
+            quantity = 1;
+            selectedPatient = null;
+            document.getElementById('scan-result').classList.remove('show');
+            document.getElementById('quantity-card').style.display = 'none';
+            document.getElementById('qty-value').value = 1;
+            document.querySelectorAll('.qr-item.selected').forEach(el => el.classList.remove('selected'));
+            // 出庫モードでは患者情報を維持（同じ患者に複数薬品を出庫するケースが多い）
+            if (currentMode === 'in') {
+                patientInputEl.value = '';
+            }
+            updateActionButtons();
 
-                    const msg = currentMode === 'in'
-                        ? `${selectedMedicine.name} を ${quantity}${selectedMedicine.unit} 入庫しました`
-                        : `${selectedMedicine.name} を ${quantity}${selectedMedicine.unit} 出庫しました`;
-                    showToast(msg, 'success');
-                    resetForm();
-                    renderQRGrid(); // 在庫数を更新
-                } else {
-                    showToast(result?.error || '送信に失敗しました', 'error');
-                    submitBtn.disabled = false;
-                    setMode(currentMode);
-                }
+            showToast(`${item.medicine.name} をリストに追加しました`, 'success');
+            if (navigator.vibrate) navigator.vibrate(50);
+        }
+
+        function removeBatchItem(index) {
+            batchItems.splice(index, 1);
+            renderBatchList();
+            updateActionButtons();
+        }
+
+        function renderBatchList() {
+            const card = document.getElementById('batch-card');
+            const list = document.getElementById('batch-list');
+            const count = document.getElementById('batch-count');
+
+            if (batchItems.length === 0) {
+                card.style.display = 'none';
                 return;
             }
 
-            // ローカルモード（USE_GAS = false）
-            const selectedNormalizedLocal = normalizeCode(selectedMedicine.code);
-            const idx = stockData.findIndex(m => normalizeCode(m.code) === selectedNormalizedLocal);
-            if (currentMode === 'in') {
-                stockData[idx].stock += quantity;
-            } else {
-                if (stockData[idx].stock < quantity) {
-                    showToast('在庫が不足しています', 'error');
-                    submitBtn.disabled = false;
-                    setMode(currentMode);
-                    return;
+            card.style.display = 'block';
+            count.textContent = batchItems.length;
+
+            list.innerHTML = batchItems.map((item, i) => `
+                <div class="batch-item">
+                    <div class="batch-item-info">
+                        <div class="batch-item-name">${item.medicine.name}</div>
+                        <div class="batch-item-detail">${item.quantity}${item.medicine.unit}${item.patient ? ' / ' + item.patient.name : ''}</div>
+                    </div>
+                    <div class="batch-item-qty ${item.mode}">${item.mode === 'in' ? '+' : '-'}${item.quantity}</div>
+                    <button class="batch-remove-btn" onclick="removeBatchItem(${i})">✕</button>
+                </div>
+            `).join('');
+        }
+
+        // ===== 一括送信 =====
+        async function submitAll() {
+            if (batchItems.length === 0) return;
+
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '⏳ 送信中...';
+
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const item of batchItems) {
+                if (USE_GAS) {
+                    let result;
+                    if (item.mode === 'in') {
+                        result = await gasPost('stockIn', {
+                            code: item.medicine.code,
+                            quantity: item.quantity,
+                            operator: '担当者',
+                            note: ''
+                        });
+                    } else {
+                        const patientId = item.patient?.id || '';
+                        const patientName = item.patient?.name || '';
+                        result = await gasPost('stockOut', {
+                            code: item.medicine.code,
+                            quantity: item.quantity,
+                            patientId: patientId,
+                            patientName: patientName,
+                            operator: '担当者',
+                            note: ''
+                        });
+                    }
+
+                    if (result && (result.success || result.message)) {
+                        successCount++;
+                    } else {
+                        errorCount++;
+                    }
+                } else {
+                    successCount++;
                 }
-                stockData[idx].stock -= quantity;
+
+                // ローカルデータ更新
+                const normalizedCode = normalizeCode(item.medicine.code);
+                const idx = stockData.findIndex(m => normalizeCode(m.code) === normalizedCode);
+                if (idx >= 0) {
+                    if (item.mode === 'in') {
+                        stockData[idx].stock += item.quantity;
+                    } else {
+                        stockData[idx].stock -= item.quantity;
+                    }
+                }
+
+                // 履歴に追加
+                historyData.unshift({
+                    time: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
+                    type: item.mode,
+                    medicine: item.medicine.name,
+                    code: item.medicine.code,
+                    quantity: item.quantity,
+                    unit: item.medicine.unit,
+                    patient: item.patient?.name || null
+                });
             }
 
-            const isNumericLocal = /^\d+$/.test(patientInput.trim());
-            const patientDisplay = currentMode === 'out'
-                ? (isNumericLocal ? `ID:${patientInput.trim()}` : patientInput.trim())
-                : null;
-            const record = {
-                time: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
-                type: currentMode,
-                medicine: selectedMedicine.name,
-                code: selectedMedicine.code,
-                quantity: quantity,
-                unit: selectedMedicine.unit,
-                patient: patientDisplay
-            };
-            historyData.unshift(record);
+            const modeLabel = currentMode === 'in' ? '入庫' : '出庫';
+            if (errorCount === 0) {
+                showToast(`${successCount}件の${modeLabel}を記録しました`, 'success');
+            } else {
+                showToast(`${successCount}件成功、${errorCount}件失敗`, 'error');
+            }
 
-            const msg = currentMode === 'in'
-                ? `${selectedMedicine.name} を ${quantity}${selectedMedicine.unit} 入庫しました`
-                : `${selectedMedicine.name} を ${quantity}${selectedMedicine.unit} 出庫しました`;
-            showToast(msg, 'success');
-
-            resetForm();
-            renderQRGrid(); // 在庫数を更新
+            batchItems = [];
+            renderBatchList();
+            renderQRGrid();
+            renderStockList();
+            updateActionButtons();
         }
 
         function resetForm() {
@@ -1149,8 +1300,7 @@
             document.getElementById('quantity-card').style.display = 'none';
             document.getElementById('patient-input').value = '';
             document.querySelectorAll('.qr-item.selected').forEach(el => el.classList.remove('selected'));
-            setMode(currentMode);
-            updateSubmitButton();
+            updateActionButtons();
         }
 
         // ===== トースト通知 =====
@@ -1225,7 +1375,7 @@
         patientInput.addEventListener('input', function() {
             selectedPatient = null;
             showPatientAutocomplete(this.value);
-            updateSubmitButton();
+            updateActionButtons();
         });
 
         patientInput.addEventListener('blur', function() {
