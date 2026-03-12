@@ -22,6 +22,9 @@ qr_codes/
 # Data files (patient CSV etc.)
 data/
 
+# Claude Code local settings (user-specific)
+.claude/settings.local.json
+
 # OS
 Thumbs.db
 .DS_Store
