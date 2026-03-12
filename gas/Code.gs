@@ -283,14 +283,23 @@ function getHistory(dateStr) {
 
   const history = [];
 
+  // 日時セルをyyyy-MM-dd形式に変換して比較する関数
+  function formatTimestamp(val) {
+    if (val instanceof Date) {
+      return Utilities.formatDate(val, 'Asia/Tokyo', 'yyyy-MM-dd HH:mm:ss');
+    }
+    return String(val);
+  }
+
   // 入庫履歴
   if (inSheet) {
     const inData = inSheet.getDataRange().getValues();
     for (let i = 1; i < inData.length; i++) {
       const row = inData[i];
-      if (row[0] && row[0].toString().startsWith(targetDate)) {
+      const ts = formatTimestamp(row[0]);
+      if (row[0] && ts.startsWith(targetDate)) {
         history.push({
-          timestamp: row[0],
+          timestamp: ts,
           type: 'in',
           code: row[1],
           name: row[2],
@@ -308,9 +317,10 @@ function getHistory(dateStr) {
     const outData = outSheet.getDataRange().getValues();
     for (let i = 1; i < outData.length; i++) {
       const row = outData[i];
-      if (row[0] && row[0].toString().startsWith(targetDate)) {
+      const ts = formatTimestamp(row[0]);
+      if (row[0] && ts.startsWith(targetDate)) {
         history.push({
-          timestamp: row[0],
+          timestamp: ts,
           type: 'out',
           code: row[1],
           name: row[2],
