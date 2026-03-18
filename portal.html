@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ドライブスルー診療 プロジェクトポータル</title>
+<style>
+:root {
+  --primary: #2563eb;
+  --primary-light: #dbeafe;
+  --primary-dark: #1d4ed8;
+  --text: #1e293b;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+  --bg: #f8fafc;
+  --card: #ffffff;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+.header {
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #3b82f6 100%);
+  color: #fff;
+  padding: 40px 24px 32px;
+  text-align: center;
+}
+.header h1 {
+  font-size: 28px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+.header p {
+  font-size: 14px;
+  opacity: 0.8;
+}
+.container {
+  max-width: 960px;
+  margin: -24px auto 40px;
+  padding: 0 16px;
+}
+.section-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--primary);
+  margin: 32px 0 12px;
+  padding-left: 12px;
+  border-left: 4px solid var(--primary);
+}
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  transition: transform 0.15s, box-shadow 0.15s;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+}
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+}
+.card .badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  align-self: flex-start;
+}
+.badge-emr { background: #dcfce7; color: #16a34a; }
+.badge-pharmacy { background: var(--primary-light); color: var(--primary); }
+.badge-tool { background: #fef9c3; color: #92400e; }
+.badge-doc { background: #f3e8ff; color: #7c3aed; }
+.card h3 {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.card p {
+  font-size: 13px;
+  color: var(--text-muted);
+  flex: 1;
+  margin-bottom: 8px;
+}
+.card .url {
+  font-size: 11px;
+  color: var(--primary);
+  word-break: break-all;
+  font-family: monospace;
+}
+.full-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+  font-size: 13px;
+  background: var(--card);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.full-table th {
+  background: var(--primary);
+  color: #fff;
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 600;
+}
+.full-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.full-table tr:last-child td { border-bottom: none; }
+.full-table a {
+  color: var(--primary);
+  text-decoration: none;
+}
+.full-table a:hover { text-decoration: underline; }
+.footer {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 24px;
+}
+@media (max-width: 600px) {
+  .card-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>ドライブスルー診療<br>プロジェクトポータル</h1>
+  <p>西春内科・在宅クリニック | GitHub Pages 公開一覧</p>
+</div>
+
+<div class="container">
+
+<h2 class="section-title">プロジェクト一覧</h2>
+<div class="card-grid">
+
+  <a class="card" href="karte_v02/index.html">
+    <span class="badge badge-emr">電子カルテ</span>
+    <h3>電子カルテ v0.2</h3>
+    <p>ダッシュボード一画面型。患者管理・SOAP・処方・算定・検査を1画面で完結。GAS + スプレッドシート バックエンド。</p>
+    <span class="url">karte_v02/index.html</span>
+  </a>
+
+  <a class="card" href="index.html">
+    <span class="badge badge-pharmacy">薬品在庫</span>
+    <h3>薬品在庫管理（本番）</h3>
+    <p>QRコードカメラ読み取りで入庫・出庫を記録。スマホ対応。GAS + スプレッドシート連携。</p>
+    <span class="url">index.html</span>
+  </a>
+
+  <a class="card" href="demo.html">
+    <span class="badge badge-pharmacy">薬品在庫</span>
+    <h3>薬品在庫管理（デモ版）</h3>
+    <p>QRクリック選択で動作。GAS不要、ローカルデータのみで試せるデモ。</p>
+    <span class="url">demo.html</span>
+  </a>
+
+  <a class="card" href="qr_generator.html">
+    <span class="badge badge-tool">ツール</span>
+    <h3>QRコード生成・印刷</h3>
+    <p>薬品ラベル用QRコードを一括生成。印刷レイアウト対応。</p>
+    <span class="url">qr_generator.html</span>
+  </a>
+
+  <a class="card" href="manual_flow.html">
+    <span class="badge badge-doc">マニュアル</span>
+    <h3>薬品在庫 操作マニュアル</h3>
+    <p>薬品在庫管理システムの操作手順書。フロー図付き。</p>
+    <span class="url">manual_flow.html</span>
+  </a>
+
+  <a class="card" href="karte_v02/manual/operation_manual.html">
+    <span class="badge badge-doc">マニュアル</span>
+    <h3>カルテ v0.2 操作マニュアル</h3>
+    <p>14章構成の詳細操作マニュアル。スクリーンショット付き縦長HTML版。</p>
+    <span class="url">karte_v02/manual/operation_manual.html</span>
+  </a>
+
+  <a class="card" href="karte_v02/manual/operation_manual_slides.html">
+    <span class="badge badge-doc">マニュアル</span>
+    <h3>カルテ v0.2 スライド版マニュアル</h3>
+    <p>16:9横長スライド17枚。PowerPoint/Google Slides貼付け用。矢印キーで操作。</p>
+    <span class="url">karte_v02/manual/operation_manual_slides.html</span>
+  </a>
+
+</div>
+
+<h2 class="section-title">URL一覧表</h2>
+<table class="full-table">
+  <tr>
+    <th>プロジェクト</th>
+    <th>種別</th>
+    <th>URL</th>
+  </tr>
+  <tr>
+    <td><strong>ポータル（この画面）</strong></td>
+    <td>ポータル</td>
+    <td><a href="https://soumu-lgtm.github.io/drive-through-pharmacy/portal.html">portal.html</a></td>
+  </tr>
+  <tr>
+    <td><strong>電子カルテ v0.2</strong></td>
+    <td>アプリ</td>
+    <td><a href="https://soumu-lgtm.github.io/drive-through-pharmacy/karte_v02/index.html">karte_v02/index.html</a></td>
+  </tr>
+  <tr>
+    <td><strong>カルテ操作マニュアル</strong></td>
+    <td>マニュアル</td>
+    <td><a href="https://soumu-lgtm.github.io/drive-through-pharmacy/karte_v02/manual/operation_manual.html">karte_v02/manual/operation_manual.html</a></td>
+  </tr>
+  <tr>
+    <td><strong>カルテ スライド版マニュアル</strong></td>
+    <td>マニュアル</td>
+    <td><a href="https://soumu-lgtm.github.io/drive-through-pharmacy/karte_v02/manual/operation_manual_slides.html">karte_v02/manual/operation_manual_slides.html</a></td>
+  </tr>
+  <tr>
+    <td><strong>薬品在庫管理（本番）</strong></td>
+    <td>アプリ</td>
+    <td><a href="https://soumu-lgtm.github.io/drive-through-pharmacy/index.html">index.html</a></td>
+  </tr>
+  <tr>
+    <td><strong>薬品在庫管理（デモ）</strong></td>
+    <td>アプリ</td>
+    <td><a href="https://soumu-lgtm.github.io/drive-through-pharmacy/demo.html">demo.html</a></td>
+  </tr>
+  <tr>
+    <td><strong>QRコード生成ツール</strong></td>
+    <td>ツール</td>
+    <td><a href="https://soumu-lgtm.github.io/drive-through-pharmacy/qr_generator.html">qr_generator.html</a></td>
+  </tr>
+  <tr>
+    <td><strong>薬品在庫 操作マニュアル</strong></td>
+    <td>マニュアル</td>
+    <td><a href="https://soumu-lgtm.github.io/drive-through-pharmacy/manual_flow.html">manual_flow.html</a></td>
+  </tr>
+</table>
+
+</div>
+
+<div class="footer">
+  ドライブスルー診療プロジェクト | 西春内科・在宅クリニック | 最終更新: 2026-03-18
+</div>
+
+</body>
+</html>
