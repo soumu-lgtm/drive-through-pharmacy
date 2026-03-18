@@ -28,3 +28,6 @@ data/
 # OS
 Thumbs.db
 .DS_Store
+
+# Allow karte_v02 manual screenshots
+!karte_v02/manual/screenshots/
