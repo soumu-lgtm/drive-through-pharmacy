@@ -151,30 +151,9 @@
             margin-top: 12px;
         }
 
-        /* 読み取り結果 */
-        .scan-result {
-            display: none;
-            background: #f0fdf4;
-            border: 2px solid var(--success);
-            border-radius: 10px;
-            padding: 16px;
-            margin-top: 12px;
-        }
-
-        .scan-result.show {
-            display: block;
-            animation: slideIn 0.3s ease;
-        }
-
         @keyframes slideIn {
             from { opacity: 0; transform: translateY(-10px); }
             to { opacity: 1; transform: translateY(0); }
-        }
-
-        .medicine-name {
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--text);
         }
 
         .medicine-code {
@@ -455,8 +434,82 @@
             background: var(--danger);
         }
 
-        /* バッチ登録リスト */
-        .add-to-list-btn {
+        /* スキャン通知ポップアップ（画面中央に大きく表示） */
+        .scan-popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 300;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        .scan-popup-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .scan-popup {
+            background: white;
+            border-radius: 16px;
+            padding: 28px 32px;
+            text-align: center;
+            max-width: 340px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            transform: scale(0.8);
+            transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .scan-popup-overlay.show .scan-popup {
+            transform: scale(1);
+        }
+
+        .scan-popup-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .scan-popup-name {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+
+        .scan-popup-detail {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        .scan-popup-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .scan-popup-badge.stacked {
+            background: #dcfce7;
+            color: var(--success);
+        }
+
+        .scan-popup-badge.selected {
+            background: #dbeafe;
+            color: var(--primary);
+        }
+
+        /* 薬品追加ボタン */
+        .manual-add-btn {
             width: 100%;
             padding: 14px;
             border: 2px dashed var(--primary);
@@ -470,19 +523,12 @@
             transition: all 0.2s;
         }
 
-        .add-to-list-btn:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-            border-color: var(--border);
-            background: var(--bg);
-            color: var(--text-muted);
-        }
-
-        .add-to-list-btn:not(:disabled):active {
+        .manual-add-btn:active {
             transform: scale(0.98);
             background: #dbeafe;
         }
 
+        /* バッチ登録リスト */
         .batch-card {
             border: 2px solid var(--primary);
             background: #eff6ff;
@@ -526,6 +572,32 @@
 
         .batch-item-qty.out {
             color: var(--danger);
+        }
+
+        .batch-item-controls {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-right: 8px;
+        }
+
+        .batch-qty-btn {
+            width: 28px;
+            height: 28px;
+            border: 1px solid var(--border);
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .batch-qty-btn:active {
+            background: var(--bg);
         }
 
         .batch-remove-btn {
@@ -747,26 +819,6 @@
                         <a href="#" onclick="openManualSelect()" style="color: white;">手動で薬品を選択</a>
                     </div>
                 </div>
-
-                <!-- 読み取り結果 -->
-                <div id="scan-result" class="scan-result">
-                    <div class="medicine-name" id="result-name">-</div>
-                    <div class="medicine-code" id="result-code">コード: -</div>
-                    <div class="medicine-stock" id="result-stock">現在庫: - 個</div>
-                </div>
-            </div>
-
-            <!-- 数量入力 -->
-            <div class="card" id="quantity-card" style="display: none;">
-                <div class="card-title">📦 数量</div>
-                <div class="quantity-input">
-                    <button class="quantity-btn" onclick="changeQty(-1)">−</button>
-                    <div class="quantity-value">
-                        <input type="number" id="qty-value" value="1" min="1" inputmode="numeric" pattern="[0-9]*" onchange="updateQtyFromInput()">
-                        <span class="quantity-unit" id="qty-unit">錠</span>
-                    </div>
-                    <button class="quantity-btn" onclick="changeQty(1)">+</button>
-                </div>
             </div>
 
             <!-- 患者選択（出庫時のみ） -->
@@ -780,9 +832,27 @@
                 </div>
             </div>
 
-            <!-- リストに追加ボタン -->
-            <button class="add-to-list-btn" id="add-to-list-btn" onclick="addToBatch()" disabled>
-                ＋ リストに追加して続ける
+            <!-- 担当者選択 -->
+            <div class="card">
+                <div class="card-title">🧑‍⚕️ 担当者</div>
+                <select class="form-input" id="operator-select">
+                    <option value="">-- 選択してください --</option>
+                    <option value="島原">島原</option>
+                    <option value="森">森</option>
+                    <option value="湯浅">湯浅</option>
+                    <option value="長部">長部</option>
+                    <option value="田中">田中</option>
+                    <option value="沓名">沓名</option>
+                    <option value="西村">西村</option>
+                    <option value="佐川">佐川</option>
+                    <option value="萩原">萩原</option>
+                    <option value="加藤">加藤</option>
+                </select>
+            </div>
+
+            <!-- 薬品追加ボタン -->
+            <button class="manual-add-btn" onclick="openManualSelect()">
+                ＋ 薬品を追加（手動選択）
             </button>
 
             <!-- バッチリスト -->
@@ -855,6 +925,16 @@
 
     <!-- トースト -->
     <div class="toast" id="toast"></div>
+
+    <!-- スキャン通知ポップアップ -->
+    <div class="scan-popup-overlay" id="scan-popup-overlay" onclick="closeScanPopup()">
+        <div class="scan-popup" onclick="event.stopPropagation()">
+            <div class="scan-popup-icon" id="scan-popup-icon">💊</div>
+            <div class="scan-popup-name" id="scan-popup-name">-</div>
+            <div class="scan-popup-detail" id="scan-popup-detail">-</div>
+            <div class="scan-popup-badge stacked" id="scan-popup-badge">リストに追加しました</div>
+        </div>
+    </div>
 
     <script>
         // ===== GAS連携設定 =====
@@ -990,6 +1070,9 @@
         let selectedPatient = null;
         let html5QrCode = null;
         let batchItems = [];
+        let scanPopupTimer = null;
+        let lastScannedCode = null;
+        let scanCooldown = false;
 
         // ===== モード切替 =====
         function setMode(mode) {
@@ -1036,12 +1119,22 @@
         }
 
         function onScanSuccess(decodedText) {
+            // 重複防止（同じコードを1.5秒間無視）
             const normalizedScanned = normalizeCode(decodedText);
+            if (scanCooldown && lastScannedCode === normalizedScanned) return;
+
             const medicine = stockData.find(m => normalizeCode(m.code) === normalizedScanned);
 
             if (medicine) {
-                selectMedicine(medicine);
+                lastScannedCode = normalizedScanned;
+                scanCooldown = true;
+                setTimeout(() => { scanCooldown = false; }, 1500);
+
                 if (navigator.vibrate) navigator.vibrate(100);
+
+                // 即バッチ追加 + ポップアップ通知
+                addToBatchDirect(medicine);
+                showScanPopup(medicine, true);
             } else {
                 const stockCodes = stockData.slice(0, 3).map(m => `${m.code}→${normalizeCode(m.code)}`).join(', ');
                 const debugMsg = `未登録の薬品です\n\nスキャン: ${decodedText}\n正規化後: ${normalizedScanned}\n\nデータ数: ${stockData.length}件\n登録コード例:\n${stockCodes}`;
@@ -1050,37 +1143,6 @@
         }
 
         function onScanFailure(error) {
-        }
-
-        function selectMedicine(medicine) {
-            selectedMedicine = medicine;
-            document.getElementById('result-name').textContent = medicine.name;
-            document.getElementById('result-code').textContent = 'コード: ' + medicine.code;
-            document.getElementById('result-stock').textContent = '現在庫: ' + medicine.stock + ' ' + medicine.unit;
-            document.getElementById('scan-result').classList.add('show');
-            document.getElementById('quantity-card').style.display = 'block';
-            document.getElementById('qty-unit').textContent = medicine.unit;
-            quantity = 1;
-            document.getElementById('qty-value').value = quantity;
-            updateActionButtons();
-        }
-
-        // ===== 数量操作 =====
-        function changeQty(delta) {
-            quantity = Math.max(1, quantity + delta);
-            document.getElementById('qty-value').value = quantity;
-            if (navigator.vibrate) navigator.vibrate(30);
-        }
-
-        function updateQtyFromInput() {
-            const input = document.getElementById('qty-value');
-            const val = parseInt(input.value, 10);
-            if (isNaN(val) || val < 1) {
-                quantity = 1;
-                input.value = 1;
-            } else {
-                quantity = val;
-            }
         }
 
         // ===== 患者オートコンプリート =====
@@ -1124,12 +1186,7 @@
 
         // ===== ボタン状態管理 =====
         function updateActionButtons() {
-            const addBtn = document.getElementById('add-to-list-btn');
             const submitBtn = document.getElementById('submit-btn');
-
-            const canAdd = selectedMedicine &&
-                (currentMode === 'in' || (currentMode === 'out' && document.getElementById('patient-input').value));
-            addBtn.disabled = !canAdd;
 
             const totalItems = batchItems.length;
             if (totalItems > 0) {
@@ -1143,46 +1200,19 @@
             }
         }
 
-        // ===== バッチ登録機能 =====
-        function addToBatch() {
-            if (!selectedMedicine) return;
 
-            const patientInputEl = document.getElementById('patient-input');
-            const patientInputVal = patientInputEl.value;
-            if (currentMode === 'out' && !patientInputVal) return;
-
-            const item = {
-                mode: currentMode,
-                medicine: { ...selectedMedicine },
-                quantity: quantity,
-                patient: currentMode === 'out' ? {
-                    id: selectedPatient?.id || '',
-                    name: patientInputVal
-                } : null
-            };
-
-            batchItems.push(item);
-            renderBatchList();
-
-            selectedMedicine = null;
-            quantity = 1;
-            selectedPatient = null;
-            document.getElementById('scan-result').classList.remove('show');
-            document.getElementById('quantity-card').style.display = 'none';
-            document.getElementById('qty-value').value = 1;
-            if (currentMode === 'in') {
-                patientInputEl.value = '';
-            }
-            updateActionButtons();
-
-            showToast(`${item.medicine.name} をリストに追加しました`, 'success');
-            if (navigator.vibrate) navigator.vibrate(50);
-        }
 
         function removeBatchItem(index) {
             batchItems.splice(index, 1);
             renderBatchList();
             updateActionButtons();
+        }
+
+        function changeBatchQty(index, delta) {
+            const item = batchItems[index];
+            item.quantity = Math.max(1, item.quantity + delta);
+            renderBatchList();
+            if (navigator.vibrate) navigator.vibrate(30);
         }
 
         function renderBatchList() {
@@ -1202,9 +1232,13 @@
                 <div class="batch-item">
                     <div class="batch-item-info">
                         <div class="batch-item-name">${item.medicine.name}</div>
-                        <div class="batch-item-detail">${item.quantity}${item.medicine.unit}${item.patient ? ' / ' + item.patient.name : ''}</div>
+                        <div class="batch-item-detail">${item.patient ? item.patient.name : ''}</div>
                     </div>
-                    <div class="batch-item-qty ${item.mode}">${item.mode === 'in' ? '+' : '-'}${item.quantity}</div>
+                    <div class="batch-item-controls">
+                        <button class="batch-qty-btn" onclick="changeBatchQty(${i}, -1)">−</button>
+                        <span class="batch-item-qty ${item.mode}">${item.mode === 'in' ? '+' : '-'}${item.quantity}</span>
+                        <button class="batch-qty-btn" onclick="changeBatchQty(${i}, 1)">＋</button>
+                    </div>
                     <button class="batch-remove-btn" onclick="removeBatchItem(${i})">✕</button>
                 </div>
             `).join('');
@@ -1214,9 +1248,41 @@
         async function submitAll() {
             if (batchItems.length === 0) return;
 
+            // 担当者必須チェック
+            const operator = document.getElementById('operator-select').value;
+            if (!operator) {
+                showToast('担当者を選択してください', 'error');
+                document.getElementById('operator-select').focus();
+                return;
+            }
+
+            // 出庫モードでは患者入力を必須チェック
+            if (currentMode === 'out') {
+                const patientInputVal = document.getElementById('patient-input').value;
+                if (!patientInputVal) {
+                    showToast('患者を入力してから送信してください', 'error');
+                    document.getElementById('patient-input').focus();
+                    return;
+                }
+            }
+
             const submitBtn = document.getElementById('submit-btn');
             submitBtn.disabled = true;
             submitBtn.innerHTML = '⏳ 送信中...';
+
+            // 送信時点の情報を全アイテムに付与
+            for (const item of batchItems) {
+                item.operator = operator;
+            }
+            if (currentMode === 'out') {
+                const patientInputVal = document.getElementById('patient-input').value;
+                for (const item of batchItems) {
+                    item.patient = {
+                        id: selectedPatient?.id || '',
+                        name: patientInputVal
+                    };
+                }
+            }
 
             let successCount = 0;
             let errorCount = 0;
@@ -1228,7 +1294,7 @@
                         result = await gasPost('stockIn', {
                             code: item.medicine.code,
                             quantity: item.quantity,
-                            operator: '担当者',
+                            operator: item.operator || '担当者',
                             note: ''
                         });
                     } else {
@@ -1239,7 +1305,7 @@
                             quantity: item.quantity,
                             patientId: patientId,
                             patientName: patientName,
-                            operator: '担当者',
+                            operator: item.operator || '担当者',
                             note: ''
                         });
                     }
@@ -1291,11 +1357,48 @@
             selectedMedicine = null;
             quantity = 1;
             selectedPatient = null;
-            document.getElementById('scan-result').classList.remove('show');
-            document.getElementById('quantity-card').style.display = 'none';
             document.getElementById('patient-input').value = '';
             document.querySelectorAll('.patient-chip').forEach(c => c.classList.remove('selected'));
             updateActionButtons();
+        }
+
+        // ===== スキャン通知ポップアップ =====
+        function showScanPopup(medicine, wasStacked) {
+            const overlay = document.getElementById('scan-popup-overlay');
+            document.getElementById('scan-popup-icon').textContent = '💊';
+            document.getElementById('scan-popup-name').textContent = medicine.name;
+            document.getElementById('scan-popup-detail').textContent = `コード: ${medicine.code}　現在庫: ${medicine.stock} ${medicine.unit}`;
+
+            const badge = document.getElementById('scan-popup-badge');
+            badge.textContent = `リストに追加しました（${batchItems.length}件目）`;
+            badge.className = 'scan-popup-badge stacked';
+
+            overlay.classList.add('show');
+
+            if (scanPopupTimer) clearTimeout(scanPopupTimer);
+            const duration = 1200;
+            scanPopupTimer = setTimeout(() => {
+                overlay.classList.remove('show');
+            }, duration);
+        }
+
+        function closeScanPopup() {
+            document.getElementById('scan-popup-overlay').classList.remove('show');
+            if (scanPopupTimer) clearTimeout(scanPopupTimer);
+        }
+
+        // ===== 即バッチ追加 =====
+        function addToBatchDirect(medicine) {
+            const item = {
+                mode: currentMode,
+                medicine: { ...medicine },
+                quantity: 1,
+            };
+
+            batchItems.push(item);
+            renderBatchList();
+            updateActionButtons();
+            if (navigator.vibrate) navigator.vibrate(50);
         }
 
         // ===== トースト通知 =====
@@ -1398,10 +1501,19 @@
         function selectFromModal(code) {
             const normalizedCode = normalizeCode(code);
             const medicine = stockData.find(m => normalizeCode(m.code) === normalizedCode);
-            if (medicine) {
-                selectMedicine(medicine);
-                closeManualSelect();
-            }
+            if (!medicine) return;
+
+            // 即バッチ追加 → モーダルを閉じる → リストにスクロール
+            addToBatchDirect(medicine);
+            showScanPopup(medicine, true);
+            if (navigator.vibrate) navigator.vibrate(50);
+            closeManualSelect();
+
+            // バッチリストが見える位置にスクロール
+            setTimeout(() => {
+                const batchCard = document.getElementById('batch-card');
+                if (batchCard) batchCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
         }
 
         // ===== 初期化 =====
