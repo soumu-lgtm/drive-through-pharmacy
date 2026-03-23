@@ -1067,50 +1067,53 @@ function escHtml(s) {
 // ===== Init =====
 loadData();
 
-// Sample data (only if no v2 data yet)
-const todayKey = dateKey(new Date());
-if (!data[todayKey]) {
-  data[todayKey] = {
-    '沓名': { tasks: [
-      { title: '週次MTG準備', detail: 'アジェンダ作成', status: 'done' },
-      { title: '売上データ確認', detail: 'Amazon・Qoo10', status: 'pending' },
-    ], handover: '' },
-    '田中': { tasks: [
-      { title: '固定費レビュー', detail: '3月分', status: 'done' },
-      { title: '予算承認対応', detail: '', status: 'in-progress' },
-    ], handover: '' },
-    '森': { tasks: [
-      { title: '在庫DB整合チェック', detail: 'スプレッドシート', status: 'done' },
-      { title: '注文処理', detail: '本日分12件', status: 'done' },
-      { title: '返品対応', detail: 'Qoo10 1件', status: 'pending' },
-    ], handover: '返品は明日集荷手配' },
-    '佐川': { tasks: [
-      { title: 'KPIレポート提出', detail: '週次', status: 'in-progress' },
-      { title: '利益率計算', detail: 'HUNDRED DOCTOR', status: 'pending' },
-    ], handover: '' },
-    '西村': { tasks: [
-      { title: 'Amazon広告調整', detail: 'CPC確認', status: 'done' },
-      { title: 'SEOキーワード分析', detail: '', status: 'in-progress' },
-    ], handover: '' },
-    '湯浅': { tasks: [
-      { title: '商品撮影', detail: '新商品3点', status: 'done' },
-      { title: '動画編集', detail: 'SNS用30秒', status: 'in-progress' },
-    ], handover: '' },
-    '長部': { tasks: [
-      { title: '出荷確認', detail: '本日分', status: 'done' },
-      { title: 'CVR分析', detail: 'LP改善用', status: 'done' },
-      { title: '配送業者連絡', detail: '遅延分フォロー', status: 'pending' },
-    ], handover: '遅延2件、明朝再確認' },
-    '萩原': { tasks: [
-      { title: '請求書処理', detail: '3月分', status: 'done' },
-      { title: '経費精算', detail: '', status: 'pending' },
-    ], handover: '' },
-    '加藤': { tasks: [
-      { title: 'SNS投稿', detail: 'Instagram 2本', status: 'done' },
-      { title: 'インフルエンサー連絡', detail: '3名', status: 'in-progress' },
-    ], handover: '' },
-  };
-  saveData();
+// Sample data: show only once (first-ever access), not every new day
+if (!localStorage.getItem('taskboard_sample_shown')) {
+  const todayKey = dateKey(new Date());
+  if (!data[todayKey]) {
+    data[todayKey] = {
+      '沓名': { tasks: [
+        { title: '週次MTG準備', detail: 'アジェンダ作成', status: 'done' },
+        { title: '売上データ確認', detail: 'Amazon・Qoo10', status: 'pending' },
+      ], handover: '' },
+      '田中': { tasks: [
+        { title: '固定費レビュー', detail: '3月分', status: 'done' },
+        { title: '予算承認対応', detail: '', status: 'in-progress' },
+      ], handover: '' },
+      '森': { tasks: [
+        { title: '在庫DB整合チェック', detail: 'スプレッドシート', status: 'done' },
+        { title: '注文処理', detail: '本日分12件', status: 'done' },
+        { title: '返品対応', detail: 'Qoo10 1件', status: 'pending' },
+      ], handover: '返品は明日集荷手配' },
+      '佐川': { tasks: [
+        { title: 'KPIレポート提出', detail: '週次', status: 'in-progress' },
+        { title: '利益率計算', detail: 'HUNDRED DOCTOR', status: 'pending' },
+      ], handover: '' },
+      '西村': { tasks: [
+        { title: 'Amazon広告調整', detail: 'CPC確認', status: 'done' },
+        { title: 'SEOキーワード分析', detail: '', status: 'in-progress' },
+      ], handover: '' },
+      '湯浅': { tasks: [
+        { title: '商品撮影', detail: '新商品3点', status: 'done' },
+        { title: '動画編集', detail: 'SNS用30秒', status: 'in-progress' },
+      ], handover: '' },
+      '長部': { tasks: [
+        { title: '出荷確認', detail: '本日分', status: 'done' },
+        { title: 'CVR分析', detail: 'LP改善用', status: 'done' },
+        { title: '配送業者連絡', detail: '遅延分フォロー', status: 'pending' },
+      ], handover: '遅延2件、明朝再確認' },
+      '萩原': { tasks: [
+        { title: '請求書処理', detail: '3月分', status: 'done' },
+        { title: '経費精算', detail: '', status: 'pending' },
+      ], handover: '' },
+      '加藤': { tasks: [
+        { title: 'SNS投稿', detail: 'Instagram 2本', status: 'done' },
+        { title: 'インフルエンサー連絡', detail: '3名', status: 'in-progress' },
+      ], handover: '' },
+    };
+    saveData();
+  }
+  localStorage.setItem('taskboard_sample_shown', '1');
 }
 
 // Modal close on overlay click
