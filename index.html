@@ -415,8 +415,9 @@
             border-radius: 10px;
             font-weight: 600;
             opacity: 0;
+            pointer-events: none;
             transition: all 0.3s;
-            z-index: 200;
+            z-index: 250;
             max-width: 90%;
             text-align: center;
         }
@@ -424,6 +425,7 @@
         .toast.show {
             transform: translateX(-50%) translateY(0);
             opacity: 1;
+            pointer-events: auto;
         }
 
         .toast.success {
@@ -671,11 +673,6 @@
         }
 
         /* 薬品検索リスト */
-        .medicine-list {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
         .medicine-item {
             display: flex;
             justify-content: space-between;
@@ -702,6 +699,71 @@
             color: var(--text-muted);
         }
 
+        /* カテゴリ選択カード */
+        .modal-category-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+            background: white;
+        }
+        .modal-category-card:hover {
+            background: #f0f4ff;
+            border-color: var(--primary);
+        }
+        .modal-category-card:active {
+            background: #dde6ff;
+        }
+        .modal-cat-icon {
+            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg);
+            border-radius: 10px;
+            flex-shrink: 0;
+        }
+        .modal-cat-label {
+            font-weight: 600;
+            font-size: 15px;
+        }
+        .modal-cat-count {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        .modal-cat-arrow {
+            margin-left: auto;
+            color: var(--text-muted);
+            font-size: 18px;
+        }
+        .modal-breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 0;
+            font-size: 13px;
+            flex-wrap: wrap;
+        }
+        .modal-bc-link {
+            color: var(--primary);
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        .modal-bc-sep { color: var(--text-muted); }
+        .modal-bc-current { color: var(--text); font-weight: 600; }
+
+        .medicine-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
         /* ボトムナビ */
         .bottom-nav {
             position: fixed;
@@ -711,24 +773,31 @@
             background: white;
             border-top: 1px solid var(--border);
             display: flex;
-            justify-content: space-around;
-            padding: 8px 0;
-            padding-bottom: max(8px, env(safe-area-inset-bottom));
+            z-index: 200;
         }
 
         .nav-item {
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 8px 16px;
+            justify-content: center;
+            padding: 10px 0;
+            flex: 1;
+            min-height: 52px;
             color: var(--text-muted);
             text-decoration: none;
-            font-size: 11px;
+            font-size: 12px;
             cursor: pointer;
+            -webkit-tap-highlight-color: rgba(0,0,0,0.05);
         }
 
+        .nav-item:hover {
+            background: #f0f4ff;
+            color: var(--primary);
+        }
         .nav-item.active {
             color: var(--primary);
+            background: #e8eeff;
         }
 
         .nav-item span {
@@ -755,6 +824,10 @@
             border-radius: 10px;
             margin-bottom: 8px;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            transition: background 0.15s;
+        }
+        .stock-item:active {
+            background: #f0f4ff;
         }
 
         .stock-info {
@@ -783,6 +856,38 @@
         .stock-unit {
             font-size: 13px;
             color: var(--text-muted);
+        }
+
+        .stock-category {
+            font-size: 11px;
+            color: #fff;
+            background: var(--primary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-top: 2px;
+        }
+        .stock-category.child { background: #e67e22; }
+        .stock-category.external { background: #27ae60; }
+
+        .stock-meta {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .cat-btn {
+            padding: 6px 14px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            background: white;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .cat-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
         }
     </style>
 </head>
@@ -872,8 +977,14 @@
     <div id="tab-stock" class="tab-content">
         <div class="container">
             <div class="card">
-                <div class="card-title">🔍 薬品検索</div>
-                <input type="text" class="form-input" id="stock-search" placeholder="薬品名で検索..." oninput="filterStock()">
+                <div class="card-title">🔍 薬品検索（123品目）</div>
+                <input type="text" class="form-input" id="stock-search" placeholder="薬品名・コード・カテゴリで検索..." oninput="filterStock()">
+                <div class="category-filter" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+                    <button class="cat-btn active" onclick="setCategoryFilter('')">全て</button>
+                    <button class="cat-btn" onclick="setCategoryFilter('成人')">成人</button>
+                    <button class="cat-btn" onclick="setCategoryFilter('小児')">小児</button>
+                    <button class="cat-btn" onclick="setCategoryFilter('外用')">外用</button>
+                </div>
             </div>
             <div id="stock-list">
                 <!-- 在庫一覧がここに表示される -->
@@ -913,10 +1024,11 @@
     <div class="modal-overlay" id="manual-modal">
         <div class="modal-content">
             <div class="modal-header">
-                <div class="modal-title">薬品を選択</div>
+                <div class="modal-title" id="modal-title-text">薬品を選択</div>
                 <button class="modal-close" onclick="closeManualSelect()">×</button>
             </div>
-            <input type="text" class="form-input" id="modal-search" placeholder="薬品名で検索..." oninput="filterModalList()">
+            <input type="text" class="form-input" id="modal-search" placeholder="薬品名・カテゴリで検索..." oninput="filterModalList()">
+            <div id="modal-breadcrumb" class="modal-breadcrumb" style="display:none;"></div>
             <div class="medicine-list" id="modal-list">
                 <!-- 薬品リストがここに表示される -->
             </div>
@@ -1007,15 +1119,39 @@
         async function loadStockFromGAS() {
             const result = await gasGet('getStock');
             if (result && result.success) {
-                stockData = result.stock.map(s => ({
-                    code: String(s.code),
-                    name: s.name,
-                    stock: s.currentStock,
-                    unit: s.unit,
-                    threshold: s.threshold || 10
-                }));
+                // GASデータでstockのみ更新し、category等のローカル情報は維持
+                const gasMap = {};
+                result.stock.forEach(s => {
+                    gasMap[String(s.code)] = s;
+                });
+                stockData.forEach(m => {
+                    const gs = gasMap[m.code];
+                    if (gs) {
+                        m.stock = gs.currentStock;
+                        if (gs.unit) m.unit = gs.unit;
+                        if (gs.threshold) m.threshold = gs.threshold;
+                    }
+                });
+                // GASにあってローカルにない薬品を追加
+                result.stock.forEach(s => {
+                    const code = String(s.code);
+                    if (!stockData.find(m => m.code === code)) {
+                        stockData.push({
+                            code: code,
+                            name: s.name,
+                            stock: s.currentStock,
+                            unit: s.unit,
+                            threshold: s.threshold || 10,
+                            category: '',
+                            usage: '',
+                            price: '',
+                            maker: '',
+                            target: ''
+                        });
+                    }
+                });
                 renderStockList();
-                showToast('データを同期しました (' + stockData.length + '件)', 'success');
+                showToast('在庫数を同期しました (' + result.stock.length + '件)', 'success');
             } else if (result && result.error) {
                 showToast('データ取得エラー: ' + result.error, 'error');
             }
@@ -1040,16 +1176,129 @@
 
         // ===== データ（プロトタイプ用サンプル / GAS未接続時のフォールバック） =====
         let stockData = [
-            { code: '059000001', name: 'クロピドグレル錠75mg「SANIK」', stock: 120, unit: '錠', threshold: 30 },
-            { code: '059000002', name: 'ランソプラゾール15mg腸溶性口腔内崩壊錠', stock: 85, unit: '錠', threshold: 20 },
-            { code: '059000003', name: 'アムロジンOD錠10mg', stock: 200, unit: '錠', threshold: 50 },
-            { code: '059000004', name: 'トラゼンタ錠5mg', stock: 45, unit: '錠', threshold: 30 },
-            { code: '059000005', name: 'ロスバスタチン錠5mg「DSEP」', stock: 150, unit: '錠', threshold: 40 },
-            { code: '059000006', name: 'ジャディアンス錠10mg', stock: 60, unit: '錠', threshold: 30 },
-            { code: '059000007', name: 'センノシド錠12mg「サワイ」', stock: 180, unit: '錠', threshold: 50 },
-            { code: '059000008', name: 'ロキソプロフェンNaテープ100mg', stock: 25, unit: '枚', threshold: 30 },
-            { code: '059000009', name: '万年筆型注入器用注射針（超微細型）', stock: 100, unit: '本', threshold: 50 },
-            { code: '059000010', name: 'ライゾデグ配合注 フレックスタッチ 300単位', stock: 8, unit: 'キット', threshold: 5 },
+            { code: '621520803', name: '後）アセトアミノフェン錠 200㎎', stock: 160, unit: '錠', threshold: 20, category: '成人/解熱鎮痛剤', usage: '適時', price: '6.3', maker: '', target: '成人' },
+            { code: '622649001', name: '後）アセトアミノフェン錠 500㎎', stock: 48, unit: '錠', threshold: 20, category: '成人/解熱鎮痛剤', usage: '適時', price: '11.2', maker: '', target: '成人' },
+            { code: '620098801', name: '後）ロキソプロフェン錠６０ｍｇ 60㎎', stock: 15, unit: '錠', threshold: 20, category: '成人/解熱鎮痛剤', usage: '1日3回', price: '10.5', maker: '', target: '成人' },
+            { code: '612220325', name: 'メジコン錠１５ｍｇ 15㎎', stock: 120, unit: '錠', threshold: 20, category: '成人/咳止め', usage: '1日3回', price: '8.5', maker: '', target: '成人' },
+            { code: '612240006', name: 'アスベリン錠２０　２０ｍｇ 20㎎', stock: 95, unit: '錠', threshold: 20, category: '成人/咳止め', usage: '1日3回', price: '13.8', maker: '', target: '成人' },
+            { code: '612220347', name: 'レスプレン錠３０ｍｇ 30㎎', stock: 95, unit: '錠', threshold: 20, category: '成人/咳止め', usage: '1日3回', price: '11.8', maker: '', target: '成人' },
+            { code: '620007000', name: 'トランサミンカプセル２５０ｍｇ 250㎎', stock: 56, unit: '錠', threshold: 20, category: '成人/止血剤', usage: '1日3回', price: '10.8', maker: '', target: '成人' },
+            { code: '620005047', name: '後）トラネキサム酸錠２５０ｍｇ 250㎎', stock: 48, unit: '錠', threshold: 20, category: '成人/止血剤', usage: '1日3回', price: '10.8', maker: '', target: '成人' },
+            { code: '610407447', name: 'ムコダイン錠２５０ｍｇ 250㎎', stock: 250, unit: '錠', threshold: 20, category: '成人/去痰剤', usage: '1日3回', price: '10.8', maker: '「杏林製薬」', target: '成人' },
+            { code: 'DT00010', name: 'ムコダイン錠５００ｍｇ 500㎎', stock: 60, unit: '錠', threshold: 20, category: '成人/去痰剤', usage: '1日3回', price: '10.8', maker: '「杏林製薬」', target: '成人' },
+            { code: '620383101', name: 'カルボシステイン錠２５０ｍｇ 250㎎', stock: 35, unit: '錠', threshold: 20, category: '成人/去痰剤', usage: '1日3回', price: '10.8', maker: '', target: '成人' },
+            { code: 'DT00012', name: 'カルボシステイン錠５００ｍｇ 500㎎', stock: 90, unit: '錠', threshold: 20, category: '成人/去痰剤', usage: '1日3回', price: '10.8', maker: '', target: '成人' },
+            { code: 'DT00013', name: 'ミヤBM錠', stock: 12, unit: '錠', threshold: 20, category: '成人/整腸剤', usage: '1日3回', price: '6.1', maker: '', target: '成人' },
+            { code: 'DT00014', name: 'ビオフェルミン錠剤', stock: 24, unit: '錠', threshold: 10, category: '成人/整腸剤', usage: '1日3回', price: '6.1', maker: '', target: '成人' },
+            { code: '610443040', name: 'アレグラ錠６０ｍｇ 60㎎', stock: 15, unit: '錠', threshold: 20, category: '成人/抗アレルギー剤', usage: '1日2回', price: '20.9', maker: 'サノフィ', target: '成人' },
+            { code: 'DT00016', name: '後）フェキソフェナジン塩酸塩60㎎ 60㎎', stock: 35, unit: '錠', threshold: 20, category: '成人/抗アレルギー剤', usage: '1日2回', price: '10.8', maker: '', target: '成人' },
+            { code: 'DT00017', name: '後）ドンペリドン錠１０ｍｇ 10㎎', stock: 80, unit: '錠', threshold: 20, category: '成人/吐気止め', usage: '適時', price: '6.3', maker: '', target: '成人' },
+            { code: '620006100', name: 'プリンペラン錠５　５ｍｇ 5㎎', stock: 95, unit: '錠', threshold: 20, category: '成人/吐気止め', usage: '1日数回', price: '10.8', maker: '「日医工」', target: '成人' },
+            { code: '610454087', name: 'メリスロン錠６ｍｇ 6㎎', stock: 45, unit: '錠', threshold: 20, category: '成人/鎮暈剤', usage: '1日3回', price: '10.8', maker: '「エーザイ」', target: '成人' },
+            { code: '622404401', name: 'タケキャブ錠１０ｍｇ 10㎎', stock: 140, unit: '錠', threshold: 10, category: '成人/消化性潰瘍用剤', usage: '1日1回', price: '91.6', maker: '', target: '成人' },
+            { code: 'DT00021', name: '後）レボフロキサシン錠２５０ｍｇ 250㎎', stock: 15, unit: '錠', threshold: 20, category: '成人/抗生剤', usage: '1日1回', price: '24.7', maker: '', target: '成人' },
+            { code: '620006919', name: 'サワシリンカプセル２５０　２５０ｍｇ 250㎎', stock: 60, unit: '錠', threshold: 20, category: '成人/抗生剤', usage: '1日3回', price: '15.3', maker: '', target: '成人' },
+            { code: '620004981', name: 'ケフレックスカプセル２５０ｍｇ 250㎎', stock: 80, unit: '錠', threshold: 10, category: '成人/抗生剤', usage: '1日3回', price: '31.5', maker: '', target: '成人' },
+            { code: 'DT00024', name: 'クラリスロマイシン錠200㎎ 200㎎', stock: 160, unit: '錠', threshold: 10, category: '成人/抗生剤', usage: '1日2回', price: '19.2', maker: '「NPI」', target: '成人' },
+            { code: '615101504', name: '麻黄湯エキス顆粒 7.5g', stock: 15, unit: '包', threshold: 8, category: '成人/漢方薬', usage: '1日3回', price: '11.4', maker: '', target: '成人' },
+            { code: 'DT00026', name: '後）オセルタミビルカプセル 75㎎', stock: 60, unit: '錠', threshold: 10, category: '成人/抗インフルエンザ薬', usage: '1日2回', price: '108', maker: '「サワイ」', target: '成人' },
+            { code: '620509501', name: 'ＳＰトローチ０．２５ｍｇ「明治」 0.25㎎', stock: 12, unit: '錠', threshold: 10, category: '成人/口腔用剤', usage: '1日6回', price: '6.3', maker: '「明治」', target: '成人' },
+            { code: '615101755', name: '麻黄附子細辛湯', stock: 12, unit: '包', threshold: 8, category: '成人/漢方薬', usage: '1日3回', price: '18.4', maker: '', target: '成人' },
+            { code: 'DT00029', name: '小青竜湯', stock: 36, unit: '包', threshold: 8, category: '成人/漢方薬', usage: '1日3回', price: '12.8', maker: '', target: '成人' },
+            { code: '620481301', name: 'プルゼニド錠１２ｍｇ 12㎎', stock: 90, unit: '錠', threshold: 10, category: '成人/下剤', usage: '1日1回', price: '5.9', maker: '「サンファーマ」', target: '成人' },
+            { code: 'DT00031', name: 'プレドニン 5㎎', stock: 120, unit: '錠', threshold: 10, category: '成人/ステロイド', usage: '1日3回', price: '10.1', maker: '「シオノギ」', target: '成人' },
+            { code: 'DT00032', name: 'アメナリーフ 200㎎', stock: 15, unit: '錠', threshold: 10, category: '成人/抗ヘルペスウィルス薬', usage: '1日1回', price: '1148.7', maker: '「マルホ」', target: '成人' },
+            { code: 'DT00033', name: '向デパス 0.25㎎', stock: 72, unit: '錠', threshold: 10, category: '成人/抗不安薬', usage: '就寝前', price: '9.5', maker: '「田辺」', target: '成人' },
+            { code: 'DT00034', name: 'タミフルカプセル 75㎎', stock: 12, unit: '錠', threshold: 10, category: '成人/抗インフルエンザ薬', usage: '1日2回', price: '189.4', maker: '「中外」', target: '成人' },
+            { code: 'DT00035', name: 'クラリスロマイシン錠２００ｍｇ「ＮＩＧ」 200㎎', stock: 180, unit: '錠', threshold: 10, category: '成人/抗生剤', usage: '1日2回', price: '25.3', maker: '「ＮＩＧ」', target: '成人' },
+            { code: 'DT00036', name: 'ジスロマック 250㎎', stock: 120, unit: '錠', threshold: 10, category: '成人/抗生剤', usage: '1日1回', price: '145.4', maker: '', target: '成人' },
+            { code: '621925701', name: 'クラビット錠２５０ｍｇ　（レボフロキサシンとして） 250㎎', stock: 56, unit: '錠', threshold: 20, category: '成人/抗菌剤', usage: '1日1回', price: '65', maker: '', target: '成人' },
+            { code: '622080701', name: 'ネキシウムカプセル１０ｍｇ 10㎎', stock: 80, unit: '錠', threshold: 20, category: '成人/消化性潰瘍用剤', usage: '1日1回', price: '59.3', maker: '「アストラゼネカ」', target: '成人' },
+            { code: '621116301', name: 'オーグメンチン配合錠２５０ＲＳ　（３７５ｍｇ） 250㎎', stock: 180, unit: '錠', threshold: 10, category: '成人/抗生剤', usage: '1日3回', price: '45.7', maker: '', target: '成人' },
+            { code: 'DT00040', name: 'バルトレックス錠 500㎎', stock: 48, unit: '錠', threshold: 10, category: '成人/抗ヘルペスウィルス薬', usage: '1日2回', price: '145.4', maker: '「グラクソ」', target: '成人' },
+            { code: 'DT00041', name: 'ベルソムラ 20㎎', stock: 35, unit: '錠', threshold: 10, category: '成人/睡眠導入剤', usage: '就寝前', price: '69.3', maker: '「MSD」', target: '成人' },
+            { code: 'DT00042', name: 'ハルシオン 0.125㎎', stock: 8, unit: '錠', threshold: 10, category: '成人/睡眠導入剤', usage: '就寝前', price: '6.1', maker: '「ファイザー」', target: '成人' },
+            { code: '620002023', name: 'カロナール錠 200㎎', stock: 48, unit: '錠', threshold: 20, category: '成人/解熱鎮痛剤', usage: '適時', price: '6.1', maker: '「あゆみ」', target: '成人' },
+            { code: '620000033', name: 'カロナール錠 300㎎', stock: 200, unit: '錠', threshold: 20, category: '成人/解熱鎮痛剤', usage: '適時', price: '6.4', maker: '「あゆみ」', target: '成人' },
+            { code: '622381201', name: 'カロナール錠 500㎎', stock: 200, unit: '錠', threshold: 20, category: '成人/解熱鎮痛剤', usage: '適時', price: '', maker: '「あゆみ」', target: '成人' },
+            { code: '620383203', name: 'カルボシステイン錠２５０ｍｇ「ツルハラ」 250㎎', stock: 140, unit: '錠', threshold: 20, category: '成人/去痰剤', usage: '1日3回', price: '10.4', maker: '「ツルハラ」', target: '成人' },
+            { code: '620383709', name: 'カルボシステイン錠２５０ｍｇ「ＮＩＧ」 250㎎', stock: 120, unit: '錠', threshold: 20, category: '成人/去痰剤', usage: '1日3回', price: '10.4', maker: '「ＮＩＧ」', target: '成人' },
+            { code: '620383801', name: 'カルボシステイン錠２５０ｍｇ「トーワ」 250㎎', stock: 24, unit: '錠', threshold: 20, category: '成人/去痰剤', usage: '1日3回', price: '10.4', maker: '「トーワ」', target: '成人' },
+            { code: '620004412', name: 'アレグラ錠３０ｍｇ 30㎎', stock: 3, unit: '錠', threshold: 20, category: '成人/抗アレルギー剤', usage: '1日2回', price: '20.4', maker: '「サノフィ」', target: '成人' },
+            { code: '620003498', name: 'アタラックスPカプセル 25㎎', stock: 60, unit: 'CP', threshold: 20, category: '成人/抗アレルギー剤', usage: '1日2回', price: '6.1', maker: '', target: '成人' },
+            { code: '621741401', name: 'クラリスロマイシン錠２００ｍｇ「ＴＣＫ」 200㎎', stock: 48, unit: '錠', threshold: 10, category: '成人/抗生剤', usage: '1日2回', price: '22.8', maker: '「ＴＣＫ」', target: '成人' },
+            { code: '621742103', name: 'クラリスロマイシン錠２００ｍｇ「杏林」 200㎎', stock: 8, unit: '錠', threshold: 10, category: '成人/抗生剤', usage: '1日2回', price: '19.2', maker: '「杏林」', target: '成人' },
+            { code: '620005904', name: 'アムロジン錠 2.5㎎', stock: 35, unit: '錠', threshold: 20, category: '成人/降圧剤', usage: '1日1回', price: '11.3', maker: '「住友ファーマ」', target: '成人' },
+            { code: 'DT00054', name: 'ブスコパン錠 10㎎', stock: 60, unit: '錠', threshold: 10, category: '成人/鎮痙剤', usage: '1日3回', price: '6.1', maker: '「サノフィ」', target: '成人' },
+            { code: 'DT00055', name: 'マグミット 330㎎', stock: 150, unit: '錠', threshold: 10, category: '成人/下剤', usage: '1日数回', price: '5.9', maker: '', target: '成人' },
+            { code: 'DT00056', name: 'モビコールHD', stock: 160, unit: '錠', threshold: 10, category: '成人/下剤', usage: '1日数回', price: '', maker: '', target: '成人' },
+            { code: '615101406', name: '葛根湯', stock: 48, unit: '包', threshold: 8, category: '成人/漢方薬', usage: '1日3回', price: '13.4', maker: '', target: '成人' },
+            { code: 'DT00072', name: '後）アセトアミノフェンＤＳ小児用２０％ 0.5g', stock: 27, unit: '包', threshold: 10, category: '小児/解熱薬', usage: '1日3回', price: '7.2', maker: '', target: '10kg' },
+            { code: 'DT00073', name: '後）アセトアミノフェンＤＳ小児用２０％ 0.75g', stock: 24, unit: '包', threshold: 10, category: '小児/解熱薬', usage: '1日3回', price: '7.2', maker: '', target: '15kg' },
+            { code: 'DT00074', name: '後）アセトアミノフェンＤＳ小児用２０％ 1g', stock: 48, unit: '包', threshold: 10, category: '小児/解熱薬', usage: '1日3回', price: '7.2', maker: '', target: '20kg' },
+            { code: 'DT00075', name: '後）アセトアミノフェンＤＳ小児用２０％ 1.25g', stock: 12, unit: '包', threshold: 10, category: '小児/解熱薬', usage: '1日3回', price: '7.2', maker: '', target: '25kg' },
+            { code: 'DT00076', name: 'アンヒバ坐剤 100mg', stock: 3, unit: '個', threshold: 10, category: '小児/解熱薬', usage: '1日3回', price: '21.6', maker: '', target: '10㎎/kg' },
+            { code: 'DT00077', name: 'アンヒバ坐剤 200mg', stock: 0, unit: '個', threshold: 10, category: '小児/解熱薬', usage: '1日3回', price: '21.6', maker: '', target: '10㎎/kg' },
+            { code: 'DT00078', name: 'アスベリンDS2％ 0.125g', stock: 3, unit: '包', threshold: 10, category: '小児/咳止め', usage: '1日3回', price: '16.6', maker: '', target: '5kg' },
+            { code: 'DT00079', name: 'アスベリンDS2％ 0.25g', stock: 12, unit: '包', threshold: 10, category: '小児/咳止め', usage: '1日3回', price: '16.6', maker: '', target: '10kg' },
+            { code: 'DT00080', name: 'アスベリンDS2％ 0.375g', stock: 21, unit: '包', threshold: 10, category: '小児/咳止め', usage: '1日3回', price: '16.6', maker: '', target: '15kg' },
+            { code: 'DT00081', name: 'アスベリンDS2％ 0.5g', stock: 18, unit: '包', threshold: 10, category: '小児/咳止め', usage: '1日3回', price: '16.6', maker: '', target: '20kg' },
+            { code: 'DT00083', name: 'カルボシステインDS50％ 0.45g', stock: 5, unit: '包', threshold: 10, category: '小児/去痰剤', usage: '1日3回', price: '12.5', maker: '「杏林製薬」', target: '5kg' },
+            { code: 'DT00084', name: 'カルボシステインDS50％ 0.6g', stock: 27, unit: '包', threshold: 10, category: '小児/去痰剤', usage: '1日3回', price: '12.5', maker: '「杏林製薬」', target: '10kg' },
+            { code: 'DT00085', name: 'カルボシステインDS50％ 0.9g', stock: 12, unit: '包', threshold: 10, category: '小児/去痰剤', usage: '1日3回', price: '12.5', maker: '「杏林製薬」', target: '15kg' },
+            { code: 'DT00086', name: 'カルボシステインDS50％ 1.2g', stock: 27, unit: '包', threshold: 10, category: '小児/去痰剤', usage: '1日3回', price: '12.5', maker: '「杏林製薬」', target: '20kg' },
+            { code: 'DT00087', name: 'カルボシステインDS50％ 1.5g', stock: 5, unit: '包', threshold: 10, category: '小児/去痰剤', usage: '1日3回', price: '12.5', maker: '「杏林製薬」', target: '25kg' },
+            { code: 'DT00088', name: '後）フェキソフェナジンDS 0.5g', stock: 30, unit: '包', threshold: 10, category: '小児/抗アレルギー剤', usage: '1日2回', price: '28.2', maker: '', target: '2歳以上' },
+            { code: 'DT00089', name: '後）フェキソフェナジンDS 1.0g', stock: 18, unit: '包', threshold: 10, category: '小児/抗アレルギー剤', usage: '1日2回', price: '28.2', maker: '', target: '7歳以上' },
+            { code: 'DT00090', name: 'ビオフェルミン配合散 0.2g', stock: 36, unit: '包', threshold: 10, category: '小児/整腸剤', usage: '1日3回', price: '6.7', maker: '「ミヤリサン製薬」', target: '5kg' },
+            { code: 'DT00091', name: 'ビオフェルミン配合散 0.4g', stock: 3, unit: '包', threshold: 10, category: '小児/整腸剤', usage: '1日3回', price: '6.7', maker: '「ミヤリサン製薬」', target: '10kg' },
+            { code: 'DT00092', name: 'ビオフェルミン配合散 0.6g', stock: 27, unit: '包', threshold: 10, category: '小児/整腸剤', usage: '1日3回', price: '6.7', maker: '「ミヤリサン製薬」', target: '15kg' },
+            { code: 'DT00093', name: 'ビオフェルミン配合散 0.8g', stock: 24, unit: '包', threshold: 10, category: '小児/整腸剤', usage: '1日3回', price: '6.7', maker: '「ミヤリサン製薬」', target: '20kg' },
+            { code: 'DT00094', name: 'ビオフェルミン配合散 1.0g', stock: 8, unit: '包', threshold: 10, category: '小児/整腸剤', usage: '1日3回', price: '6.7', maker: '「ミヤリサン製薬」', target: '25kg' },
+            { code: 'DT00095', name: '後）ドンペリドン坐剤 10mg', stock: 15, unit: '個', threshold: 5, category: '小児/吐気止め', usage: '', price: '33.4', maker: '', target: '' },
+            { code: 'DT00096', name: '後）ドンペリドン坐剤 30mg', stock: 15, unit: '個', threshold: 5, category: '小児/吐気止め', usage: '', price: '52.8', maker: '', target: '' },
+            { code: 'DT00097', name: 'ダイアップ6㎎ 6㎎', stock: 8, unit: '個', threshold: 10, category: '小児/熱性けいれん緩和剤', usage: '', price: '', maker: '', target: '' },
+            { code: 'DT00098', name: 'ケフラール小児用顆粒100㎎ 1.5g', stock: 3, unit: '包', threshold: 10, category: '小児/抗生剤/セフェム系', usage: '1日3回', price: '44.3', maker: '「塩野義」', target: '5kg' },
+            { code: 'DT00099', name: 'ケフラール小児用顆粒100㎎ 3.0g', stock: 18, unit: '包', threshold: 10, category: '小児/抗生剤/セフェム系', usage: '1日3回', price: '44.3', maker: '「塩野義」', target: '10kg' },
+            { code: 'DT00100', name: 'ケフラール小児用顆粒100㎎ 4.5g', stock: 15, unit: '包', threshold: 10, category: '小児/抗生剤/セフェム系', usage: '1日3回', price: '44.3', maker: '「塩野義」', target: '15kg' },
+            { code: 'DT00101', name: 'ケフラール小児用顆粒100㎎ 6.0g', stock: 3, unit: '包', threshold: 10, category: '小児/抗生剤/セフェム系', usage: '1日3回', price: '44.3', maker: '「塩野義」', target: '20kg' },
+            { code: 'DT00102', name: 'ケフラール小児用顆粒100㎎ 7.5g', stock: 3, unit: '包', threshold: 10, category: '小児/抗生剤/セフェム系', usage: '1日3回', price: '44.3', maker: '「塩野義」', target: '25kg' },
+            { code: 'DT00103', name: '後）クラリスロマイシン錠小児用 0.5g', stock: 35, unit: '錠', threshold: 10, category: '小児/抗生剤/マクロライド系', usage: '1日2回', price: '11.2', maker: '', target: '' },
+            { code: 'DT00104', name: 'クラリスロマイシンＤＳ小児用10％ 0.5g', stock: 48, unit: '包', threshold: 10, category: '小児/抗生剤/マクロライド系', usage: '1日2回', price: '38', maker: '', target: '0～20kg' },
+            { code: 'DT00105', name: 'クラリスロマイシンＤＳ小児用10％ 1.0g', stock: 3, unit: '包', threshold: 10, category: '小児/抗生剤/マクロライド系', usage: '1日2回', price: '38', maker: '', target: '20～30kg' },
+            { code: 'DT00106', name: 'ワイドシリン細粒２０％　２００ｍｇ 1.0g', stock: 8, unit: '包', threshold: 10, category: '小児/抗生剤/ペニシリン系', usage: '1日3回', price: '11.8', maker: '', target: '5kg' },
+            { code: 'DT00107', name: 'ワイドシリン細粒２０％　２００ｍｇ 1.5g', stock: 42, unit: '包', threshold: 10, category: '小児/抗生剤/ペニシリン系', usage: '1日3回', price: '11.8', maker: '', target: '10kg' },
+            { code: 'DT00108', name: 'ワイドシリン細粒２０％　２００ｍｇ 2.3g', stock: 15, unit: '包', threshold: 10, category: '小児/抗生剤/ペニシリン系', usage: '1日3回', price: '11.8', maker: '', target: '15kg' },
+            { code: 'DT00109', name: 'ワイドシリン細粒２０％　２００ｍｇ 3.0g', stock: 12, unit: '包', threshold: 10, category: '小児/抗生剤/ペニシリン系', usage: '1日3回', price: '11.8', maker: '', target: '20kg' },
+            { code: 'DT00110', name: 'ワイドシリン細粒２０％　２００ｍｇ 3.8g', stock: 8, unit: '包', threshold: 10, category: '小児/抗生剤/ペニシリン系', usage: '1日3回', price: '11.8', maker: '', target: '25kg' },
+            { code: 'DT00111', name: '後）オセルタミビルDS3％ 1.0g', stock: 36, unit: '包', threshold: 10, category: '小児/抗インフルエンザ薬', usage: '1日2回', price: '75.9', maker: '「サワイ」', target: '5kg' },
+            { code: 'DT00112', name: '後）オセルタミビルDS3％ 1.3g', stock: 30, unit: '包', threshold: 10, category: '小児/抗インフルエンザ薬', usage: '1日2回', price: '75.9', maker: '「サワイ」', target: '10kg' },
+            { code: 'DT00113', name: '後）オセルタミビルDS3％ 1.9g', stock: 18, unit: '包', threshold: 10, category: '小児/抗インフルエンザ薬', usage: '1日2回', price: '75.9', maker: '「サワイ」', target: '15kg' },
+            { code: 'DT00114', name: '後）オセルタミビルDS3％ 2.6g', stock: 3, unit: '包', threshold: 10, category: '小児/抗インフルエンザ薬', usage: '1日2回', price: '75.9', maker: '「サワイ」', target: '20kg' },
+            { code: 'DT00115', name: '後）オセルタミビルDS3％ 3.2g', stock: 15, unit: '包', threshold: 10, category: '小児/抗インフルエンザ薬', usage: '1日2回', price: '75.9', maker: '「サワイ」', target: '25kg' },
+            { code: 'DT00116', name: '後）オセルタミビル75㎎', stock: 60, unit: '錠', threshold: 10, category: '小児/抗インフルエンザ薬', usage: '1日2回', price: '108', maker: '「サワイ」', target: '35kg以上' },
+            { code: 'DT00140', name: 'ゲンタシン軟膏 10g', stock: 5, unit: '本', threshold: 5, category: '外用/抗生物質製剤', usage: '', price: '11', maker: '', target: '' },
+            { code: '620009078', name: 'ロコイド軟膏０．１％', stock: 1, unit: '本', threshold: 10, category: '外用/ステロイド', usage: '', price: '14.9', maker: '', target: '' },
+            { code: 'DT00142', name: 'リンデロンVG軟膏0.12％ 5g', stock: 10, unit: '本', threshold: 5, category: '外用/ステロイド', usage: '', price: '27.7', maker: '', target: '' },
+            { code: '620009048', name: 'ヒルドイドクリーム０．３％ 25g', stock: 0, unit: '本', threshold: 5, category: '外用/保湿剤', usage: '', price: '17.7', maker: '', target: '' },
+            { code: '621169611', name: '白色ワセリン 50g', stock: 5, unit: '本', threshold: 5, category: '外用/保湿剤', usage: '', price: '2.43', maker: '', target: '' },
+            { code: 'DT00145', name: 'レボフラビン点眼0.5％ 5ml', stock: 0, unit: '本', threshold: 5, category: '外用/点眼薬', usage: '', price: '', maker: '', target: '' },
+            { code: '620007813', name: 'ロキソニンテープ１００ｍｇ　１０ｃｍ×１４ｃｍ 100㎎', stock: 28, unit: '枚', threshold: 5, category: '外用/消炎鎮痛剤', usage: '', price: '17.6', maker: '', target: '' },
+            { code: 'DT00147', name: '後）ツロブテロールテープ０．５ｍｇ 0.5㎎', stock: 35, unit: '枚', threshold: 10, category: '外用/気管支拡張剤', usage: '', price: '13.1', maker: '', target: '' },
+            { code: 'DT00148', name: '後）ツロブテロールテープ１ｍｇ 1.0㎎', stock: 20, unit: '枚', threshold: 10, category: '外用/気管支拡張剤', usage: '', price: '16.3', maker: '', target: '' },
+            { code: 'DT00149', name: '後）ツロブテロールテープ２ｍｇ 2.0㎎', stock: 5, unit: '枚', threshold: 10, category: '外用/気管支拡張剤', usage: '', price: '23.7', maker: '', target: '' },
+            { code: 'DT00150', name: 'イナビル吸入粉末剤２０ｍｇ 20㎎', stock: 2, unit: 'キット', threshold: 10, category: '外用/抗インフルエンザ薬', usage: '', price: '1484.9', maker: '「第一三共」', target: '' },
+            { code: 'DT00151', name: 'アドテスト', stock: 2, unit: '個', threshold: 10, category: '外用/検査キット', usage: '', price: '', maker: '', target: '' },
+            { code: 'DT00152', name: 'クイックチェイサー', stock: 15, unit: '個', threshold: 10, category: '外用/検査キット', usage: '', price: '', maker: '大塚製薬', target: '' },
+            { code: '621371901', name: 'アドレナリン注０．１％シリンジ「テルモ」　１ｍＬ 1ml', stock: 5, unit: '本', threshold: 10, category: '外用/救急薬', usage: '', price: '353', maker: '「テルモ」', target: '' },
+            { code: 'DT00155', name: 'メプチンエアー10μg 5ml', stock: 6, unit: '個', threshold: 5, category: '外用/気管支拡張剤', usage: '', price: '1060.9円/個', maker: '', target: '' },
+            { code: '620002619', name: 'アズノール軟膏0.033％ 20g', stock: 15, unit: '本', threshold: 5, category: '外用/消炎剤', usage: '', price: '8.03円/g', maker: '「日本新薬」', target: '' },
+            { code: 'DT00157', name: 'ジクロフェナク坐剤 25㎎', stock: 20, unit: '個', threshold: 10, category: '外用/消炎鎮痛剤', usage: '', price: '', maker: '「日新」', target: '' },
+            { code: 'DT00158', name: 'グリセリン浣腸液５０％「ムネ」３０ｍＬ 30ml', stock: 1, unit: '本', threshold: 5, category: '外用/浣腸剤', usage: '', price: '102.8', maker: '「ムネ」', target: '' },
+            { code: 'DT00159', name: 'グリセリン浣腸液５０％「ムネ」６０ｍＬ 60ml', stock: 15, unit: '本', threshold: 5, category: '外用/浣腸剤', usage: '', price: '124.2', maker: '「ムネ」', target: '' },
+            { code: '620007812', name: 'ロキソニンテープ５０ｍｇ　７ｃｍ×１０ｃｍ 50㎎', stock: 10, unit: '枚', threshold: 5, category: '外用/消炎鎮痛剤', usage: '', price: '12.7', maker: '', target: '' },
+            { code: 'DT00161', name: 'ヒアレイン点眼0.1％ 5ml', stock: 8, unit: '本', threshold: 5, category: '外用/点眼薬', usage: '', price: '', maker: '', target: '' },
+            { code: 'DT00162', name: 'レボフロキサシン点眼0.5％ 5ml', stock: 3, unit: '本', threshold: 5, category: '外用/点眼薬', usage: '', price: '', maker: '「日新」', target: '' },
         ];
 
         let historyData = [];
@@ -1367,7 +1616,8 @@
             const overlay = document.getElementById('scan-popup-overlay');
             document.getElementById('scan-popup-icon').textContent = '💊';
             document.getElementById('scan-popup-name').textContent = medicine.name;
-            document.getElementById('scan-popup-detail').textContent = `コード: ${medicine.code}　現在庫: ${medicine.stock} ${medicine.unit}`;
+            const catInfo = medicine.category ? `　${medicine.category}` : '';
+            document.getElementById('scan-popup-detail').textContent = `コード: ${medicine.code}　現在庫: ${medicine.stock} ${medicine.unit}${catInfo}`;
 
             const badge = document.getElementById('scan-popup-badge');
             badge.textContent = `リストに追加しました（${batchItems.length}件目）`;
@@ -1423,29 +1673,66 @@
         }
 
         // ===== 在庫一覧 =====
+        let currentCategoryFilter = '';
+
+        function setCategoryFilter(cat) {
+            currentCategoryFilter = cat;
+            document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            filterStock();
+        }
+
         function renderStockList(filter = '') {
             const container = document.getElementById('stock-list');
-            const filtered = stockData.filter(m =>
-                m.name.toLowerCase().includes(filter.toLowerCase()) ||
-                m.code.includes(filter)
-            );
-            container.innerHTML = filtered.map(m => `
-                <div class="stock-item">
+            const lf = filter.toLowerCase();
+            const filtered = stockData.filter(m => {
+                const matchText = !lf ||
+                    m.name.toLowerCase().includes(lf) ||
+                    m.code.includes(filter) ||
+                    (m.category || '').toLowerCase().includes(lf) ||
+                    (m.maker || '').toLowerCase().includes(lf);
+                const matchCat = !currentCategoryFilter ||
+                    (m.category || '').startsWith(currentCategoryFilter);
+                return matchText && matchCat;
+            });
+            container.innerHTML = filtered.map(m => {
+                const isExternal = (m.category || '').startsWith('外用');
+                const catClass = (m.category || '').startsWith('小児') ? 'child' : isExternal ? 'external' : '';
+                const subCat = (m.category || '').split('/').slice(1).join('/');
+                const metaParts = [m.usage, m.price ? `¥${m.price}` : '', m.target && m.target !== '成人' ? m.target : ''].filter(Boolean);
+                if (isExternal) metaParts.unshift('外部薬局');
+                return `
+                <div class="stock-item" onclick="selectFromStock('${m.code}')" style="cursor:pointer;">
                     <div class="stock-info">
                         <div class="stock-name">${m.name}</div>
-                        <div class="stock-code">${m.code}</div>
+                        <div class="stock-code">${m.code}${subCat ? ` <span class="stock-category ${catClass}">${subCat}</span>` : ''}</div>
+                        ${metaParts.length ? `<div class="stock-meta">${metaParts.join(' ｜ ')}</div>` : ''}
                     </div>
-                    <div>
-                        <span class="stock-qty ${m.stock <= m.threshold ? 'low' : ''}">${m.stock}</span>
-                        <span class="stock-unit">${m.unit}</span>
+                    <div style="text-align:right">
+                        <span class="stock-qty" style="${isExternal ? 'color:var(--text-muted)' : m.stock <= m.threshold ? 'color:var(--danger)' : ''}">${isExternal ? '--' : m.stock}</span>
+                        <span class="stock-unit">${isExternal ? '' : m.unit}</span>
                     </div>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
         }
 
         function filterStock() {
             const query = document.getElementById('stock-search').value;
             renderStockList(query);
+        }
+
+        function selectFromStock(code) {
+            const normalizedCode = normalizeCode(code);
+            const medicine = stockData.find(m => normalizeCode(m.code) === normalizedCode);
+            if (!medicine) return;
+            addToBatchDirect(medicine);
+            showScanPopup(medicine, true);
+            if (navigator.vibrate) navigator.vibrate(50);
+            switchTab('scan');
+            setTimeout(() => {
+                const batchCard = document.getElementById('batch-card');
+                if (batchCard) batchCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
         }
 
         // ===== 履歴 =====
@@ -1467,35 +1754,182 @@
             `).join('');
         }
 
-        // ===== 手動選択モーダル =====
+        // ===== 手動選択モーダル（カテゴリドリルダウン） =====
+        let modalDrillPath = []; // e.g. [] → ['成人'] → ['成人','解熱鎮痛剤']
+
+        // カテゴリ→アイコンマッピング
+        const catIcons = {
+            '成人': '🧑', '小児': '👶', '外用': '💊',
+            '解熱鎮痛剤': '🌡️', '咳止め': '😷', '止血剤': '🩹', '去痰剤': '💨',
+            '整腸剤': '🫁', '抗アレルギー剤': '🤧', '吐気止め': '🤢', '鎮暈剤': '😵',
+            '消化性潰瘍用剤': '💊', '抗生剤': '💉', '漢方薬': '🍃', '抗インフルエンザ薬': '🦠',
+            '口腔用剤': '👄', 'ホルモン剤': '⚗️', '抗菌剤': '🧫', '抗ヘルペスウィルス薬': '🧬',
+            '睡眠導入剤': '😴', '降圧剤': '❤️', '止痢剤': '🚿', '下剤': '🚽',
+            '解熱薬': '🌡️', '熱性けいれん緩和剤': '⚡',
+            '抗生剤/セフェム系': '💉', '抗生剤/マクロライド系': '💉', '抗生剤/ペニシリン系': '💉',
+            '抗生物質製剤': '🧴', '副腎皮質ホルモン剤': '🧴', 'ステロイド': '🧴',
+            '血行促進・皮膚保湿剤': '🧴', '軟膏基剤': '🧴', 'ヒスタミンH1受容体拮抗薬': '👁️',
+            '気管支拡張剤': '🫁', '気管支痙攣の緩解': '🫁', '解熱鎮痛消炎剤': '🌡️',
+            'Flu+Covid19': '🧪', 'StrepA': '🧪',
+            '鎮痙剤': '💊', '消炎鎮痛剤': '🩹', '浣腸剤': '🚿', '点眼薬': '👁️',
+            '検査キット': '🧪', '救急薬': '🚑', '抗不安薬': '😌', '消炎剤': '🩹',
+            '保湿剤': '🧴',
+        };
+
         function openManualSelect() {
+            modalDrillPath = [];
+            document.getElementById('modal-search').value = '';
             document.getElementById('manual-modal').classList.add('show');
-            renderModalList();
+            renderModalView();
         }
 
         function closeManualSelect() {
             document.getElementById('manual-modal').classList.remove('show');
         }
 
-        function renderModalList(filter = '') {
+        function renderModalView() {
+            const search = document.getElementById('modal-search').value.trim();
+            if (search) {
+                renderModalSearchResults(search);
+                return;
+            }
+            renderModalCategories();
+        }
+
+        function renderModalSearchResults(query) {
             const container = document.getElementById('modal-list');
+            const bc = document.getElementById('modal-breadcrumb');
+            bc.style.display = 'none';
+            document.getElementById('modal-title-text').textContent = '検索結果';
+
+            const lf = query.toLowerCase();
             const filtered = stockData.filter(m =>
-                m.name.toLowerCase().includes(filter.toLowerCase()) ||
-                m.code.includes(filter)
+                m.name.toLowerCase().includes(lf) ||
+                m.code.includes(query) ||
+                (m.category || '').toLowerCase().includes(lf)
             );
-            container.innerHTML = filtered.map(m => `
+            if (filtered.length === 0) {
+                container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px;">該当なし</div>';
+                return;
+            }
+            container.innerHTML = filtered.map(m => {
+                const subCat = (m.category || '').split('/').slice(1).join('/');
+                const isExt = (m.category || '').startsWith('外用');
+                const stockText = isExt ? '外部薬局' : '在庫: ' + m.stock + m.unit;
+                return `
                 <div class="medicine-item" onclick="selectFromModal('${m.code}')">
                     <div>
                         <div class="medicine-item-name">${m.name}</div>
-                        <div class="medicine-item-stock">在庫: ${m.stock}${m.unit}</div>
+                        <div class="medicine-item-stock">${stockText}${subCat ? ' ｜ ' + subCat : ''}</div>
                     </div>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
+        }
+
+        function renderModalCategories() {
+            const container = document.getElementById('modal-list');
+            const bc = document.getElementById('modal-breadcrumb');
+            const depth = modalDrillPath.length;
+            const prefix = modalDrillPath.join('/');
+
+            // Build breadcrumb
+            if (depth === 0) {
+                bc.style.display = 'none';
+                document.getElementById('modal-title-text').textContent = '用途から選ぶ';
+            } else {
+                bc.style.display = 'flex';
+                let html = '<span class="modal-bc-link" onclick="modalDrillTo(-1)">全て</span>';
+                modalDrillPath.forEach((p, i) => {
+                    html += '<span class="modal-bc-sep">›</span>';
+                    if (i < depth - 1) {
+                        html += `<span class="modal-bc-link" onclick="modalDrillTo(${i})">${p}</span>`;
+                    } else {
+                        html += `<span class="modal-bc-current">${p}</span>`;
+                    }
+                });
+                bc.innerHTML = html;
+                document.getElementById('modal-title-text').textContent = modalDrillPath[depth - 1];
+            }
+
+            // Get items matching current path prefix
+            const matchingItems = stockData.filter(m => {
+                const cat = m.category || '';
+                if (!prefix) return true;
+                return cat === prefix || cat.startsWith(prefix + '/');
+            });
+
+            // Collect unique sub-category names at current depth
+            const subCats = new Map(); // key => { count, items }
+            matchingItems.forEach(m => {
+                const cat = m.category || '';
+                const parts = cat.split('/');
+                if (parts.length > depth) {
+                    const sub = parts[depth];
+                    if (!subCats.has(sub)) {
+                        subCats.set(sub, { count: 0, items: [] });
+                    }
+                    subCats.get(sub).count++;
+                    subCats.get(sub).items.push(m);
+                }
+            });
+
+            // Decide: show sub-category cards or medicine items
+            if (subCats.size >= 2) {
+                // Multiple sub-categories: show cards
+                let html = '';
+                subCats.forEach((info, key) => {
+                    const icon = catIcons[key] || '💊';
+                    html += `
+                    <div class="modal-category-card" onclick="modalDrillDown('${key}')">
+                        <div class="modal-cat-icon">${icon}</div>
+                        <div>
+                            <div class="modal-cat-label">${key}</div>
+                            <div class="modal-cat-count">${info.count}品目</div>
+                        </div>
+                        <div class="modal-cat-arrow">›</div>
+                    </div>`;
+                });
+                container.innerHTML = html;
+            } else {
+                // 0 or 1 sub-category: show medicine items directly
+                if (matchingItems.length === 0) {
+                    container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px;">該当なし</div>';
+                    return;
+                }
+                container.innerHTML = matchingItems.map(m => {
+                    const targetInfo = m.target && m.target !== '成人' ? m.target : '';
+                    const usageInfo = m.usage || '';
+                    const isExt = (m.category || '').startsWith('外用');
+                    const extra = [isExt ? '外部薬局' : '', usageInfo, targetInfo].filter(Boolean).join(' ｜ ');
+                    const stockText = isExt ? '--' : '在庫: ' + m.stock + m.unit;
+                    return `
+                    <div class="medicine-item" onclick="selectFromModal('${m.code}')">
+                        <div>
+                            <div class="medicine-item-name">${m.name}</div>
+                            <div class="medicine-item-stock">${stockText}${extra ? ' ｜ ' + extra : ''}</div>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+        }
+
+        function modalDrillDown(subCat) {
+            modalDrillPath.push(subCat);
+            renderModalView();
+            document.getElementById('modal-list').scrollTop = 0;
+        }
+
+        function modalDrillTo(index) {
+            if (index < 0) {
+                modalDrillPath = [];
+            } else {
+                modalDrillPath = modalDrillPath.slice(0, index + 1);
+            }
+            renderModalView();
         }
 
         function filterModalList() {
-            const query = document.getElementById('modal-search').value;
-            renderModalList(query);
+            renderModalView();
         }
 
         function selectFromModal(code) {
