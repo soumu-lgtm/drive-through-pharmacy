@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ドライブスルー診療 プロジェクトポータル</title>
+<title>HUNDRED DOCTOR プロジェクトポータル</title>
 <style>
 :root {
   --primary: #2563eb;
@@ -80,9 +80,10 @@ body {
   margin-bottom: 8px;
   align-self: flex-start;
 }
+.badge-dashboard { background: #fef3c7; color: #92400e; }
 .badge-emr { background: #dcfce7; color: #16a34a; }
 .badge-pharmacy { background: var(--primary-light); color: var(--primary); }
-.badge-tool { background: #fef9c3; color: #92400e; }
+.badge-tool { background: #e0e7ff; color: #4338ca; }
 .badge-doc { background: #f3e8ff; color: #7c3aed; }
 .card h3 {
   font-size: 16px;
@@ -142,35 +143,52 @@ body {
 <body>
 
 <div class="header">
-  <h1>ドライブスルー診療<br>プロジェクトポータル</h1>
-  <p>西春内科・在宅クリニック | GitHub Pages 公開一覧</p>
+  <h1>HUNDRED DOCTOR<br>プロジェクトポータル</h1>
+  <p>GitHub Pages 公開一覧</p>
 </div>
 
 <div class="container">
 
-<h2 class="section-title">プロジェクト一覧</h2>
+<h2 class="section-title">業務ツール</h2>
+<div class="card-grid">
+
+  <a class="card" href="https://soumu-lgtm.github.io/drive-through-pharmacy/task_board/index.html" target="_blank">
+    <span class="badge badge-dashboard">業務管理</span>
+    <h3>タスクボード</h3>
+    <p>シンプル業務管理ツール。コルクボード風UI、付箋でタスク表示。GAS + スプレッドシート同期。</p>
+    <span class="url">task_board/index.html</span>
+  </a>
+
+  <a class="card" href="https://soumu-lgtm.github.io/drive-through-pharmacy/ec_dashboard/index.html" target="_blank">
+    <span class="badge badge-dashboard">売上管理</span>
+    <h3>EC売上ダッシュボード</h3>
+    <p>Shopify・Amazon・Qoo10・社割・卸売の5チャネル統合売上ダッシュボード。GA4連携・在庫管理・利益比較・KPIレポート。GAS Web Appからリアルタイムデータ取得。</p>
+    <span class="url">ec_dashboard/index.html</span>
+  </a>
+
+</div>
+
+<h2 class="section-title">医療システム</h2>
 <div class="card-grid">
 
   <a class="card" href="https://soumu-lgtm.github.io/drive-through-pharmacy/karte_v02/index.html" target="_blank">
     <span class="badge badge-emr">電子カルテ</span>
-    <h3>電子カルテ v0.2</h3>
+    <h3>電子カルテ</h3>
     <p>ダッシュボード一画面型。患者管理・SOAP・処方・算定・検査を1画面で完結。GAS + スプレッドシート バックエンド。</p>
     <span class="url">karte_v02/index.html</span>
   </a>
 
   <a class="card" href="https://soumu-lgtm.github.io/drive-through-pharmacy/index.html" target="_blank">
     <span class="badge badge-pharmacy">薬品在庫</span>
-    <h3>薬品在庫管理 v0.3（本番）</h3>
+    <h3>薬品在庫管理</h3>
     <p>QRカメラ読み取り＋手動選択で即スタック。複数薬品の連続登録、担当者選択、スキャン通知ポップアップ対応。GAS + スプレッドシート連携。</p>
     <span class="url">index.html</span>
   </a>
 
-  <a class="card" href="https://soumu-lgtm.github.io/drive-through-pharmacy/demo.html" target="_blank">
-    <span class="badge badge-pharmacy">薬品在庫</span>
-    <h3>薬品在庫管理（デモ版）</h3>
-    <p>QRクリック選択で動作。GAS不要、ローカルデータのみで試せるデモ。</p>
-    <span class="url">demo.html</span>
-  </a>
+</div>
+
+<h2 class="section-title">ツール</h2>
+<div class="card-grid">
 
   <a class="card" href="https://soumu-lgtm.github.io/drive-through-pharmacy/qr_generator.html" target="_blank">
     <span class="badge badge-tool">ツール</span>
@@ -179,39 +197,30 @@ body {
     <span class="url">qr_generator.html</span>
   </a>
 
-  <a class="card" href="https://soumu-lgtm.github.io/drive-through-pharmacy/manual_flow.html" target="_blank">
-    <span class="badge badge-doc">マニュアル</span>
-    <h3>薬品在庫 操作マニュアル</h3>
-    <p>薬品在庫管理システムの操作手順書。フロー図付き。</p>
-    <span class="url">manual_flow.html</span>
-  </a>
+</div>
+
+<h2 class="section-title">マニュアル</h2>
+<div class="card-grid">
 
   <a class="card" href="https://soumu-lgtm.github.io/drive-through-pharmacy/karte_v02/manual/operation_manual.html" target="_blank">
     <span class="badge badge-doc">マニュアル</span>
-    <h3>カルテ v0.2 操作マニュアル</h3>
+    <h3>電子カルテ 操作マニュアル</h3>
     <p>14章構成の詳細操作マニュアル。スクリーンショット付き縦長HTML版。</p>
     <span class="url">karte_v02/manual/operation_manual.html</span>
   </a>
 
   <a class="card" href="https://soumu-lgtm.github.io/drive-through-pharmacy/karte_v02/manual/operation_manual_slides.html" target="_blank">
     <span class="badge badge-doc">マニュアル</span>
-    <h3>カルテ v0.2 スライド版マニュアル</h3>
+    <h3>電子カルテ スライド版マニュアル</h3>
     <p>16:9横長スライド17枚。PowerPoint/Google Slides貼付け用。矢印キーで操作。</p>
     <span class="url">karte_v02/manual/operation_manual_slides.html</span>
   </a>
 
-  <a class="card" href="https://soumu-lgtm.github.io/drive-through-pharmacy/task_board/index.html" target="_blank">
-    <span class="badge badge-tool">業務管理</span>
-    <h3>タスクボード</h3>
-    <p>HUNDRED DOCTOR向けシンプル業務管理ツール。コルクボード風UI、付箋でタスク表示。GAS + スプレッドシート同期。</p>
-    <span class="url">task_board/index.html</span>
-  </a>
-
-  <a class="card" href="https://soumu-lgtm.github.io/drive-through-pharmacy/ec_dashboard/index.html" target="_blank">
-    <span class="badge badge-tool">ツール</span>
-    <h3>EC売上ダッシュボード</h3>
-    <p>Shopify・Amazon・Qoo10・社割・卸売の5チャネル統合売上ダッシュボード。GA4連携・在庫管理・利益比較・KPIレポート。GAS Web App からリアルタイムデータ取得。</p>
-    <span class="url">ec_dashboard/index.html</span>
+  <a class="card" href="https://soumu-lgtm.github.io/drive-through-pharmacy/manual_flow.html" target="_blank">
+    <span class="badge badge-doc">マニュアル</span>
+    <h3>薬品在庫 操作マニュアル</h3>
+    <p>薬品在庫管理システムの操作手順書。フロー図付き。</p>
+    <span class="url">manual_flow.html</span>
   </a>
 
 </div>
@@ -229,41 +238,6 @@ body {
     <td><a target="_blank" href="https://soumu-lgtm.github.io/drive-through-pharmacy/portal.html">portal.html</a></td>
   </tr>
   <tr>
-    <td><strong>電子カルテ v0.2</strong></td>
-    <td>アプリ</td>
-    <td><a target="_blank" href="https://soumu-lgtm.github.io/drive-through-pharmacy/karte_v02/index.html">karte_v02/index.html</a></td>
-  </tr>
-  <tr>
-    <td><strong>カルテ操作マニュアル</strong></td>
-    <td>マニュアル</td>
-    <td><a target="_blank" href="https://soumu-lgtm.github.io/drive-through-pharmacy/karte_v02/manual/operation_manual.html">karte_v02/manual/operation_manual.html</a></td>
-  </tr>
-  <tr>
-    <td><strong>カルテ スライド版マニュアル</strong></td>
-    <td>マニュアル</td>
-    <td><a target="_blank" href="https://soumu-lgtm.github.io/drive-through-pharmacy/karte_v02/manual/operation_manual_slides.html">karte_v02/manual/operation_manual_slides.html</a></td>
-  </tr>
-  <tr>
-    <td><strong>薬品在庫管理 v0.3（本番）</strong></td>
-    <td>アプリ</td>
-    <td><a target="_blank" href="https://soumu-lgtm.github.io/drive-through-pharmacy/index.html">index.html</a></td>
-  </tr>
-  <tr>
-    <td><strong>薬品在庫管理（デモ）</strong></td>
-    <td>アプリ</td>
-    <td><a target="_blank" href="https://soumu-lgtm.github.io/drive-through-pharmacy/demo.html">demo.html</a></td>
-  </tr>
-  <tr>
-    <td><strong>QRコード生成ツール</strong></td>
-    <td>ツール</td>
-    <td><a target="_blank" href="https://soumu-lgtm.github.io/drive-through-pharmacy/qr_generator.html">qr_generator.html</a></td>
-  </tr>
-  <tr>
-    <td><strong>薬品在庫 操作マニュアル</strong></td>
-    <td>マニュアル</td>
-    <td><a target="_blank" href="https://soumu-lgtm.github.io/drive-through-pharmacy/manual_flow.html">manual_flow.html</a></td>
-  </tr>
-  <tr>
     <td><strong>タスクボード</strong></td>
     <td>アプリ</td>
     <td><a target="_blank" href="https://soumu-lgtm.github.io/drive-through-pharmacy/task_board/index.html">task_board/index.html</a></td>
@@ -273,12 +247,42 @@ body {
     <td>アプリ</td>
     <td><a target="_blank" href="https://soumu-lgtm.github.io/drive-through-pharmacy/ec_dashboard/index.html">ec_dashboard/index.html</a></td>
   </tr>
+  <tr>
+    <td><strong>電子カルテ</strong></td>
+    <td>アプリ</td>
+    <td><a target="_blank" href="https://soumu-lgtm.github.io/drive-through-pharmacy/karte_v02/index.html">karte_v02/index.html</a></td>
+  </tr>
+  <tr>
+    <td><strong>薬品在庫管理</strong></td>
+    <td>アプリ</td>
+    <td><a target="_blank" href="https://soumu-lgtm.github.io/drive-through-pharmacy/index.html">index.html</a></td>
+  </tr>
+  <tr>
+    <td><strong>QRコード生成ツール</strong></td>
+    <td>ツール</td>
+    <td><a target="_blank" href="https://soumu-lgtm.github.io/drive-through-pharmacy/qr_generator.html">qr_generator.html</a></td>
+  </tr>
+  <tr>
+    <td><strong>電子カルテ 操作マニュアル</strong></td>
+    <td>マニュアル</td>
+    <td><a target="_blank" href="https://soumu-lgtm.github.io/drive-through-pharmacy/karte_v02/manual/operation_manual.html">karte_v02/manual/operation_manual.html</a></td>
+  </tr>
+  <tr>
+    <td><strong>電子カルテ スライドマニュアル</strong></td>
+    <td>マニュアル</td>
+    <td><a target="_blank" href="https://soumu-lgtm.github.io/drive-through-pharmacy/karte_v02/manual/operation_manual_slides.html">karte_v02/manual/operation_manual_slides.html</a></td>
+  </tr>
+  <tr>
+    <td><strong>薬品在庫 操作マニュアル</strong></td>
+    <td>マニュアル</td>
+    <td><a target="_blank" href="https://soumu-lgtm.github.io/drive-through-pharmacy/manual_flow.html">manual_flow.html</a></td>
+  </tr>
 </table>
 
 </div>
 
 <div class="footer">
-  ドライブスルー診療プロジェクト | 西春内科・在宅クリニック | 最終更新: 2026-03-27
+  HUNDRED DOCTOR プロジェクトポータル | 最終更新: 2026-03-27
 </div>
 
 </body>
