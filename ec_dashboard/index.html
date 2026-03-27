@@ -2242,6 +2242,11 @@
             inventoryData = data.inventoryData || inventoryData;
             feeData = data.feeData || [];
             amazonQoo10LastImport = data.amazonQoo10LastImport || "";
+            // Update timestamp
+            const now = new Date();
+            const ts = now.getFullYear() + '年' + String(now.getMonth()+1).padStart(2,'0') + '月' + String(now.getDate()).padStart(2,'0') + '日 ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
+            const tsEl = document.querySelector('.timestamp');
+            if (tsEl) tsEl.textContent = '最終更新: ' + ts;
             // Re-render all dashboard components
             if (typeof initDashboard === 'function') initDashboard();
             if (typeof updateAllCharts === 'function') updateAllCharts();
