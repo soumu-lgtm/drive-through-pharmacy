@@ -208,6 +208,22 @@ const TRACKS = [
 
   // ── Lo-Fi / Chill ──
   {
+    id: "afternoon_glow",
+    title: "Afternoon Glow",
+    genre: "chillhop",
+    genreLabel: "Lo-Fi / Chill",
+    mood: "relaxing",
+    moodLabel: "リラックス",
+    duration: 56,
+    bpm: 85,
+    key: "D",
+    file_mp3: "assets/audio/afternoon_glow.mp3",
+    file_ogg: null,
+    file_wav: null,
+    description: "午後の陽だまり。ドリアンモードのピアノアルペジオとグロッケンが織りなす穏やかなアンビエント。",
+    status: "ready"
+  },
+  {
     id: "midnight_study",
     title: "Midnight Study",
     genre: "chillhop",
