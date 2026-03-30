@@ -2,10 +2,10 @@
 // status: "ready" = 音源あり, "soon" = 近日公開（プレビュー用にvelvet_dreamsを仮当て）
 
 const TRACKS = [
-  // ── Jazz / Velvet Room ──
+  // ── Jazz ──
   {
-    id: "velvet_dreams",
-    title: "Velvet Dreams",
+    id: "midnight_glass",
+    title: "Midnight Glass",
     genre: "jazz",
     genreLabel: "Jazz",
     mood: "mysterious",
@@ -13,10 +13,10 @@ const TRACKS = [
     duration: 30,
     bpm: 95,
     key: "Dm",
-    file_mp3: "assets/audio/velvet_dreams.mp3",
-    file_ogg: "assets/audio/velvet_dreams.ogg",
+    file_mp3: "assets/audio/midnight_glass.mp3",
+    file_ogg: "assets/audio/midnight_glass.ogg",
     file_wav: null,
-    description: "ペルソナ風ベルベットルームジャズ。ミステリアスなピアノとソプラノハミング。",
+    description: "夜のラウンジに響くジャズピアノ。ミステリアスなムードとソプラノの残響。",
     status: "ready"
   },
   {
