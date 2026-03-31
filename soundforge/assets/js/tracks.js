@@ -146,6 +146,38 @@ const TRACKS = [
 
   // ── RPG Town / Field ──
   {
+    id: "shiki_no_kaze",
+    title: "四季の風の道",
+    genre: "rpg-town",
+    genreLabel: "RPG Town",
+    mood: "peaceful",
+    moodLabel: "穏やか",
+    duration: 138,
+    bpm: 80,
+    key: "Am",
+    file_mp3: "assets/audio/shiki_no_kaze.mp3",
+    file_ogg: null,
+    file_wav: null,
+    description: "紅葉燃える山寺。三味線と太鼓のアクセントが映える和風フォーク。季節の移ろいを感じるフィールド曲。",
+    status: "ready"
+  },
+  {
+    id: "starlit_dunes",
+    title: "Starlit Dunes",
+    genre: "rpg-town",
+    genreLabel: "RPG Town",
+    mood: "peaceful",
+    moodLabel: "穏やか",
+    duration: 192,
+    bpm: 80,
+    key: "Dm",
+    file_mp3: "assets/audio/starlit_dunes.mp3",
+    file_ogg: null,
+    file_wav: null,
+    description: "星降る砂漠のオアシス。ウードとソフトパーカッションが織りなすワールドミュージック・アンビエント。",
+    status: "ready"
+  },
+  {
     id: "tavern_night",
     title: "Tavern Night",
     genre: "rpg-town",
