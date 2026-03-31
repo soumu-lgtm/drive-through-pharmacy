@@ -115,6 +115,13 @@
     // 詳細
     detailEmpty.style.display='none';
     detailFilled.style.display='';
+
+    // 背景画像
+    const dfImage=document.getElementById('dfImage');
+    const dfImg=document.getElementById('dfImg');
+    if(t.image){dfImg.src=t.image;dfImage.style.display=''}
+    else{dfImage.style.display='none';dfImg.src=''}
+
     document.getElementById('dfNum').textContent='#'+String(di+1).padStart(2,'0');
     document.getElementById('dfTitle').textContent=t.title;
     document.getElementById('dfDesc').textContent=t.description;

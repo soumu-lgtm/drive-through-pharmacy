@@ -158,6 +158,7 @@ const TRACKS = [
     file_mp3: "assets/audio/shiki_no_kaze.mp3",
     file_ogg: null,
     file_wav: null,
+    image: "assets/images/shiki_no_kaze.png",
     description: "紅葉燃える山寺。三味線と太鼓のアクセントが映える和風フォーク。季節の移ろいを感じるフィールド曲。",
     status: "ready"
   },
@@ -174,6 +175,7 @@ const TRACKS = [
     file_mp3: "assets/audio/starlit_dunes.mp3",
     file_ogg: null,
     file_wav: null,
+    image: "assets/images/starlit_dunes.png",
     description: "星降る砂漠のオアシス。ウードとソフトパーカッションが織りなすワールドミュージック・アンビエント。",
     status: "ready"
   },
