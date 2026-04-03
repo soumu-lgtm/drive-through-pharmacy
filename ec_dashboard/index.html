@@ -633,18 +633,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
-<div id="loading-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(245,247,250,0.95);z-index:99999;display:flex;align-items:center;justify-content:center;">
-  <div style="text-align:center;">
-    <div style="width:48px;height:48px;border:4px solid #e0e0e0;border-top:4px solid #667eea;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px;"></div>
-    <h2 style="color:#333;margin-bottom:8px;">データ読み込み中...</h2>
-    <p style="color:#666;">Google Sheets &amp; GA4 からデータを取得しています</p>
-  </div>
-</div>
-<style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
     <div class="header">
         <div>
             <h1>EC売上ダッシュボード</h1>
-            <div class="timestamp">最終更新: 2026年03月27日 09:57:44</div>
+            <div class="timestamp">最終更新: 2026年04月03日 17:54:17</div>
         </div>
         <button class="pdf-btn" onclick="downloadPDF()">PDF ダウンロード</button>
     </div>
@@ -667,34 +659,34 @@
         <!-- ダッシュボード用日付フィルター -->
         <div class="date-filter">
             <label>開始日:</label>
-            <input type="date" id="startDate" value="2025-08-01" min="2025-08-01" max="2026-03-27">
+            <input type="date" id="startDate" value="2025-08-01" min="2025-08-01" max="2026-04-03">
             <label>終了日:</label>
-            <input type="date" id="endDate" value="2026-03-27" min="2025-08-01" max="2026-03-27">
+            <input type="date" id="endDate" value="2026-04-03" min="2025-08-01" max="2026-04-03">
             <button class="filter-btn" onclick="applyDateFilter()">適用</button>
             <button class="reset-btn" onclick="resetDateFilter()">リセット</button>
             <div class="date-range-info">
-                データ範囲: 2025-08-01 ～ 2026-03-26
+                データ範囲: 2025-08-01 ～ 2026-04-03
             </div>
         </div>
         <div class="grid">
             <div class="card">
                 <h2>売上合計</h2>
-                <div class="metric" id="metric-total-sales">¥2,420,334</div>
-                <div class="metric-sub">純売上: <span id="metric-net-sales">¥2,379,988</span></div>
+                <div class="metric" id="metric-total-sales">¥2,483,718</div>
+                <div class="metric-sub">純売上: <span id="metric-net-sales">¥2,442,828</span></div>
             </div>
             <div class="card">
                 <h2>注文件数</h2>
-                <div class="metric" id="metric-total-orders">239</div>
-                <div class="metric-sub">平均単価: <span id="metric-avg-order">¥10,127</span></div>
+                <div class="metric" id="metric-total-orders">250</div>
+                <div class="metric-sub">平均単価: <span id="metric-avg-order">¥9,935</span></div>
             </div>
             <div class="card">
                 <h2>商品販売数</h2>
-                <div class="metric" id="metric-total-quantity">765</div>
+                <div class="metric" id="metric-total-quantity">786</div>
                 <div class="metric-sub">個</div>
             </div>
             <div class="card">
                 <h2>手数料</h2>
-                <div class="metric" id="metric-total-fees">¥40,346</div>
+                <div class="metric" id="metric-total-fees">¥40,890</div>
                 <div class="metric-sub">決済手数料合計</div>
             </div>
         </div>
@@ -713,18 +705,18 @@
                     <tbody id="channel-table-body">
                         <tr>
                             <td><span class="badge badge-amazon">Amazon</span></td>
-                            <td>¥29,860</td>
-                            <td>5件</td>
+                            <td>¥38,820</td>
+                            <td>6件</td>
                         </tr>
                         <tr>
                             <td><span class="badge badge-qoo10">Qoo10</span></td>
-                            <td>¥3,980</td>
-                            <td>1件</td>
+                            <td>¥7,960</td>
+                            <td>2件</td>
                         </tr>
                         <tr>
                             <td><span class="badge badge-shopify">Shopify</span></td>
-                            <td>¥1,454,174</td>
-                            <td>171件</td>
+                            <td>¥1,487,118</td>
+                            <td>177件</td>
                         </tr>
                         <tr>
                             <td><span class="badge badge-wholesale">卸売</span></td>
@@ -733,8 +725,8 @@
                         </tr>
                         <tr>
                             <td><span class="badge badge-employee">社割</span></td>
-                            <td>¥252,000</td>
-                            <td>47件</td>
+                            <td>¥269,500</td>
+                            <td>50件</td>
                         </tr>
                     </tbody>
                 </table>
@@ -762,8 +754,8 @@
                         </tr>
                         <tr>
                             <td>わき用クリーム (Shopify)</td>
-                            <td>¥361,782</td>
-                            <td>91個</td>
+                            <td>¥377,702</td>
+                            <td>95個</td>
                         </tr>
                         <tr>
                             <td>わき用クリーム (卸売)</td>
@@ -776,9 +768,9 @@
                             <td>65個</td>
                         </tr>
                         <tr>
-                            <td>メンズスキンセラム (Shopify)</td>
-                            <td>¥139,440</td>
-                            <td>28個</td>
+                            <td>メンズスキンセラム</td>
+                            <td>¥148,902</td>
+                            <td>30個</td>
                         </tr>
                         <tr>
                             <td>スキンローション (卸売)</td>
@@ -787,8 +779,8 @@
                         </tr>
                         <tr>
                             <td>メンズスキンローション (Shopify)</td>
-                            <td>¥107,460</td>
-                            <td>27個</td>
+                            <td>¥115,022</td>
+                            <td>29個</td>
                         </tr>
                         <tr>
                             <td>メンズスキンローション (卸売)</td>
@@ -796,9 +788,9 @@
                             <td>44個</td>
                         </tr>
                         <tr>
-                            <td>メンズスキンセラム (卸売)</td>
-                            <td>¥74,700</td>
-                            <td>30個</td>
+                            <td>スキンセラム (社割)</td>
+                            <td>¥78,000</td>
+                            <td>39個</td>
                         </tr>
                     </tbody>
                 </table>
@@ -809,19 +801,19 @@
             <div class="card">
                 <h2>定期購入分析</h2>
                 <table id="subscription-table">
-                    <tr><td>定期注文件数</td><td><strong>1</strong></td></tr>
-                    <tr><td>定期売上合計</td><td><strong>¥3,582</strong></td></tr>
+                    <tr><td>定期注文件数</td><td><strong>2</strong></td></tr>
+                    <tr><td>定期売上合計</td><td><strong>¥11,646</strong></td></tr>
                     <tr><td>新規（初回）</td><td>0件</td></tr>
                     <tr><td>継続（2回目以降）</td><td>0件</td></tr>
-                    <tr><td>　2ヶ月</td><td>1件 / ¥3,582</td></tr>
+                    <tr><td>　2ヶ月</td><td>1件 / ¥3,582</td></tr><tr><td>　3ヶ月</td><td>1件 / ¥8,064</td></tr>
                 </table>
             </div>
             <div class="card">
                 <h2>顧客分析</h2>
                 <table>
-                    <tr><td>総顧客数</td><td><strong>225</strong></td></tr>
+                    <tr><td>総顧客数</td><td><strong>229</strong></td></tr>
                     <tr><td>マーケティング承認率</td><td>0.4%</td></tr>
-                    <tr><td>平均LTV</td><td>¥67</td></tr>
+                    <tr><td>平均LTV</td><td>¥66</td></tr>
                 </table>
             </div>
         </div>
@@ -832,9 +824,9 @@
         <!-- グラフ分析用日付フィルター -->
         <div class="date-filter">
             <label>開始日:</label>
-            <input type="date" id="chartStartDate" value="2025-08-01" min="2025-08-01" max="2026-03-27">
+            <input type="date" id="chartStartDate" value="2025-08-01" min="2025-08-01" max="2026-04-03">
             <label>終了日:</label>
-            <input type="date" id="chartEndDate" value="2026-03-27" min="2025-08-01" max="2026-03-27">
+            <input type="date" id="chartEndDate" value="2026-04-03" min="2025-08-01" max="2026-04-03">
             <label style="margin-left: 20px;">商品選択:</label>
             <select id="chartProductSelect" onchange="updateCharts()">
                 <option value="all">全商品</option>
@@ -883,9 +875,9 @@
         <!-- 商品別詳細用日付フィルター -->
         <div class="date-filter">
             <label>開始日:</label>
-            <input type="date" id="productStartDate" value="2025-08-01" min="2025-08-01" max="2026-03-27">
+            <input type="date" id="productStartDate" value="2025-08-01" min="2025-08-01" max="2026-04-03">
             <label>終了日:</label>
-            <input type="date" id="productEndDate" value="2026-03-27" min="2025-08-01" max="2026-03-27">
+            <input type="date" id="productEndDate" value="2026-04-03" min="2025-08-01" max="2026-04-03">
             <label style="margin-left: 20px;">商品選択:</label>
             <select id="productDetailSelect" onchange="updateProductDetail()">
                 <option value="わき用クリーム">わき用クリーム</option>
@@ -1087,9 +1079,9 @@
         <!-- 売上報告用日付フィルター -->
         <div class="date-filter">
             <label>開始日:</label>
-            <input type="date" id="reportStartDate" value="2025-08-01" min="2025-08-01" max="2026-03-27">
+            <input type="date" id="reportStartDate" value="2025-08-01" min="2025-08-01" max="2026-04-03">
             <label>終了日:</label>
-            <input type="date" id="reportEndDate" value="2026-03-27" min="2025-08-01" max="2026-03-27">
+            <input type="date" id="reportEndDate" value="2026-04-03" min="2025-08-01" max="2026-04-03">
             <button class="filter-btn" onclick="updateReportPreview()">適用</button>
             <button class="reset-btn" onclick="resetReportDateFilter()">リセット</button>
         </div>
@@ -1112,9 +1104,9 @@
         <!-- 日付フィルター -->
         <div class="date-filter">
             <label>開始日:</label>
-            <input type="date" id="profitStartDate" value="2026-03-16" min="2025-08-01" max="2026-03-27">
+            <input type="date" id="profitStartDate" value="2026-03-23" min="2025-08-01" max="2026-04-03">
             <label>終了日:</label>
-            <input type="date" id="profitEndDate" value="2026-03-29" min="2025-08-01" max="2026-03-27">
+            <input type="date" id="profitEndDate" value="2026-04-05" min="2025-08-01" max="2026-04-03">
             <button class="filter-btn" onclick="applyProfitDateFilter()">適用</button>
             <button class="reset-btn" onclick="resetProfitDateFilter()">リセット</button>
             <label style="margin-left: 20px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
@@ -1130,17 +1122,17 @@
         <div id="profit-summary" class="grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 30px;">
             <div class="card">
                 <h2>期間販売数</h2>
-                <div class="metric" id="profit-qty">10</div>
+                <div class="metric" id="profit-qty">5</div>
                 <div class="metric-sub">個</div>
             </div>
             <div class="card">
                 <h2>期間利益</h2>
-                <div class="metric" id="profit-amount">¥25,162</div>
-                <div class="metric-sub" id="profit-period">03/23 - 03/29</div>
+                <div class="metric" id="profit-amount">¥12,780</div>
+                <div class="metric-sub" id="profit-period">03/30 - 04/05</div>
             </div>
             <div class="card">
                 <h2>前期比増減</h2>
-                <div class="metric" id="profit-diff" style="color: #38ef7d;">+¥9,682</div>
+                <div class="metric" id="profit-diff" style="color: #ff6b6b;">¥-19,338</div>
                 <div class="metric-sub">前期間比</div>
             </div>
         </div>
@@ -1160,27 +1152,27 @@
                 <tbody id="profit-table-body">
                     <tr style="background: #ffffff;">
                         <td>わき用クリーム</td>
+                        <td style="text-align: right;">7</td>
                         <td style="text-align: right;">3</td>
-                        <td style="text-align: right;">6</td>
+                        <td style="text-align: right;">¥16,850</td>
                         <td style="text-align: right;">¥7,392</td>
-                        <td style="text-align: right;">¥14,386</td>
-                        <td style="text-align: right; color: #38ef7d;">▲ ¥6,994</td>
+                        <td style="text-align: right; color: #ff6b6b;">▼ ¥9,458</td>
                     </tr>
                     <tr style="background: #f5f5f5;">
                         <td>スキンセラム</td>
-                        <td style="text-align: right;">2</td>
-                        <td style="text-align: right;">2</td>
-                        <td style="text-align: right;">¥4,462</td>
-                        <td style="text-align: right;">¥5,956</td>
-                        <td style="text-align: right; color: #38ef7d;">▲ ¥1,494</td>
+                        <td style="text-align: right;">3</td>
+                        <td style="text-align: right;">1</td>
+                        <td style="text-align: right;">¥8,436</td>
+                        <td style="text-align: right;">¥2,978</td>
+                        <td style="text-align: right; color: #ff6b6b;">▼ ¥5,458</td>
                     </tr>
                     <tr style="background: #ffffff;">
                         <td>スキンローション</td>
-                        <td style="text-align: right;">2</td>
-                        <td style="text-align: right;">2</td>
-                        <td style="text-align: right;">¥3,626</td>
-                        <td style="text-align: right;">¥4,820</td>
-                        <td style="text-align: right; color: #38ef7d;">▲ ¥1,194</td>
+                        <td style="text-align: right;">3</td>
+                        <td style="text-align: right;">1</td>
+                        <td style="text-align: right;">¥6,832</td>
+                        <td style="text-align: right;">¥2,410</td>
+                        <td style="text-align: right; color: #ff6b6b;">▼ ¥4,422</td>
                     </tr>
                     <tr style="background: #f5f5f5;">
                         <td>メンズスキンセラム</td>
@@ -1200,17 +1192,17 @@
                     </tr>
                     <tr style="background: #e8e8e8; font-weight: bold;">
                         <td>合計</td>
-                        <td style="text-align: right;">7</td>
-                        <td style="text-align: right;">10</td>
-                        <td style="text-align: right;">¥15,480</td>
-                        <td style="text-align: right;">¥25,162</td>
-                        <td style="text-align: right; color: #38ef7d;"> ¥9,682</td>
+                        <td style="text-align: right;">13</td>
+                        <td style="text-align: right;">5</td>
+                        <td style="text-align: right;">¥32,118</td>
+                        <td style="text-align: right;">¥12,780</td>
+                        <td style="text-align: right; color: #38ef7d;"> ¥19,338</td>
                     </tr>
                 </tbody>
             </table>
             <div id="profit-date-info" style="margin-top: 15px; color: #888; font-size: 12px;">
-                前期: 2026/03/16 - 2026/03/22 /
-                今期: 2026/03/23 - 2026/03/29
+                前期: 2026/03/23 - 2026/03/29 /
+                今期: 2026/03/30 - 2026/04/05
             </div>
             <div id="profit-calc-note" style="margin-top: 10px; padding: 10px; background: #f0f8ff; border-left: 3px solid #4a90d9; font-size: 12px; display: none;">
                 <strong>詳細計算モード:</strong>
@@ -1600,10 +1592,10 @@
                 <div class="source"><strong>処理:</strong> 3つのチャネルデータを統合したDataFrame</div>
                 <table class="debug-table" style="margin-top: 12px;">
                     <tr><th>チャネル</th><th>参照シート</th><th>config.py キー</th><th>レコード数</th></tr>
-                    <tr><td>Shopify</td><td>Shopify注文自動Webhook</td><td>shopify_orders</td><td>276件</td></tr>
-                    <tr><td>社割</td><td>社割購入</td><td>employee_orders</td><td>99件</td></tr>
+                    <tr><td>Shopify</td><td>Shopify注文自動Webhook</td><td>shopify_orders</td><td>284件</td></tr>
+                    <tr><td>社割</td><td>社割購入</td><td>employee_orders</td><td>105件</td></tr>
                     <tr><td>卸売</td><td>クリニック卸売</td><td>wholesale_orders</td><td>28件</td></tr>
-                    <tr><td colspan="3"><strong>合計</strong></td><td><strong>411件</strong></td></tr>
+                    <tr><td colspan="3"><strong>合計</strong></td><td><strong>428件</strong></td></tr>
                 </table>
             </div>
         </div>
@@ -1621,7 +1613,7 @@
                     <li>卸売: <span class="highlight-yellow">合計</span> カラム</li>
                 </ul>
                 <div class="formula">summary.total_sales = filtered["total"].sum()</div>
-                <div class="value">計算結果: ¥2,420,334</div>
+                <div class="value">計算結果: ¥2,483,718</div>
             </div>
 
             <div class="debug-item">
@@ -1629,33 +1621,33 @@
                 <div class="source"><strong>参照:</strong> unified_orders["order_id"] カラム</div>
                 <div class="formula">summary.total_orders = filtered["order_id"].nunique()</div>
                 <div class="source" style="margin-top: 8px;"><strong>注意:</strong> nunique()はユニーク値をカウント</div>
-                <div class="value">計算結果: 239件</div>
+                <div class="value">計算結果: 250件</div>
             </div>
 
             <div class="debug-item">
                 <h4>商品販売数 (total_quantity)</h4>
                 <div class="source"><strong>参照:</strong> unified_orders["quantity"] カラム</div>
                 <div class="formula">summary.total_quantity = filtered["quantity"].sum()</div>
-                <div class="value">計算結果: 765個</div>
+                <div class="value">計算結果: 786個</div>
             </div>
 
             <div class="debug-item">
                 <h4>平均注文額 (average_order_value)</h4>
                 <div class="formula">summary.average_order_value = total_sales / total_orders</div>
-                <div class="value">計算結果: ¥10,127</div>
+                <div class="value">計算結果: ¥9,935</div>
             </div>
 
             <div class="debug-item">
                 <h4>手数料 (total_fees)</h4>
                 <div class="source"><strong>参照:</strong> shopify_fees シート（Shopify決済手数料Webhock）</div>
                 <div class="formula">fees_df["手数料"].apply(_parse_number).sum()</div>
-                <div class="value">計算結果: ¥40,346</div>
+                <div class="value">計算結果: ¥40,890</div>
             </div>
 
             <div class="debug-item">
                 <h4>純売上 (net_sales)</h4>
                 <div class="formula">summary.net_sales = total_sales - total_fees</div>
-                <div class="value">計算結果: ¥2,379,988</div>
+                <div class="value">計算結果: ¥2,442,828</div>
             </div>
         </div>
 
@@ -2114,7 +2106,7 @@
                     </tr>
                 </table>
                 <div class="source" style="margin-top: 8px;">
-                    <strong>デフォルト値:</strong> 開始日 = 2025-08-01 (データ最古日), 終了日 = 2026-03-27 (本日)<br>
+                    <strong>デフォルト値:</strong> 開始日 = 2025-08-01 (データ最古日), 終了日 = 2026-04-03 (本日)<br>
                     <strong>JS変数:</strong> <code>defaultStartDate</code>, <code>defaultEndDate</code><br>
                     <strong>利益比較タブ:</strong> デフォルトは今週月曜～今日、リセット時も同様
                 </div>
@@ -2126,9 +2118,9 @@
     <div id="tab-inventory" class="tab-content">
         <div class="date-filter">
             <label>開始日:</label>
-            <input type="date" id="invStartDate" value="2026-03-01" min="2025-08-01">
+            <input type="date" id="invStartDate" value="2026-04-01" min="2025-08-01">
             <label>終了日:</label>
-            <input type="date" id="invEndDate" value="2026-03-27">
+            <input type="date" id="invEndDate" value="2026-04-03">
             <button class="filter-btn" onclick="applyInventoryFilter()">適用</button>
             <button class="reset-btn" onclick="resetInventoryFilter()">リセット</button>
         </div>
@@ -2212,12 +2204,9 @@
         Generated by EC Aggregator Tool | Data Source: ECManagementSystem Spreadsheet
     </div>
 
+    <div id="loading-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.95);z-index:10000;display:flex;align-items:center;justify-content:center;"><div style="text-align:center;"><div style="width:48px;height:48px;border:4px solid #e5e7eb;border-top:4px solid #667eea;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px;"></div><p style="font-size:16px;color:#666;">GASからデータを取得中...</p></div></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style>
     <script>
         // データ
-        // GAS Web App endpoint - update this URL after deploying
-        const GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbykfItNTTHByVC8Ub-h693N_jSUYiL6bRaLrmshRek6iosVqP483PTb54ID5S2cszDI/exec';
-
-        // Loading state
         let allOrders = [];
         let discountData = [];
         let gaData = {summary_7d:{sessions:0,pageViews:0,revenue:0,users:0,avgDuration:0},summary_30d:{sessions:0,pageViews:0,revenue:0,users:0,avgDuration:0},daily:[],regional:[],device:[],browser:[],traffic:[],pages:[],hourly:[],hourlyPages:[],hourlyPagesStart:"",hourlyPagesEnd:"",trafficDaily:[],deviceDaily:[],regionalDaily:[],pagesDaily:[],hourlyTransactions:[],lpData:{},atcData:{}};
@@ -2227,62 +2216,16 @@
         let feeData = [];
         let amazonQoo10LastImport = "";
         let snsData = {};
-
-        async function loadDashboardData() {
-          const overlay = document.getElementById('loading-overlay');
-          try {
-            const url = GAS_ENDPOINT + (GAS_ENDPOINT.includes('?') ? '&' : '?') + 'nocache=' + Date.now();
-            const res = await fetch(url);
-            const data = await res.json();
-            allOrders = data.allOrders || [];
-            discountData = data.discountData || [];
-            gaData = data.gaData || gaData;
-            sgaData = data.sgaData || {};
-            shippingData = data.shippingData || {};
-            inventoryData = data.inventoryData || inventoryData;
-            feeData = data.feeData || [];
-            amazonQoo10LastImport = data.amazonQoo10LastImport || "";
-            // Update timestamp
-            const now = new Date();
-            const ts = now.getFullYear() + '年' + String(now.getMonth()+1).padStart(2,'0') + '月' + String(now.getDate()).padStart(2,'0') + '日 ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
-            const tsEl = document.querySelector('.timestamp');
-            if (tsEl) tsEl.textContent = '最終更新: ' + ts;
-            // Re-render all dashboard components
-            if (typeof initDashboard === 'function') initDashboard();
-            if (typeof updateAllCharts === 'function') updateAllCharts();
-            if (typeof applyFilters === 'function') applyFilters();
-            // Re-trigger DOMContentLoaded-equivalent initializations
-            updateReportPreview();
-            initGaDatePickers();
-            if (document.getElementById('profitStartDate')) {
-                applyProfitDateFilter();
-            }
-            // KPI tab init
-            if (document.getElementById('kpiStartDate')) {
-                document.getElementById('kpiStartDate').value = kpiDefaultStartDate;
-                document.getElementById('kpiEndDate').value = kpiDefaultEndDate;
-                updateAllKPIData(kpiDefaultStartDate, kpiDefaultEndDate);
-            }
-          } catch(e) {
-            console.error('Dashboard data load failed:', e);
-            if (overlay) overlay.innerHTML = '<div style="text-align:center;color:#e74c3c;"><h2>データ取得エラー</h2><p>' + e.message + '</p><button onclick="loadDashboardData()" style="margin-top:16px;padding:8px 24px;cursor:pointer;">再試行</button></div>';
-            return;
-          }
-          if (overlay) overlay.style.display = 'none';
-        }
-        // 原価データをsgaData（販管費）から構築
-        const costData = (function() {
+        function buildCostData(sgaData) {
             const result = {};
             if (typeof sgaData === 'object' && sgaData !== null) {
                 for (const [key, info] of Object.entries(sgaData)) {
-                    // キーは "販売形態_商品名" 形式。「定価」行のデータを優先的に使用
                     const parts = key.split('_');
                     const salesType = parts[0] || '';
                     const productName = parts.length > 1 ? parts.slice(1).join('_') : key;
                     const unitCost = info.unit_cost || info.product_cost || 0;
                     const sga = info.sga || 0;
                     const listPrice = info.list_price || 0;
-                    // 「定価」行を優先、なければ他の行を使用
                     if (sga > 0 && (!result[productName] || salesType === '定価')) {
                         result[productName] = {
                             total_cost: sga,
@@ -2293,11 +2236,75 @@
                 }
             }
             return result;
-        })();
-        const defaultStartDate = '2025-08-01';
-        const defaultEndDate = '2026-03-27';
-        const invDefaultStartDate = '2026-03-01';
-        const invDefaultEndDate = '2026-03-27';
+        }
+        let costData = {};
+        let defaultStartDate = '2025-08-01';
+        let defaultEndDate = '2026-04-03';
+        let invDefaultStartDate = '2026-04-01';
+        let invDefaultEndDate = '2026-04-03';
+
+        async function loadDashboardData() {
+          const overlay = document.getElementById('loading-overlay');
+          try {
+            const url = 'https://script.google.com/macros/s/AKfycbykfItNTTHByVC8Ub-h693N_jSUYiL6bRaLrmshRek6iosVqP483PTb54ID5S2cszDI/exec' + '?nocache=' + Date.now();
+            const res = await fetch(url);
+            const data = await res.json();
+            allOrders = data.allOrders || [];
+            discountData = data.discountData || [];
+            gaData = data.gaData || gaData;
+            sgaData = data.sgaData || {};
+            shippingData = data.shippingData || {};
+            inventoryData = data.inventoryData || inventoryData;
+            feeData = data.feeData || [];
+            amazonQoo10LastImport = data.amazonQoo10LastImport || "";
+            // costDataをsgaDataから再構築
+            costData = buildCostData(sgaData);
+            // 日付範囲をデータから動的に算出
+            if (allOrders.length > 0) {
+              const dates = allOrders.map(o => o.order_date).filter(d => d).sort();
+              defaultStartDate = dates[0] || defaultStartDate;
+              defaultEndDate = dates[dates.length - 1] || defaultEndDate;
+              const now = new Date();
+              const todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+              if (todayStr > defaultEndDate) defaultEndDate = todayStr;
+              invDefaultEndDate = todayStr;
+              invDefaultStartDate = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-01';
+              // 日付フィルターのmax属性とデフォルト値を更新
+              const dateInputs = document.querySelectorAll('input[type=date]');
+              dateInputs.forEach(input => {
+                if (input.getAttribute('max')) input.max = defaultEndDate;
+              });
+              document.getElementById('startDate').value = defaultStartDate;
+              document.getElementById('endDate').value = defaultEndDate;
+            }
+            // タイムスタンプ更新
+            const now = new Date();
+            const ts = now.getFullYear() + '年' + String(now.getMonth()+1).padStart(2,'0') + '月' + String(now.getDate()).padStart(2,'0') + '日 ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
+            const tsEl = document.querySelector('.timestamp');
+            if (tsEl) tsEl.textContent = '最終更新: ' + ts + ' (GASリアルタイム)';
+            // エラー情報表示
+            if (data._errors && data._errors.length > 0) {
+              console.warn('GAS API errors:', data._errors);
+            }
+            // 全画面を再描画
+            applyDateFilter();
+            updateReportPreview();
+            initGaDatePickers();
+            if (document.getElementById('profitStartDate')) {
+                applyProfitDateFilter();
+            }
+            if (document.getElementById('kpiStartDate')) {
+                document.getElementById('kpiStartDate').value = defaultStartDate;
+                document.getElementById('kpiEndDate').value = defaultEndDate;
+                updateAllKPIData(defaultStartDate, defaultEndDate);
+            }
+          } catch(e) {
+            console.error('Dashboard data load failed:', e);
+            if (overlay) overlay.innerHTML = '<div style="text-align:center;color:#e74c3c;padding:40px;"><h2>データ取得エラー</h2><p>' + e.message + '</p><button onclick="loadDashboardData()" style="margin-top:16px;padding:8px 24px;cursor:pointer;border-radius:8px;border:1px solid #ccc;">再試行</button></div>';
+            return;
+          }
+          if (overlay) overlay.style.display = 'none';
+        }
 
         // 商品名の正規化（メンズ商品を先にチェックする順序が重要）
         const productMappingOrdered = [
@@ -3988,11 +3995,16 @@
 
         // 初期化
         document.addEventListener('DOMContentLoaded', () => {
-            updateReportPreview();
-            initGaDatePickers();
-            // 利益比較タブを初期化（全チャネル + ECのみ表示）
-            if (document.getElementById('profitStartDate')) {
-                applyProfitDateFilter();
+            if (typeof loadDashboardData === 'function') {
+                // GitHub Pages版: GASからデータ取得後に初期化
+                loadDashboardData();
+            } else {
+                // ローカル版: データ埋め込み済みなのでそのまま初期化
+                updateReportPreview();
+                initGaDatePickers();
+                if (document.getElementById('profitStartDate')) {
+                    applyProfitDateFilter();
+                }
             }
             // 地図はタブ表示時に初期化（非表示状態では幅が0になるため）
         });
@@ -5753,11 +5765,6 @@
                 renderTransactionTable();
             }
         };
-
-        // GAS Web App からデータを取得してダッシュボードを初期化
-        document.addEventListener('DOMContentLoaded', function() {
-            loadDashboardData();
-        });
     </script>
 </body>
 </html>
