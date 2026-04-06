@@ -630,446 +630,7 @@
     <script>
 
         // 画像マッピング
-        const imageMapping = {
-        "115A18": [
-                "115A18_1.jpg",
-                "115A18_3.jpg"
-        ],
-        "115A19": [
-                "115A19_1.jpg",
-                "115A19_3.jpg"
-        ],
-        "115A20": [
-                "115A20_1.jpg",
-                "115A20_3.jpg"
-        ],
-        "115A21": [
-                "115A21_1.jpg",
-                "115A21_3.jpg"
-        ],
-        "115A22": [
-                "115A22_1.jpg",
-                "115A22_2.jpg",
-                "115A22_4.jpg",
-                "115A22_5.jpg"
-        ],
-        "115A27": [
-                "115A27_1.jpg",
-                "115A27_2.jpg",
-                "115A27_4.jpg",
-                "115A27_5.jpg"
-        ],
-        "115A28": [
-                "115A28_1.jpg",
-                "115A28_3.jpg"
-        ],
-        "115A29": [
-                "115A29_1.jpg",
-                "115A29_3.jpg"
-        ],
-        "115A30": [
-                "115A30_1.jpg",
-                "115A30_2.jpg",
-                "115A30_4.jpg",
-                "115A30_5.jpg"
-        ],
-        "115A32": [
-                "115A32_1.jpg",
-                "115A32_3.jpg"
-        ],
-        "115A33": [
-                "115A33_1.jpg",
-                "115A33_3.jpg"
-        ],
-        "115A37": [
-                "115A37_1.jpg",
-                "115A37_2.jpg",
-                "115A37_4.jpg",
-                "115A37_5.jpg"
-        ],
-        "115A40": [
-                "115A40_1.jpg",
-                "115A40_2.jpg",
-                "115A40_4.jpg",
-                "115A40_5.jpg"
-        ],
-        "115A49": [
-                "115A49_1.jpg",
-                "115A49_3.jpg"
-        ],
-        "115A50": [
-                "115A50_1.jpg",
-                "115A50_3.jpg"
-        ],
-        "115A55": [
-                "115A55_1.jpg",
-                "115A55_3.jpg"
-        ],
-        "115A58": [
-                "115A58_1.jpg",
-                "115A58_3.jpg"
-        ],
-        "115A59": [
-                "115A59_1.jpg",
-                "115A59_2.jpg",
-                "115A59_4.jpg",
-                "115A59_5.jpg"
-        ],
-        "115A60": [
-                "115A60_1.jpg",
-                "115A60_2.jpg",
-                "115A60_3.jpg",
-                "115A60_5.jpg",
-                "115A60_6.jpg",
-                "115A60_7.jpg"
-        ],
-        "115A64": [
-                "115A64_1.jpg",
-                "115A64_2.jpg",
-                "115A64_3.jpg",
-                "115A64_5.jpg",
-                "115A64_6.jpg",
-                "115A64_7.jpg"
-        ],
-        "115A65": [
-                "115A65_1.jpg",
-                "115A65_2.jpg",
-                "115A65_4.jpg",
-                "115A65_5.jpg"
-        ],
-        "115A68": [
-                "115A68_1.jpg",
-                "115A68_3.jpg"
-        ],
-        "115A69": [
-                "115A69_1.jpg",
-                "115A69_2.jpg",
-                "115A69_4.jpg",
-                "115A69_5.jpg"
-        ],
-        "115A70": [
-                "115A70_1.jpg",
-                "115A70_3.jpg"
-        ],
-        "115A71": [
-                "115A71_1.jpg",
-                "115A71_3.jpg"
-        ],
-        "115A73": [
-                "115A73_1.jpg",
-                "115A73_3.jpg"
-        ],
-        "115A74": [
-                "115A74_1.jpg",
-                "115A74_3.jpg"
-        ],
-        "115B12": [
-                "115B12_1.jpg",
-                "115B12_3.jpg"
-        ],
-        "115B29": [
-                "115B29_1.jpg",
-                "115B29_2.jpg",
-                "115B29_4.jpg",
-                "115B29_5.jpg"
-        ],
-        "115B36": [
-                "115B36_1.jpg",
-                "115B36_3.jpg"
-        ],
-        "115B38": [
-                "115B38_1.jpg",
-                "115B38_2.jpg",
-                "115B38_4.jpg",
-                "115B38_5.jpg"
-        ],
-        "115B39": [
-                "115B39_1.jpg",
-                "115B39_2.jpg",
-                "115B39_4.jpg",
-                "115B39_5.jpg"
-        ],
-        "115B40": [
-                "115B40_1.jpg",
-                "115B40_2.jpg",
-                "115B40_4.jpg",
-                "115B40_5.jpg"
-        ],
-        "115C10": [
-                "115C10_1.jpg",
-                "115C10_3.jpg"
-        ],
-        "115C14": [
-                "115C14_1.jpg",
-                "115C14_3.jpg"
-        ],
-        "115C23": [
-                "115C23_1.jpg",
-                "115C23_3.jpg"
-        ],
-        "115C29": [
-                "115C29_1.jpg",
-                "115C29_3.jpg"
-        ],
-        "115C38": [
-                "115C38_1.jpg",
-                "115C38_3.jpg"
-        ],
-        "115C39": [
-                "115C39_1.jpg",
-                "115C39_3.jpg"
-        ],
-        "115C41": [
-                "115C41_1.jpg",
-                "115C41_2.jpg",
-                "115C41_4.jpg",
-                "115C41_5.jpg"
-        ],
-        "115C42": [
-                "115C42_1.jpg",
-                "115C42_2.jpg",
-                "115C42_4.jpg",
-                "115C42_5.jpg"
-        ],
-        "115C44": [
-                "115C44_1.jpg",
-                "115C44_3.jpg"
-        ],
-        "115C50": [
-                "115C50_1.jpg",
-                "115C50_3.jpg"
-        ],
-        "115C52": [
-                "115C52_1.jpg",
-                "115C52_2.jpg",
-                "115C52_4.jpg",
-                "115C52_5.jpg"
-        ],
-        "115C54": [
-                "115C54_1.jpg",
-                "115C54_3.jpg"
-        ],
-        "115C56": [
-                "115C56_1.jpg",
-                "115C56_3.jpg"
-        ],
-        "115C59": [
-                "115C59_1.jpg",
-                "115C59_3.jpg"
-        ],
-        "115D16": [
-                "115D16_1.jpg",
-                "115D16_2.jpg",
-                "115D16_4.jpg",
-                "115D16_5.jpg"
-        ],
-        "115D19": [
-                "115D19_1.jpg",
-                "115D19_2.jpg",
-                "115D19_3.jpg",
-                "115D19_4.jpg",
-                "115D19_6.jpg",
-                "115D19_7.jpg",
-                "115D19_8.jpg",
-                "115D19_9.jpg"
-        ],
-        "115D20": [
-                "115D20_1.jpg",
-                "115D20_2.jpg",
-                "115D20_3.jpg",
-                "115D20_4.jpg",
-                "115D20_6.jpg",
-                "115D20_7.jpg",
-                "115D20_8.jpg",
-                "115D20_9.jpg"
-        ],
-        "115D23": [
-                "115D23_1.jpg",
-                "115D23_2.jpg",
-                "115D23_4.jpg",
-                "115D23_5.jpg"
-        ],
-        "115D24": [
-                "115D24_1.jpg",
-                "115D24_3.jpg"
-        ],
-        "115D26": [
-                "115D26_1.jpg",
-                "115D26_3.jpg"
-        ],
-        "115D27": [
-                "115D27_1.jpg",
-                "115D27_2.jpg",
-                "115D27_4.jpg",
-                "115D27_5.jpg"
-        ],
-        "115D33": [
-                "115D33_1.jpg",
-                "115D33_3.jpg"
-        ],
-        "115D37": [
-                "115D37_1.jpg",
-                "115D37_2.jpg",
-                "115D37_4.jpg",
-                "115D37_5.jpg"
-        ],
-        "115D38": [
-                "115D38_1.jpg",
-                "115D38_3.jpg"
-        ],
-        "115D39": [
-                "115D39_1.jpg",
-                "115D39_2.jpg",
-                "115D39_4.jpg",
-                "115D39_5.jpg"
-        ],
-        "115D41": [
-                "115D41_1.jpg",
-                "115D41_2.jpg",
-                "115D41_4.jpg",
-                "115D41_5.jpg"
-        ],
-        "115D44": [
-                "115D44_1.jpg",
-                "115D44_3.jpg"
-        ],
-        "115D46": [
-                "115D46_1.jpg",
-                "115D46_2.jpg",
-                "115D46_4.jpg",
-                "115D46_5.jpg"
-        ],
-        "115D47": [
-                "115D47_1.jpg",
-                "115D47_3.jpg"
-        ],
-        "115D49": [
-                "115D49_1.jpg",
-                "115D49_3.jpg"
-        ],
-        "115D52": [
-                "115D52_1.jpg",
-                "115D52_2.jpg",
-                "115D52_4.jpg",
-                "115D52_5.jpg"
-        ],
-        "115D53": [
-                "115D53_1.jpg",
-                "115D53_3.jpg"
-        ],
-        "115D56": [
-                "115D56_1.jpg",
-                "115D56_3.jpg"
-        ],
-        "115D58": [
-                "115D58_1.jpg",
-                "115D58_2.jpg",
-                "115D58_3.jpg",
-                "115D58_5.jpg",
-                "115D58_6.jpg",
-                "115D58_7.jpg"
-        ],
-        "115D60": [
-                "115D60_1.jpg",
-                "115D60_2.jpg",
-                "115D60_3.jpg",
-                "115D60_5.jpg",
-                "115D60_6.jpg",
-                "115D60_7.jpg"
-        ],
-        "115D63": [
-                "115D63_1.jpg",
-                "115D63_2.jpg",
-                "115D63_4.jpg",
-                "115D63_5.jpg"
-        ],
-        "115D65": [
-                "115D65_1.jpg",
-                "115D65_2.jpg",
-                "115D65_4.jpg",
-                "115D65_5.jpg"
-        ],
-        "115D66": [
-                "115D66_1.jpg",
-                "115D66_2.jpg",
-                "115D66_4.jpg",
-                "115D66_5.jpg"
-        ],
-        "115D67": [
-                "115D67_1.jpg",
-                "115D67_2.jpg",
-                "115D67_4.jpg",
-                "115D67_5.jpg"
-        ],
-        "115D73": [
-                "115D73_1.jpg",
-                "115D73_2.jpg",
-                "115D73_3.jpg",
-                "115D73_5.jpg",
-                "115D73_6.jpg",
-                "115D73_7.jpg"
-        ],
-        "115E25": [
-                "115E25_1.jpg",
-                "115E25_3.jpg"
-        ],
-        "115E33": [
-                "115E33_1.jpg",
-                "115E33_2.jpg",
-                "115E33_4.jpg",
-                "115E33_5.jpg"
-        ],
-        "115E36": [
-                "115E36_1.jpg",
-                "115E36_3.jpg"
-        ],
-        "115F17": [
-                "115F17_1.jpg",
-                "115F17_3.jpg"
-        ],
-        "115F30": [
-                "115F30_1.jpg",
-                "115F30_3.jpg"
-        ],
-        "115F35": [
-                "115F35_1.jpg",
-                "115F35_3.jpg"
-        ],
-        "115F36": [
-                "115F36_1.jpg",
-                "115F36_2.jpg",
-                "115F36_4.jpg",
-                "115F36_5.jpg"
-        ],
-        "115F37": [
-                "115F37_1.jpg",
-                "115F37_3.jpg"
-        ],
-        "115F40": [
-                "115F40_1.jpg",
-                "115F40_2.jpg",
-                "115F40_4.jpg",
-                "115F40_5.jpg"
-        ],
-        "115F46": [
-                "115F46_1.jpg",
-                "115F46_3.jpg"
-        ],
-        "115F50": [
-                "115F50_1.jpg",
-                "115F50_3.jpg"
-        ],
-        "115F53": [
-                "115F53_1.jpg",
-                "115F53_3.jpg"
-        ],
-        "115F58": [
-                "115F58_1.jpg",
-                "115F58_2.jpg",
-                "115F58_4.jpg",
-                "115F58_5.jpg"
-        ]
-};
+        const imageMapping = {};
 
         // 画像ベースパス（GitHub Pagesまたはローカル用）
         const IMAGE_BASE_PATH = '../data/115回/images/';
@@ -1088,7 +649,8 @@
     "choice_d": "ネフローゼ症候群",
     "choice_e": "血栓性微小血管障害",
     "answer": "e",
-    "correct_rate": "75%"
+    "correct_rate": "75%",
+    "keywords": ["強皮症腎", "全身性強皮症", "血栓性微小血管障害", "悪性高血圧", "急速進行性腎不全"]
   },
   {
     "exam_number": "115",
@@ -1102,7 +664,8 @@
     "choice_d": "左横隔膜下",
     "choice_e": "右横隔膜下",
     "answer": "a",
-    "correct_rate": "96%"
+    "correct_rate": "96%",
+    "keywords": ["腹腔内ドレナージ", "Douglas窩", "S状結腸切除術", "腹腔内解剖", "術後管理"]
   },
   {
     "exam_number": "115",
@@ -1116,7 +679,8 @@
     "choice_d": "血中ヘモグロビン値は慢性腎臓病のG2期から低下する。",
     "choice_e": "血中エリスロポエチン濃度は発症初期から測定感度以下になる。",
     "answer": "c",
-    "correct_rate": "78%"
+    "correct_rate": "78%",
+    "keywords": ["腎性貧血", "エリスロポエチン", "慢性腎臓病", "正球性正色素性貧血", "網赤血球"]
   },
   {
     "exam_number": "115",
@@ -1130,7 +694,8 @@
     "choice_d": "PD)programmed cell death1-1",
     "choice_e": "VEGF)vascular endothelial growth factor1",
     "answer": "d",
-    "correct_rate": "94%"
+    "correct_rate": "94%",
+    "keywords": ["悪性黒色腫", "免疫チェックポイント阻害薬", "PD-1", "抗体薬", "がん免疫療法"]
   },
   {
     "exam_number": "115",
@@ -1144,7 +709,8 @@
     "choice_d": "亜急性甲状腺炎",
     "choice_e": "腺腫様甲状腺腫",
     "answer": "a",
-    "correct_rate": "91%"
+    "correct_rate": "91%",
+    "keywords": ["甲状腺髄様癌", "カルシトニン", "傍濾胞細胞", "甲状腺癌", "多発性内分泌腫瘍症"]
   },
   {
     "exam_number": "115",
@@ -1158,7 +724,8 @@
     "choice_d": "The infection during pregnancy can cause microcephaly of the new born.",
     "choice_e": "Acyclovir is used for treatment.",
     "answer": "e",
-    "correct_rate": "90%"
+    "correct_rate": "90%",
+    "keywords": ["Zikaウイルス", "蚊媒介感染症", "小頭症", "先天性Zika症候群", "対症療法"]
   },
   {
     "exam_number": "115",
@@ -1172,7 +739,8 @@
     "choice_d": "閉鎖孔ヘルニア",
     "choice_e": "Bochdalek孔ヘルニア",
     "answer": "c",
-    "correct_rate": "68%"
+    "correct_rate": "68%",
+    "keywords": ["鼠径ヘルニア", "Hesselbach三角", "内鼠径ヘルニア", "外鼠径ヘルニア", "下腹壁動静脈"]
   },
   {
     "exam_number": "115",
@@ -1186,7 +754,8 @@
     "choice_d": "プロトロンビン時間",
     "choice_e": "α-フェトプロテイン)AFP1値",
     "answer": "e",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["肝予備能", "肝細胞癌", "肝切除術", "Child-Pugh分類", "ICG試験"]
   },
   {
     "exam_number": "115",
@@ -1200,7 +769,8 @@
     "choice_d": "発作性寒冷血色素尿症",
     "choice_e": "血栓性血小板減少性紫斑病",
     "answer": "e",
-    "correct_rate": "93%"
+    "correct_rate": "93%",
+    "keywords": ["赤血球破砕症候群", "微小血管症性溶血性貧血", "血栓性血小板減少性紫斑病", "破砕赤血球", "溶血性貧血"]
   },
   {
     "exam_number": "115",
@@ -1214,7 +784,8 @@
     "choice_d": "浅側頭動脈の炎症を合併しやすい。",
     "choice_e": "大動脈およびその分枝に病変をきたしやすい。",
     "answer": "e",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "keywords": ["高安動脈炎", "大動脈炎症候群", "大型血管炎", "若年女性", "脈なし病"]
   },
   {
     "exam_number": "115",
@@ -1228,7 +799,8 @@
     "choice_d": "トリプタン皮下注",
     "choice_e": "三環系抗うつ薬内服",
     "answer": "ad",
-    "correct_rate": "84%"
+    "correct_rate": "84%",
+    "keywords": ["群発頭痛", "急性期治療", "純酸素吸入", "トリプタン", "自律神経症状"]
   },
   {
     "exam_number": "115",
@@ -1242,7 +814,8 @@
     "choice_d": "眼球突出",
     "choice_e": "虹彩毛様体炎",
     "answer": "ae",
-    "correct_rate": "67%"
+    "correct_rate": "67%",
+    "keywords": ["関節リウマチ", "眼合併症", "強膜炎", "ぶどう膜炎", "自己免疫疾患"]
   },
   {
     "exam_number": "115",
@@ -1256,7 +829,8 @@
     "choice_d": "糖尿病",
     "choice_e": "皮膚色素脱失",
     "answer": "ad",
-    "correct_rate": "44%"
+    "correct_rate": "44%",
+    "keywords": ["ヘモクロマトーシス", "鉄過剰症", "肝硬変", "糖尿病", "色素沈着"]
   },
   {
     "exam_number": "115",
@@ -1270,7 +844,8 @@
     "choice_d": "半月板損傷",
     "choice_e": "離断性骨軟骨炎",
     "answer": "ab",
-    "correct_rate": "78%"
+    "correct_rate": "78%",
+    "keywords": ["減圧症", "窒素気泡", "関節痛", "骨壊死", "潜水"]
   },
   {
     "exam_number": "115",
@@ -1284,7 +859,8 @@
     "choice_d": "メタンフェタミン",
     "choice_e": "フェノバルビタール",
     "answer": "ce",
-    "correct_rate": "72%"
+    "correct_rate": "72%",
+    "keywords": ["身体依存", "精神依存", "薬物乱用", "オピオイド", "バルビツール酸系"]
   },
   {
     "exam_number": "115",
@@ -1298,7 +874,8 @@
     "choice_d": "副腎皮質ステロイド投与",
     "choice_e": "抗D人免疫グロブリン投与",
     "answer": "e",
-    "correct_rate": "95%"
+    "correct_rate": "95%",
+    "keywords": ["RhD不適合妊娠", "抗D人免疫グロブリン", "新生児溶血性疾患", "母体感作予防"]
   },
   {
     "exam_number": "115",
@@ -1312,7 +889,8 @@
     "choice_d": "腫瘍マーカー測定",
     "choice_e": "コルポスコピィ検査",
     "answer": "e",
-    "correct_rate": "97%"
+    "correct_rate": "97%",
+    "keywords": ["子宮頸がん検診", "子宮頸部異形成", "コルポスコピー", "HPV", "CIN"]
   },
   {
     "exam_number": "115",
@@ -1326,7 +904,9 @@
     "choice_d": "膀胱尿管逆流",
     "choice_e": "尿管膀胱外開口",
     "answer": "d",
-    "correct_rate": "97%"
+    "correct_rate": "97%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA018.jpg"],
+    "keywords": ["膀胱尿管逆流", "排尿時膀胱尿道造影", "尿路感染症", "腎盂腎炎", "小児泌尿器科"]
   },
   {
     "exam_number": "115",
@@ -1340,7 +920,9 @@
     "choice_d": "KL-6が高値である。",
     "choice_e": "気管支肺胞洗浄液でリンパ球増多を認める。",
     "answer": "c",
-    "correct_rate": "92%"
+    "correct_rate": "92%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA019.jpg"],
+    "keywords": ["夏型過敏性肺炎", "Trichosporon asahii", "間質性肺炎", "アレルギー反応", "BALF"]
   },
   {
     "exam_number": "115",
@@ -1354,7 +936,9 @@
     "choice_d": "利尿レノグラム",
     "choice_e": "排尿時膀胱尿道造影",
     "answer": "c",
-    "correct_rate": "74%"
+    "correct_rate": "74%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA020.jpg"],
+    "keywords": ["胎児水腎症", "腎盂拡大", "超音波検査", "小児泌尿器科", "経過観察"]
   },
   {
     "exam_number": "115",
@@ -1368,7 +952,9 @@
     "choice_d": "Kaposi水痘様発疹症",
     "choice_e": "ブドウ球菌性熱傷様皮膚症候群",
     "answer": "a",
-    "correct_rate": "79%"
+    "correct_rate": "79%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA021.jpg"],
+    "keywords": ["膿疱性乾癬", "尋常性乾癬", "Kogoj海綿状膿疱", "地図状舌", "全身性炎症反応"]
   },
   {
     "exam_number": "115",
@@ -1382,7 +968,9 @@
     "choice_d": "FDG-PET/CT",
     "choice_e": "骨シンチグラフィ",
     "answer": "c",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA022A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA022B.jpg"],
+    "keywords": ["乳がん", "画像診断", "針生検", "確定診断", "スクリーニング"]
   },
   {
     "exam_number": "115",
@@ -1396,7 +984,8 @@
     "choice_d": "口の動きに注意を向けさせると増悪する。",
     "choice_e": "片側上下肢を投げ出すような不随意運動を伴う。",
     "answer": "a",
-    "correct_rate": "35%"
+    "correct_rate": "35%",
+    "keywords": ["遅発性ジスキネジア", "抗精神病薬", "不随意運動", "錐体外路症状"]
   },
   {
     "exam_number": "115",
@@ -1410,7 +999,8 @@
     "choice_d": "睡眠薬による前向健忘",
     "choice_e": "レム)REM1睡眠行動障害",
     "answer": "d",
-    "correct_rate": "83%"
+    "correct_rate": "83%",
+    "keywords": ["睡眠薬", "前向健忘", "Z-ドラッグ", "複雑な睡眠関連行動", "薬剤性健忘"]
   },
   {
     "exam_number": "115",
@@ -1424,7 +1014,8 @@
     "choice_d": "ガンマグロブリン投与",
     "choice_e": "ヒト化モノクローナル抗体投与",
     "answer": "a",
-    "correct_rate": "89%"
+    "correct_rate": "89%",
+    "keywords": ["RSウイルス感染症", "細気管支炎", "小児感染症", "対症療法", "パリビズマブ"]
   },
   {
     "exam_number": "115",
@@ -1438,7 +1029,8 @@
     "choice_d": "急性腎障害",
     "choice_e": "高血糖緊急症",
     "answer": "d",
-    "correct_rate": "78%"
+    "correct_rate": "78%",
+    "keywords": ["急性腎障害", "急速進行性糸球体腎炎", "乏尿・無尿", "全身浮腫"]
   },
   {
     "exam_number": "115",
@@ -1452,7 +1044,8 @@
     "choice_d": "肺血栓塞栓症",
     "choice_e": "肺動脈性肺高血圧症",
     "answer": "a",
-    "correct_rate": "78%"
+    "correct_rate": "78%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA027A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA027B.jpg"]
   },
   {
     "exam_number": "115",
@@ -1466,7 +1059,9 @@
     "choice_d": "④",
     "choice_e": "⑤",
     "answer": "e",
-    "correct_rate": "73%"
+    "correct_rate": "73%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA028J01.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA028J02.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA028J03.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA028J04.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA028J05.jpg"],
+    "keywords": ["加齢性声帯萎縮", "嗄声", "声門閉鎖不全", "喉頭内視鏡"]
   },
   {
     "exam_number": "115",
@@ -1480,7 +1075,9 @@
     "choice_d": "肘部管症候群",
     "choice_e": "胸郭出口症候群",
     "answer": "b",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA029.png"],
+    "keywords": ["手根管症候群", "正中神経", "末梢神経伝導検査", "絞扼性神経障害"]
   },
   {
     "exam_number": "115",
@@ -1494,7 +1091,8 @@
     "choice_d": "乳房外Paget病",
     "choice_e": "尖圭コンジローマ",
     "answer": "b",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA030A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA030B.jpg"]
   },
   {
     "exam_number": "115",
@@ -1508,7 +1106,8 @@
     "choice_d": "網膜中心静脈閉塞症",
     "choice_e": "網膜動脈分枝閉塞症",
     "answer": "b",
-    "correct_rate": "96%"
+    "correct_rate": "96%",
+    "keywords": ["加齢黄斑変性", "歪視", "視力低下", "黄斑疾患", "高齢者眼疾患"]
   },
   {
     "exam_number": "115",
@@ -1522,7 +1121,9 @@
     "choice_d": "甲状腺機能検査値",
     "choice_e": "脳性ナトリウム利尿ペプチド)BNP1",
     "answer": "d",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA032.jpg"],
+    "keywords": ["甲状腺機能亢進症", "バセドウ病", "心房細動", "動悸", "体重減少", "振戦"]
   },
   {
     "exam_number": "115",
@@ -1536,7 +1137,9 @@
     "choice_d": "機能性卵巣囊胞",
     "choice_e": "チョコレート囊胞",
     "answer": "a",
-    "correct_rate": "89%"
+    "correct_rate": "89%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA033.jpg"],
+    "keywords": ["卵巣胚細胞腫瘍", "卵黄嚢腫瘍", "AFP", "若年女性の卵巣腫瘍", "腫瘍マーカー"]
   },
   {
     "exam_number": "115",
@@ -1550,7 +1153,8 @@
     "choice_d": "胸郭出口症候群",
     "choice_e": "頸椎椎間板ヘルニア",
     "answer": "b",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "keywords": ["急性動脈閉塞", "心房細動", "血栓塞栓症", "虚血", "5P徴候"]
   },
   {
     "exam_number": "115",
@@ -1564,7 +1168,8 @@
     "choice_d": "抗マムシ血清の投与",
     "choice_e": "自宅での経過観察の指示",
     "answer": "e",
-    "correct_rate": "93%"
+    "correct_rate": "93%",
+    "keywords": ["マムシ咬傷", "蛇咬傷", "抗マムシ血清", "毒蛇咬傷", "急性期管理"]
   },
   {
     "exam_number": "115",
@@ -1578,7 +1183,8 @@
     "choice_d": "尿管ステントを留置する。",
     "choice_e": "外腸骨動脈の塞栓術を行う。",
     "answer": "c",
-    "correct_rate": "95%"
+    "correct_rate": "95%",
+    "keywords": ["尿道損傷", "会陰部打撲", "尿閉", "逆行性尿道造影", "膀胱瘻"]
   },
   {
     "exam_number": "115",
@@ -1592,7 +1198,9 @@
     "choice_d": "喀痰の培養検査で原因微生物を同定",
     "choice_e": "週間後のペア血清で抗体価倍以上の上昇",
     "answer": "c",
-    "correct_rate": "63%"
+    "correct_rate": "63%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA037A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA037B.jpg"],
+    "keywords": ["ニューモシスチス肺炎", "日和見感染症", "造血幹細胞移植", "β-D-グルカン", "免疫不全"]
   },
   {
     "exam_number": "115",
@@ -1606,7 +1214,8 @@
     "choice_d": "抗ヒスタミン薬内服",
     "choice_e": "重炭酸ナトリウム静注",
     "answer": "c",
-    "correct_rate": "87%"
+    "correct_rate": "87%",
+    "keywords": ["アナフィラキシー", "食物依存性運動誘発アナフィラキシー", "アドレナリン", "アレルギー", "気管支喘息"]
   },
   {
     "exam_number": "115",
@@ -1620,7 +1229,8 @@
     "choice_d": "筋萎縮性側索硬化症",
     "choice_e": "Guillain-Barré症候群",
     "answer": "e",
-    "correct_rate": "90%"
+    "correct_rate": "90%",
+    "keywords": ["Guillain-Barré症候群", "Miller Fisher症候群", "先行感染", "眼球運動麻痺", "腱反射消失"]
   },
   {
     "exam_number": "115",
@@ -1634,7 +1244,9 @@
     "choice_d": "下大静脈フィルター留置",
     "choice_e": "t-PA)tissue plasminogen activator1投与",
     "answer": "b",
-    "correct_rate": "88%"
+    "correct_rate": "88%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA040A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA040B.jpg"],
+    "keywords": ["急性心筋梗塞", "心原性ショック", "ST上昇型心筋梗塞 (STEMI)", "心臓カテーテル検査", "経皮的冠動脈インターベンション (PCI)"]
   },
   {
     "exam_number": "115",
@@ -1648,7 +1260,8 @@
     "choice_d": "冠動脈造影",
     "choice_e": "右心カテーテル検査",
     "answer": "e",
-    "correct_rate": "97%"
+    "correct_rate": "97%",
+    "keywords": ["肺高血圧症", "右心カテーテル検査", "肺動脈性肺高血圧症", "右室肥大"]
   },
   {
     "exam_number": "115",
@@ -1662,7 +1275,8 @@
     "choice_d": "浸透圧性下剤投与",
     "choice_e": "食物繊維摂取の制限",
     "answer": "d",
-    "correct_rate": "62%"
+    "correct_rate": "62%",
+    "keywords": ["慢性便秘", "機能性便秘", "浸透圧性下剤", "兎糞状便", "残便感"]
   },
   {
     "exam_number": "115",
@@ -1676,7 +1290,8 @@
     "choice_d": "エリスロポエチン製剤の投与",
     "choice_e": "トロンボポエチン受容体作動薬の投与",
     "answer": "a",
-    "correct_rate": "66%"
+    "correct_rate": "66%",
+    "keywords": ["急性リンパ性白血病", "化学療法", "骨髄抑制", "血小板減少症", "血小板輸血"]
   },
   {
     "exam_number": "115",
@@ -1704,7 +1319,8 @@
     "choice_d": "塩化ナトリウムの経口投与",
     "choice_e": "カルシウム拮抗薬の経口投与",
     "answer": "a",
-    "correct_rate": "93%"
+    "correct_rate": "93%",
+    "keywords": ["低Na血症", "抗利尿ホルモン不適合分泌症候群", "SIADH", "水分制限", "電解質異常"]
   },
   {
     "exam_number": "115",
@@ -1718,7 +1334,8 @@
     "choice_d": "ステロイド抵抗性である。",
     "choice_e": "末4血好酸球は正常である。",
     "answer": "c",
-    "correct_rate": "84%"
+    "correct_rate": "84%",
+    "keywords": ["慢性好酸球性肺炎", "好酸球増多", "気管支喘息", "ステロイド反応性", "肺浸潤影"]
   },
   {
     "exam_number": "115",
@@ -1732,7 +1349,8 @@
     "choice_d": "機能性ディスペプシア",
     "choice_e": "非びらん性胃食道逆流症)NERD1",
     "answer": "d",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "keywords": ["機能性ディスペプシア", "胃もたれ", "早期満腹感", "除外診断", "機能性消化管疾患"]
   },
   {
     "exam_number": "115",
@@ -1746,7 +1364,8 @@
     "choice_d": "心室中隔欠損症",
     "choice_e": "完全大血管転位症",
     "answer": "c",
-    "correct_rate": "93%"
+    "correct_rate": "93%",
+    "keywords": ["大動脈縮窄症", "差動性チアノーゼ", "動脈管開存症", "新生児心疾患", "先天性心疾患"]
   },
   {
     "exam_number": "115",
@@ -1760,7 +1379,9 @@
     "choice_d": "装具療法",
     "choice_e": "徒手整復",
     "answer": "e",
-    "correct_rate": "90%"
+    "correct_rate": "90%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA049.jpg"],
+    "keywords": ["外反母趾", "足部変形", "骨切り術", "保存療法"]
   },
   {
     "exam_number": "115",
@@ -1774,7 +1395,8 @@
     "choice_d": "食道アカラシア",
     "choice_e": "非びらん性胃食道逆流症)NERD1",
     "answer": "e",
-    "correct_rate": "25%"
+    "correct_rate": "25%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA050.jpg"]
   },
   {
     "exam_number": "115",
@@ -1788,7 +1410,8 @@
     "choice_d": "④",
     "choice_e": "⑤",
     "answer": "d",
-    "correct_rate": "37%"
+    "correct_rate": "37%",
+    "keywords": ["高齢者高血圧", "降圧薬", "サイアザイド系利尿薬", "起立性低血圧", "RAAS阻害薬"]
   },
   {
     "exam_number": "115",
@@ -1802,7 +1425,8 @@
     "choice_d": "活性炭投与",
     "choice_e": "生理食塩液の点滴",
     "answer": "b",
-    "correct_rate": "84%"
+    "correct_rate": "84%",
+    "keywords": ["小児誤飲", "タバコ誤飲", "ニコチン中毒", "経過観察"]
   },
   {
     "exam_number": "115",
@@ -1816,7 +1440,9 @@
     "choice_d": "スルホニル尿素薬の内服の追加",
     "choice_e": "夕食前の超速効型ヒトインスリンの増量",
     "answer": "c",
-    "correct_rate": "71%"
+    "correct_rate": "71%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA053J01.png"],
+    "keywords": ["2型糖尿病", "インスリン療法", "Somogyi効果", "暁現象", "夜間低血糖"]
   },
   {
     "exam_number": "115",
@@ -1830,7 +1456,8 @@
     "choice_d": "舞踏運動",
     "choice_e": "アテトーゼ",
     "answer": "b",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "keywords": ["チック", "トゥレット症候群", "不随意運動", "小児神経疾患"]
   },
   {
     "exam_number": "115",
@@ -1844,7 +1471,9 @@
     "choice_d": "④",
     "choice_e": "⑤",
     "answer": "c",
-    "correct_rate": "97%"
+    "correct_rate": "97%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA055J01.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA055J02.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA055J03.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA055J04.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA055J05.jpg"],
+    "keywords": ["騒音性難聴", "感音難聴", "オージオグラム", "4000 Hzノッチ", "耳鳴"]
   },
   {
     "exam_number": "115",
@@ -1872,7 +1501,8 @@
     "choice_d": "2,500mL",
     "choice_e": "4,000mL",
     "answer": "d",
-    "correct_rate": "22%"
+    "correct_rate": "22%",
+    "keywords": ["産後出血", "子宮弛緩症", "出血性ショック", "吸引分娩", "用手剥離"]
   },
   {
     "exam_number": "115",
@@ -1886,7 +1516,9 @@
     "choice_d": "早期にリハビリテーションを開始する。",
     "choice_e": "t-PA)tissue plasminogen activator1療法の適応である。",
     "answer": "d",
-    "correct_rate": "92%"
+    "correct_rate": "92%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA058A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA058B.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA058C.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA058D.jpg"],
+    "keywords": ["脳梗塞", "心原性脳塞栓症", "心房細動", "急性期脳梗塞", "リハビリテーション"]
   },
   {
     "exam_number": "115",
@@ -1900,7 +1532,8 @@
     "choice_d": "デブリドマン",
     "choice_e": "骨折部への人工骨移植",
     "answer": "d",
-    "correct_rate": "97%"
+    "correct_rate": "97%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA059A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA059B.jpg"]
   },
   {
     "exam_number": "115",
@@ -1914,7 +1547,9 @@
     "choice_d": "プロテアソーム阻害薬",
     "choice_e": "多発溶骨病変に対する放射線照射",
     "answer": "e",
-    "correct_rate": "37%"
+    "correct_rate": "37%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA060A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA060B.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA060C.jpg"],
+    "keywords": ["多発性骨髄腫", "M蛋白", "溶骨性病変", "形質細胞", "血液腫瘍"]
   },
   {
     "exam_number": "115",
@@ -1928,7 +1563,8 @@
     "choice_d": "④",
     "choice_e": "⑤",
     "answer": "d",
-    "correct_rate": "67%"
+    "correct_rate": "67%",
+    "keywords": ["Sturge-Weber症候群", "ポートワイン母斑", "軟膜血管腫", "てんかん", "神経皮膚症候群"]
   },
   {
     "exam_number": "115",
@@ -1942,7 +1578,8 @@
     "choice_d": "骨盤内の癌再発",
     "choice_e": "深部静脈血栓症",
     "answer": "a",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["広汎子宮全摘術", "術後合併症", "ドレーン管理", "子宮頸癌", "術後出血"]
   },
   {
     "exam_number": "115",
@@ -1956,7 +1593,9 @@
     "choice_d": "バイパス血管には本とも大伏在静脈が用いられている。",
     "choice_e": "バイパス血管は瘤病変より近位部の冠動脈に吻合されている。",
     "answer": "c",
-    "correct_rate": "80%"
+    "correct_rate": "80%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA064A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA064B.jpg"],
+    "keywords": ["川崎病", "冠動脈瘤", "冠動脈バイパス術", "CTアンギオグラフィー", "血管開存"]
   },
   {
     "exam_number": "115",
@@ -1970,7 +1609,9 @@
     "choice_d": "Helicobacter pylori除菌療法",
     "choice_e": "免疫チェックポイント阻害薬による治療",
     "answer": "a",
-    "correct_rate": "77%"
+    "correct_rate": "77%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA065A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA065B.jpg"],
+    "keywords": ["スキルス胃癌", "印環細胞癌", "胃癌", "胃切除術", "消化器内視鏡"]
   },
   {
     "exam_number": "115",
@@ -1984,7 +1625,8 @@
     "choice_d": "両側膝蓋腱反射亢進",
     "choice_e": "両側アキレス腱反射の消失",
     "answer": "ae",
-    "correct_rate": "51%"
+    "correct_rate": "51%",
+    "keywords": ["糖尿病性神経障害", "糖尿病性自律神経障害", "起立性低血圧", "糖尿病合併症", "末梢神経障害"]
   },
   {
     "exam_number": "115",
@@ -1998,7 +1640,8 @@
     "choice_d": "先天角膜混濁",
     "choice_e": "網膜芽細胞腫",
     "answer": "ae",
-    "correct_rate": "39%"
+    "correct_rate": "39%",
+    "keywords": ["白瞳症", "先天白内障", "網膜芽細胞腫", "小児眼科", "鑑別診断"]
   },
   {
     "exam_number": "115",
@@ -2012,7 +1655,9 @@
     "choice_d": "低ガンマグロブリン血症",
     "choice_e": "ADH不適合分泌症候群)SIADH1",
     "answer": "ad",
-    "correct_rate": "94%"
+    "correct_rate": "94%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA068.jpg"],
+    "keywords": ["重症筋無力症", "胸腺腫", "赤芽球癆", "低ガンマグロブリン血症", "自己免疫疾患"]
   },
   {
     "exam_number": "115",
@@ -2026,7 +1671,9 @@
     "choice_d": "発熱後に不整脈が誘発されやすい。",
     "choice_e": "治療にはIc群のNaチャンネル遮断薬が第一選択となる。",
     "answer": "cd",
-    "correct_rate": "80%"
+    "correct_rate": "80%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA069A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA069B.jpg"],
+    "keywords": ["Brugada症候群", "心室細動", "植込み型除細動器", "チャネル病", "発熱"]
   },
   {
     "exam_number": "115",
@@ -2040,7 +1687,9 @@
     "choice_d": "網膜色素変性症",
     "choice_e": "裂孔原性網膜剝離",
     "answer": "bc",
-    "correct_rate": "31%"
+    "correct_rate": "31%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA070.jpg"],
+    "keywords": ["虹彩ルベオーシス", "血管新生緑内障", "糖尿病網膜症", "眼虚血症候群", "内頸動脈狭窄症"]
   },
   {
     "exam_number": "115",
@@ -2054,7 +1703,9 @@
     "choice_d": "気管支炎",
     "choice_e": "唾液腺癌",
     "answer": "ac",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA071.jpg"],
+    "keywords": ["肺癌", "喉頭癌", "扁平上皮癌", "喫煙", "喀痰細胞診"]
   },
   {
     "exam_number": "115",
@@ -2068,7 +1719,8 @@
     "choice_d": "胸部造影CT",
     "choice_e": "下肢静脈超音波検査",
     "answer": "de",
-    "correct_rate": "97%"
+    "correct_rate": "97%",
+    "keywords": ["深部静脈血栓症", "肺血栓塞栓症", "抗リン脂質症候群", "血栓性素因", "凝固異常"]
   },
   {
     "exam_number": "115",
@@ -2082,7 +1734,9 @@
     "choice_d": "血中補正Ca濃度12.5mg/dL",
     "choice_e": "血中1,25OHビタミンD低下",
     "answer": "ab",
-    "correct_rate": "46%"
+    "correct_rate": "46%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA073.jpg"],
+    "keywords": ["原発性副甲状腺機能亢進症", "高カルシウム血症", "低リン血症", "尿路結石", "骨粗鬆症"]
   },
   {
     "exam_number": "115",
@@ -2096,7 +1750,9 @@
     "choice_d": "カルシトニン",
     "choice_e": "総コレステロール",
     "answer": "ae",
-    "correct_rate": "90%"
+    "correct_rate": "90%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KA074.jpg"],
+    "keywords": ["甲状腺機能低下症", "粘液水腫性昏睡", "内分泌疾患", "脂質代謝異常", "筋酵素"]
   },
   {
     "exam_number": "115",
@@ -2110,7 +1766,8 @@
     "choice_d": "ヒドロコルチゾンの静注",
     "choice_e": "レボチロキシンの胃管を用いた投与",
     "answer": "bcd",
-    "correct_rate": "82%"
+    "correct_rate": "82%",
+    "keywords": ["副腎クリーゼ", "急性副腎不全", "下垂体機能低下症", "ショック", "低血糖"]
   },
   {
     "exam_number": "115",
@@ -2124,7 +1781,8 @@
     "choice_d": "食物繊維の摂取 糖尿病",
     "choice_e": "n-3系多価不飽和脂肪酸摂取 虚血性心疾患",
     "answer": "a",
-    "correct_rate": "94%"
+    "correct_rate": "94%",
+    "keywords": ["食道癌", "飲酒", "睡眠時無呼吸症候群", "フレイル", "生活習慣病"]
   },
   {
     "exam_number": "115",
@@ -2138,7 +1796,8 @@
     "choice_d": "医療機関に対する不満を把握する。",
     "choice_e": "疾患や診療に対する患者の考えを把握する。",
     "answer": "e",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["医療面接", "解釈モデル", "患者中心の医療", "共有意思決定", "コミュニケーション"]
   },
   {
     "exam_number": "115",
@@ -2152,7 +1811,8 @@
     "choice_d": "処方箋の交付",
     "choice_e": "診療録の記載",
     "answer": "b",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "keywords": ["医師法", "応召義務", "守秘義務", "臨床研修", "診療録"]
   },
   {
     "exam_number": "115",
@@ -2166,7 +1826,8 @@
     "choice_d": "間質性肺炎",
     "choice_e": "後腹膜線維症",
     "answer": "e",
-    "correct_rate": "71%"
+    "correct_rate": "71%",
+    "keywords": ["関節リウマチ", "関節外症状", "自己免疫疾患", "間質性肺炎", "皮下結節"]
   },
   {
     "exam_number": "115",
@@ -2180,7 +1841,8 @@
     "choice_d": "主治医の変更が目的である。",
     "choice_e": "受持ち患者からの依頼を拒否できる。",
     "answer": "a",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["セカンドオピニオン", "患者の権利", "インフォームド・コンセント", "自由診療", "医療倫理"]
   },
   {
     "exam_number": "115",
@@ -2194,7 +1856,8 @@
     "choice_d": "メタ分析メタアナリシスの一種である。",
     "choice_e": "観察研究に比べて交絡因子の影響が大きい。",
     "answer": "a",
-    "correct_rate": "78%"
+    "correct_rate": "78%",
+    "keywords": ["ランダム化比較試験", "内的妥当性", "エビデンスレベル", "バイアス", "交絡因子"]
   },
   {
     "exam_number": "115",
@@ -2208,7 +1871,8 @@
     "choice_d": "家族が同居していることが必要である。",
     "choice_e": "在宅でリハビリテーションを受けることができる。",
     "answer": "d",
-    "correct_rate": "93%"
+    "correct_rate": "93%",
+    "keywords": ["在宅医療", "終末期医療", "介護保険", "特定疾病", "インフォームド・コンセント"]
   },
   {
     "exam_number": "115",
@@ -2222,7 +1886,9 @@
     "choice_d": "甲状腺刺激ホルモン",
     "choice_e": "絨毛性ゴナドトロピン",
     "answer": "b",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KB008.png"],
+    "keywords": ["プロラクチン", "授乳", "妊娠中のホルモン", "産褥期", "乳汁分泌"]
   },
   {
     "exam_number": "115",
@@ -2236,7 +1902,8 @@
     "choice_d": "直腸子宮窩Douglas窩の有痛性硬結",
     "choice_e": "可動性の良い無痛性で柔らかい球状腫瘤",
     "answer": "d",
-    "correct_rate": "89%"
+    "correct_rate": "89%",
+    "keywords": ["子宮内膜症", "直腸子宮窩", "骨盤痛", "月経困難症"]
   },
   {
     "exam_number": "115",
@@ -2250,7 +1917,8 @@
     "choice_d": "エネルギー",
     "choice_e": "脂溶性ビタミン",
     "answer": "b",
-    "correct_rate": "96%"
+    "correct_rate": "96%",
+    "keywords": ["24時間蓄尿検査", "食塩摂取量", "ナトリウム排泄", "高血圧", "腎機能評価"]
   },
   {
     "exam_number": "115",
@@ -2264,7 +1932,8 @@
     "choice_d": "患者についての情報を集める。",
     "choice_e": "緊急性を考えて行う。",
     "answer": "c",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["コンサルテーション", "研修医", "医療コミュニケーション", "プロフェッショナリズム", "チーム医療"]
   },
   {
     "exam_number": "115",
@@ -2278,7 +1947,9 @@
     "choice_d": "巨赤芽球性貧血",
     "choice_e": "発作性夜間ヘモグロビン尿症",
     "answer": "c",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KB012.jpg"],
+    "keywords": ["鉄欠乏性貧血", "匙状爪", "コイロニキア", "貧血", "皮膚所見"]
   },
   {
     "exam_number": "115",
@@ -2292,7 +1963,8 @@
     "choice_d": "唾液分泌低下",
     "choice_e": "咽頭収縮力低下",
     "answer": "a",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["嚥下障害", "高齢者", "加齢変化", "誤嚥", "サルコペニア"]
   },
   {
     "exam_number": "115",
@@ -2306,7 +1978,8 @@
     "choice_d": "はさみ歩行",
     "choice_e": "分回し歩行",
     "answer": "d",
-    "correct_rate": "60%"
+    "correct_rate": "60%",
+    "keywords": ["痙縮", "歩行障害", "はさみ歩行", "錐体路障害", "脳性麻痺"]
   },
   {
     "exam_number": "115",
@@ -2320,7 +1993,8 @@
     "choice_d": "副鼻腔気管支症候群",
     "choice_e": "マイコプラズマ肺炎",
     "answer": "e",
-    "correct_rate": "67%"
+    "correct_rate": "67%",
+    "keywords": ["急性咳嗽", "マイコプラズマ肺炎", "呼吸器感染症", "慢性咳嗽", "咳喘息"]
   },
   {
     "exam_number": "115",
@@ -2334,7 +2008,8 @@
     "choice_d": "可能な限り生命を維持したいと希望する患者は対象とならない。",
     "choice_e": "本人の意思が確認できない場合、家族等による推定意思が尊重される。",
     "answer": "e",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["終末期医療", "意思決定", "アドバンス・ケア・プランニング", "患者の自己決定権", "推定意思"]
   },
   {
     "exam_number": "115",
@@ -2348,7 +2023,8 @@
     "choice_d": "パニック障害 動 悸",
     "choice_e": "良性発作性頭位めまい症 寝返り時のめまい",
     "answer": "a",
-    "correct_rate": "96%"
+    "correct_rate": "96%",
+    "keywords": ["小脳梗塞", "同名半盲", "聴神経腫瘍", "めまい疾患"]
   },
   {
     "exam_number": "115",
@@ -2362,7 +2038,8 @@
     "choice_d": "患者は行為を合理的であると考えている。",
     "choice_e": "｢行為をしなさい｣という命令が外から頭の中に吹き込まれる。",
     "answer": "c",
-    "correct_rate": "94%"
+    "correct_rate": "94%",
+    "keywords": ["強迫性障害", "強迫行為", "強迫観念", "不安緩和", "精神科"]
   },
   {
     "exam_number": "115",
@@ -2376,7 +2053,8 @@
     "choice_d": "僧帽弁閉鎖不全症",
     "choice_e": "大動脈弁閉鎖不全症",
     "answer": "a",
-    "correct_rate": "73%"
+    "correct_rate": "73%",
+    "keywords": ["前負荷", "僧帽弁狭窄症", "心臓弁膜症", "左室拡張末期容積", "循環器生理"]
   },
   {
     "exam_number": "115",
@@ -2390,7 +2068,8 @@
     "choice_d": "クレアチニン",
     "choice_e": "活性化部分トロンボプラスチン時間APTT",
     "answer": "e",
-    "correct_rate": "75%"
+    "correct_rate": "75%",
+    "keywords": ["採血", "検体量不足", "凝固検査", "APTT", "抗凝固剤"]
   },
   {
     "exam_number": "115",
@@ -2404,7 +2083,8 @@
     "choice_d": "児童相談所",
     "choice_e": "市町村保健センター",
     "answer": "d",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["児童虐待", "児童相談所", "児童虐待防止法", "医療従事者の義務"]
   },
   {
     "exam_number": "115",
@@ -2418,7 +2098,8 @@
     "choice_d": "腹膜偽粘液腫",
     "choice_e": "Krukenberg腫瘍",
     "answer": "b",
-    "correct_rate": "96%"
+    "correct_rate": "96%",
+    "keywords": ["腹部触診", "呼吸性移動", "胆嚢癌", "肝臓", "後腹膜臓器"]
   },
   {
     "exam_number": "115",
@@ -2432,7 +2113,8 @@
     "choice_d": "喀痰のGram染色を確認してから開始する。",
     "choice_e": "治療効果の判定はCRPの正常化を指標とする。",
     "answer": "d",
-    "correct_rate": "77%"
+    "correct_rate": "77%",
+    "keywords": ["市中肺炎", "抗菌薬適正使用", "経験的治療", "Gram染色", "治療効果判定"]
   },
   {
     "exam_number": "115",
@@ -2446,7 +2128,8 @@
     "choice_d": "蛋白制限",
     "choice_e": "消化管出血",
     "answer": "d",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "keywords": ["肝性脳症", "肝硬変", "アンモニア", "誘因", "消化器"]
   },
   {
     "exam_number": "115",
@@ -2460,7 +2143,8 @@
     "choice_d": "プロラクチン",
     "choice_e": "プロゲステロン",
     "answer": "b",
-    "correct_rate": "96%"
+    "correct_rate": "96%",
+    "keywords": ["更年期障害", "ホットフラッシュ", "FSH", "エストロゲン", "卵巣機能低下"]
   },
   {
     "exam_number": "115",
@@ -2474,7 +2158,8 @@
     "choice_d": "④",
     "choice_e": "⑤",
     "answer": "d",
-    "correct_rate": "91%"
+    "correct_rate": "91%",
+    "keywords": ["ノロウイルス", "感染対策", "接触予防策", "手指衛生", "医療関連感染"]
   },
   {
     "exam_number": "115",
@@ -2488,7 +2173,8 @@
     "choice_d": "12誘導心電図",
     "choice_e": "Master二階段負荷試験",
     "answer": "e",
-    "correct_rate": "96%"
+    "correct_rate": "96%",
+    "keywords": ["失神", "心房細動", "高齢者", "不整脈", "循環器検査"]
   },
   {
     "exam_number": "115",
@@ -2502,7 +2188,8 @@
     "choice_d": "アトロピン静注",
     "choice_e": "リドカイン静注",
     "answer": "b",
-    "correct_rate": "89%"
+    "correct_rate": "89%",
+    "keywords": ["心肺蘇生", "心停止", "胸骨圧迫", "無脈性電気活動", "JRC蘇生ガイドライン"]
   },
   {
     "exam_number": "115",
@@ -2516,7 +2203,9 @@
     "choice_d": "くも膜下出血",
     "choice_e": "急性硬膜下血腫",
     "answer": "d",
-    "correct_rate": "94%"
+    "correct_rate": "94%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KB029.jpg"],
+    "keywords": ["くも膜下出血", "雷鳴頭痛", "頭部CT", "脳動脈瘤破裂", "脳底槽出血"]
   },
   {
     "exam_number": "115",
@@ -2530,7 +2219,8 @@
     "choice_d": "④",
     "choice_e": "⑤",
     "answer": "c",
-    "correct_rate": "95%"
+    "correct_rate": "95%",
+    "keywords": ["小児呼吸器疾患", "呼吸困難", "頻呼吸", "陥没呼吸", "細気管支炎"]
   },
   {
     "exam_number": "115",
@@ -2544,7 +2234,8 @@
     "choice_d": "肺炎球菌による肺炎",
     "choice_e": "芽球を伴う白血球増多",
     "answer": "c",
-    "correct_rate": "97%"
+    "correct_rate": "97%",
+    "keywords": ["プロブレムリスト", "肺炎球菌性肺炎", "急性白血病", "高血圧症", "医療記録"]
   },
   {
     "exam_number": "115",
@@ -2558,7 +2249,8 @@
     "choice_d": "Vitamin C",
     "choice_e": "Vitamin D",
     "answer": "b",
-    "correct_rate": "97%"
+    "correct_rate": "97%",
+    "keywords": ["アルコール依存症", "ビタミンB1欠乏症", "ウェルニッケ・コルサコフ症候群", "脚気", "末梢神経障害"]
   },
   {
     "exam_number": "115",
@@ -2572,7 +2264,8 @@
     "choice_d": "直ちに抗HIV薬の内服を開始させる。",
     "choice_e": "研修医の心理的反応に配慮する。",
     "answer": "d",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["HIV曝露", "曝露後予防", "標準予防策", "感染経路", "医療従事者安全"]
   },
   {
     "exam_number": "115",
@@ -2586,7 +2279,8 @@
     "choice_d": "④",
     "choice_e": "⑤",
     "answer": "a",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["医療面接", "開放型質問", "閉鎖型質問", "コミュニケーションスキル", "患者中心の医療"]
   },
   {
     "exam_number": "115",
@@ -2600,7 +2294,8 @@
     "choice_d": "腫瘍マーカー測定",
     "choice_e": "薬剤リンパ球刺激試験",
     "answer": "c",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["黄疸", "肝機能障害", "胆汁うっ滞", "腹部超音波検査", "薬剤性肝障害"]
   },
   {
     "exam_number": "115",
@@ -2614,7 +2309,9 @@
     "choice_d": "Ⅳ音",
     "choice_e": "心膜摩擦音",
     "answer": "a",
-    "correct_rate": "72%"
+    "correct_rate": "72%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KB036.jpg"],
+    "keywords": ["完全房室ブロック", "徐脈", "Ⅰ音の大砲音", "Adams-Stokes症候群"]
   },
   {
     "exam_number": "115",
@@ -2628,7 +2325,8 @@
     "choice_d": "栄養投与前に聴診器で気泡音を確認する。",
     "choice_e": "留置後にエックス線撮影で位置を確認する。",
     "answer": "a",
-    "correct_rate": "87%"
+    "correct_rate": "87%",
+    "keywords": ["経鼻胃管", "経管栄養", "意識障害", "誤嚥防止", "位置確認"]
   },
   {
     "exam_number": "115",
@@ -2642,7 +2340,9 @@
     "choice_d": "肺 癌",
     "choice_e": "卵巣癌",
     "answer": "d",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KB038.jpg"],
+    "keywords": ["ばち指", "肥厚性骨関節症", "肺癌", "傍腫瘍症候群"]
   },
   {
     "exam_number": "115",
@@ -2656,7 +2356,9 @@
     "choice_d": "左上肢の浮腫",
     "choice_e": "左側の発汗増加",
     "answer": "c",
-    "correct_rate": "87%"
+    "correct_rate": "87%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KB039A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KB039B.jpg"],
+    "keywords": ["肺腺癌", "Pancoast腫瘍", "Horner症候群", "肺癌", "喫煙"]
   },
   {
     "exam_number": "115",
@@ -2670,7 +2372,9 @@
     "choice_d": "Treponema pallidum",
     "choice_e": "Vibrio cholerae",
     "answer": "d",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KB040.jpg"],
+    "keywords": ["梅毒", "Treponema pallidum", "2期梅毒", "手掌・足底皮疹", "性感染症"]
   },
   {
     "exam_number": "115",
@@ -2684,7 +2388,8 @@
     "choice_d": "54%",
     "choice_e": "50%",
     "answer": "c",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "keywords": ["急性心筋梗塞", "検査前確率", "検査後確率", "ベイズの定理", "感度・特異度"]
   },
   {
     "exam_number": "115",
@@ -2698,7 +2403,8 @@
     "choice_d": "｢なぜこの病気になってしまったとお考えですか｣",
     "choice_e": "｢こちらの病院で検査と治療を受けるのでよろしいでしょうか｣ 次の文を読み、43、44の問いに答えよ。 36歳の女性。頭痛を主訴に来院した。 現病歴 ： 本日午前 時頃から視界にきらきらした点が現れ、その後に頭痛、悪心 が出現したため、同日昼に病院を受診した。頭痛は徐々に出現し、増悪はしていな い。21歳時から年に数回同様の頭痛を経験しており、頭痛は毎回日で改善する。 今回よりも強い頭痛を経験したことがあるという。 既往歴 ： 歳時に急性虫垂炎で手術。 生活歴 ： 喫煙歴はない。飲酒は機会飲酒。 家族歴 ： 母が頭痛持ちであった。 現 症 ： 意識は清明。身長160cm、体重50kg。体温36.5℃。脈拍72/分、整。 血圧126/76mmHg。呼吸数12/分。SpO 98%:room air<。眼瞼結膜に貧血を認め 2 ない。瞳孔は左右差なく、対光反射は迅速。眼球運動に異常は認めない。心音と呼 吸音とに異常を認めない。項部硬直を認めない。四肢の筋力は保たれており、感覚 障害も認めない。四肢の腱反射は正常であり、病的反射は認めない。 検査所見 ： 血液所見：赤血球372万、Hb12.2g/dL、Ht40%、白血球6,800、 血小板16万。血液生化学所見：AST29U/L、ALT21U/L、LD171U/L:基準 120〜245<、ALP350U/L:基準115〜359<、尿素窒素10mg/dL、クレアチニン 0.5mg/dL、Na135mEq/L、K4.2mEq/L、Cl98mEq/L。CRP0.1mg/dL。 頭痛に関する文献を調べると、｢突然発症である｣、｢増悪している｣、｢これまで 経験した中で最悪の頭痛である｣の項目について、該当項目数に応じた重篤な原 因による頭痛の尤度比が以下のように掲載されていた。 該当項目数 重篤な原因による頭痛の尤度比 0 0.1 1 2.1 2 9.1 3 12.5",
     "answer": "b",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["患者説明", "インフォームド・コンセント", "コミュニケーションスキル", "医療面接"]
   },
   {
     "exam_number": "115",
@@ -2712,7 +2418,8 @@
     "choice_d": "計算できない。",
     "choice_e": "事前オッズにより異なる。",
     "answer": "b",
-    "correct_rate": "85%"
+    "correct_rate": "85%",
+    "keywords": ["頭痛", "片頭痛", "二次性頭痛", "尤度比", "事前確率・事後確率"]
   },
   {
     "exam_number": "115",
@@ -2726,7 +2433,8 @@
     "choice_d": "NSAIDは無効である。",
     "choice_e": "動き回ると痛みが軽減する。 次の文を読み、45、46の問いに答えよ。 43歳の男性。熱傷のため救急車で搬入された。 現病歴 ： 揚げ物の調理中に着衣に着火し、職場の同僚が救急要請した。 既往歴 ： 高血圧症と脂質異常症について食事療法中。 生活歴 ： 飲食店の調理場で働いている。喫煙は10本/日を10年間、飲酒はビー ルを350mL/日。妻と人暮らし。 家族歴 ： 両親が高血圧症。 現 症 ： 意識レベルはJCSⅡ-10。身長170cm、体重70kg。体温37.1℃。心拍 数90/分、整。血圧90/60mmHg。呼吸数36/分。SpO 93%:リザーバー付マスク 2 10L/分酸素投与下<。頭髪の前面と眉毛が焦げている。顔面、両上肢および胸腹部 に、38%TBSAtotal body surface areaの Ⅱ〜Ⅲ度熱傷を認める。口腔と咽頭の 粘膜には煤が付着していた。嗄声が認められる。 検査所見 ： 血液所見：赤血球550万、Hb17.0g/dL、Ht49%、白血球7,200、 血小板30万。血液生化学所見：総蛋白6.1g/dL、AST45U/L、ALT17U/L、 LD499U/L:基準120〜245<、尿素窒素22mg/dL、クレアチニン0.5mg/dL、Na 132mEq/L、K4.4mEq/L、Cl99mEq/L。",
     "answer": "c",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["片頭痛", "前兆", "光過敏", "頭痛", "国際頭痛分類"]
   },
   {
     "exam_number": "115",
@@ -2740,7 +2448,8 @@
     "choice_d": "乳酸リンゲル液",
     "choice_e": "25%アルブミン液",
     "answer": "d",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["熱傷", "熱傷ショック", "輸液療法", "乳酸リンゲル液", "気道熱傷"]
   },
   {
     "exam_number": "115",
@@ -2754,7 +2463,8 @@
     "choice_d": "両側肺野で同等の呼吸音が聴取される。",
     "choice_e": "気管チューブ内壁に呼気時の曇りがみられる。 次の文を読み、47、48の問いに答えよ。 37歳の女性。全身6怠感と頭痛を主訴に来院した。 現病歴 ： 半年前から6怠感を自覚していた。か月前から頭痛も出現するように なった。か月前からは起きた時にも強い全身6怠感があるため、仕事を休むよう になった。頭痛の程度は軽いが、か月前に脇から出てくる自転車に気付かずに接 触し、転倒したことがあった。",
     "answer": "c",
-    "correct_rate": "96%"
+    "correct_rate": "96%",
+    "keywords": ["気管挿管", "気道確保", "食道挿管", "カプノグラフィー", "救急処置"]
   },
   {
     "exam_number": "115",
@@ -2768,7 +2478,8 @@
     "choice_d": "｢頭痛はどのような痛みですか｣",
     "choice_e": "｢食欲や睡眠はいかがですか｣ さらに医療面接と診察を進めた。 現病歴 ： 頭痛は眼の奥が重く痛むようなものである。か月前から無月経になっ ている。食欲も落ちており、体重は半年でkg低下している。癌なのではないか と心配している。睡眠障害はない。か月前から便秘が悪化している。 既往歴 ： 特記すべきことはない。 生活歴 ： 会社員。夫と子どもと人暮らし。喫煙歴と飲酒歴はない。 家族歴 ： 特記すべきことはない。 現 症 ： 意識は清明。身長153cm、体重48.2kg。脈拍72/分、整。血圧98/56 mmHg。呼吸数16/分。眼瞼結膜と眼球結膜とに異常を認めない。甲状腺腫を認め ない。胸部では乳頭の圧迫で白色乳汁分泌を認める。腹部に異常を認めない。両耳 側半盲を認める。 検査所見 ： 血液所見：赤血球357万、Hb11.1g/dL、Ht34%、白血球4,200、 血小板18万。血液生化学所見：AST21U/L、ALT14U/L、LD146U/L:基準 120〜245<、尿素窒素15mg/dL、クレアチニン0.7mg/dL、血糖78mg/dL、Na 131mEq/L、K4.4mEq/L、Cl97mEq/L。内分泌検査所見：ACTH!pg/mL:基 準60以下<、コルチゾール1.9μg/dL:基準5.2〜12.6<、TSH0.76μU/mL:基準 0.500〜5.00<、FT 2.27pg/mL :基 準2.30〜4.30<、FT 0.51ng/dL :基 準 3 4 0.90〜1.70<、 LH0.3mIU/mL :基 準1.8〜7.6<、 FSH4.4mIU/mL :基 準 5.2〜14.4<、エストラジオール <10pg/mL:基準11〜230<、プロゲステロン0.2 ng/mL:基準0.5以下<、プロラクチン198ng/mL:基準15以下<。頭部造影MRI で下垂体腺腫を認める。",
     "answer": "e",
-    "correct_rate": "77%"
+    "correct_rate": "77%",
+    "keywords": ["システムレビュー", "問診", "病歴聴取", "全身倦怠感", "非特異的症状"]
   },
   {
     "exam_number": "115",
@@ -2782,7 +2493,8 @@
     "choice_d": "ホルモン補充は副腎皮質ステロイドから開始する。",
     "choice_e": "副腎皮質ステロイド補充開始後は尿崩症の出現に注意する。 次の文を読み、49、50の問いに答えよ。 52歳の男性。腹部膨満感を主訴に来院した。 現病歴 ： 週前から腹部膨満感を自覚するようになった。食欲はあるがすぐに満 腹を感じ、食事摂取量が減っている。腹痛や悪心はない。便通は毎日あり、便の性 状は以前と変わっていない。か月で体重がkg減少した。 既往歴 ： 特記すべきことはない。 生活歴 ： 会社員で事務職。喫煙歴はない。飲酒は機会飲酒。 家族歴 ： 父が高血圧症。母が糖尿病。 現 症 ： 意識は清明。身長174cm、体重67kg。体温36.3℃。脈拍76/分、整。 血圧124/78mmHg。呼吸数18/分。SpO 98%:room air<。眼瞼結膜と眼球結膜に 2 異常を認めない。心音と呼吸音とに異常を認めない。腹部はやや膨隆し、右肋骨弓 下に肝をcm、左肋骨弓下に脾をcm触知する。臍左側に径cmの弾性硬の無 痛性腫瘤を触知し、可動性や呼吸性移動や拍動を認めない。両側頸部と鼠径部に径 〜cmのリンパ節を複数触知する。いずれも弾性硬で可動性があり、圧痛はな い。下に浮腫を認めない。 検査所見 ： 尿所見：蛋白:安<、潜血:安<。血液所見：赤血球452万、Hb14.5 g/dL、Ht41%、白血球7,200:好中球68%、好酸球%、好塩基球\"%、単球 %、リンパ球26%<、血小板37万。血液生化学所見：総蛋白6.5g/dL、アルブミ ン4.0g/dL、総ビリルビン0.3mg/dL、AST18U/L、ALT16U/L、LD765U/L :基準120〜245<、ALP221U/L:基準115〜359<、γ-GT28U/L:基準〜50<、尿 素窒素32mg/dL、クレアチニン0.6mg/dL、血糖98mg/dL、CEAng/mL:基 準 以 下<、CA19-9 12U/mL :基 準37以 下<。免 疫 血 清 学 所 見：CRP0.1 mg/dL、可溶性IL-2受容体5,920U/mL:基準157〜474<。",
     "answer": "b",
-    "correct_rate": "79%"
+    "correct_rate": "79%",
+    "keywords": ["下垂体腺腫", "下垂体機能低下症", "高プロラクチン血症", "副腎クリーゼ", "ホルモン補充療法"]
   },
   {
     "exam_number": "115",
@@ -2796,7 +2508,8 @@
     "choice_d": "Traube三角の濁音",
     "choice_e": "肋骨脊柱角の叩打痛",
     "answer": "d",
-    "correct_rate": "92%"
+    "correct_rate": "92%",
+    "keywords": ["リンパ腫", "脾腫", "Traube三角", "可溶性IL-2受容体", "身体診察"]
   },
   {
     "exam_number": "115",
@@ -2810,7 +2523,8 @@
     "choice_d": "表在リンパ節からの組織診",
     "choice_e": "後腹膜腫瘤からのCTガイド下#刺吸引細胞診",
     "answer": "d",
-    "correct_rate": "77%"
+    "correct_rate": "77%",
+    "keywords": ["悪性リンパ腫", "リンパ節生検", "可溶性IL-2受容体", "LD", "全身性リンパ節腫脹"]
   },
   {
     "exam_number": "115",
@@ -2824,7 +2538,8 @@
     "choice_d": "各都道府県に該当する。",
     "choice_e": "複数の都道府県を含む。",
     "answer": "c",
-    "correct_rate": "89%"
+    "correct_rate": "89%",
+    "keywords": ["二次医療圏", "医療法", "地域医療計画", "一次医療圏", "三次医療圏"]
   },
   {
     "exam_number": "115",
@@ -2838,7 +2553,8 @@
     "choice_d": "作業場の管理区分決定のための濃度",
     "choice_e": "毒性が認められない最大生体内濃度",
     "answer": "a",
-    "correct_rate": "79%"
+    "correct_rate": "79%",
+    "keywords": ["許容濃度", "労働衛生", "作業環境測定", "職業病", "産業保健"]
   },
   {
     "exam_number": "115",
@@ -2852,7 +2568,8 @@
     "choice_d": "すべての発疹が痂皮化するまで",
     "choice_e": "病状により学校医その他の医師が感染のおそれがないと認めるまで",
     "answer": "a",
-    "correct_rate": "96%"
+    "correct_rate": "96%",
+    "keywords": ["学校保健安全法", "風疹", "出席停止期間", "感染症", "公衆衛生"]
   },
   {
     "exam_number": "115",
@@ -2866,7 +2583,8 @@
     "choice_d": "フェイスマスク 3L/分",
     "choice_e": "リザーバー付マスク 4L/分",
     "answer": "a",
-    "correct_rate": "95%"
+    "correct_rate": "95%",
+    "keywords": ["酸素療法", "酸素投与器具", "鼻カニューラ", "フェイスマスク", "リザーバー付マスク"]
   },
   {
     "exam_number": "115",
@@ -2880,7 +2598,8 @@
     "choice_d": "精神科を受診して相談するよう勧める。",
     "choice_e": "何がつらくてそう思うのか尋ねる。",
     "answer": "e",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["患者コミュニケーション", "自殺念慮", "がん患者", "精神的苦痛", "緩和ケア"]
   },
   {
     "exam_number": "115",
@@ -2894,7 +2613,8 @@
     "choice_d": "小児慢性特定疾病の外来治療",
     "choice_e": "予防接種による健康被害の救済措置",
     "answer": "b",
-    "correct_rate": "30%"
+    "correct_rate": "30%",
+    "keywords": ["公費負担医療", "感染症法", "指定感染症", "医療費助成制度", "公衆衛生"]
   },
   {
     "exam_number": "115",
@@ -2908,7 +2628,8 @@
     "choice_d": "要介護認定を受けていない者は対象外である。",
     "choice_e": "人工呼吸器の管理は看護師が在宅で行う診療補助行為に含まれる。",
     "answer": "e",
-    "correct_rate": "94%"
+    "correct_rate": "94%",
+    "keywords": ["訪問看護", "介護保険", "医療保険", "診療補助行為", "在宅医療"]
   },
   {
     "exam_number": "115",
@@ -2922,7 +2643,8 @@
     "choice_d": "背景因子には環境因子と個人因子がある。",
     "choice_e": "WHOの国際分類ファミリーのひとつである。",
     "answer": "a",
-    "correct_rate": "89%"
+    "correct_rate": "89%",
+    "keywords": ["国際生活機能分類 (ICF)", "WHO国際分類ファミリー", "生活機能モデル", "多職種連携", "背景因子"]
   },
   {
     "exam_number": "115",
@@ -2936,7 +2658,9 @@
     "choice_d": "Parkinson病",
     "choice_e": "悪性新生物がん",
     "answer": "c",
-    "correct_rate": "70%"
+    "correct_rate": "70%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KC009.jpg"],
+    "keywords": ["介護保険", "国民生活基礎調査", "高齢者医療", "骨折・転倒", "ADL低下"]
   },
   {
     "exam_number": "115",
@@ -2950,7 +2674,9 @@
     "choice_d": "④",
     "choice_e": "⑤",
     "answer": "c",
-    "correct_rate": "72%"
+    "correct_rate": "72%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KC010J01.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KC010J02.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KC010J03.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KC010J04.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KC010J05.jpg"],
+    "keywords": ["子宮頸癌", "子宮頸癌検診", "HPV", "死亡率の推移", "公衆衛生"]
   },
   {
     "exam_number": "115",
@@ -2964,7 +2690,8 @@
     "choice_d": "出生前診断",
     "choice_e": "人工妊娠中絶",
     "answer": "e",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "keywords": ["母体保護法", "母体保護法指定医", "人工妊娠中絶", "不妊手術", "産婦人科"]
   },
   {
     "exam_number": "115",
@@ -2978,7 +2705,8 @@
     "choice_d": "アンモニアはTCAサイクルで尿素に変換される。",
     "choice_e": "非抱合型ビリルビンはグルクロン酸抱合を受け脂溶性になる。",
     "answer": "a",
-    "correct_rate": "32%"
+    "correct_rate": "32%",
+    "keywords": ["肝臓代謝", "糖新生", "尿素サイクル", "ビリルビン代謝", "肝硬変"]
   },
   {
     "exam_number": "115",
@@ -2992,7 +2720,8 @@
     "choice_d": "Rubella",
     "choice_e": "Syphilis",
     "answer": "b",
-    "correct_rate": "62%"
+    "correct_rate": "62%",
+    "keywords": ["感染症法", "全数把握疾患", "定点把握疾患", "流行性耳下腺炎", "公衆衛生"]
   },
   {
     "exam_number": "115",
@@ -3006,7 +2735,9 @@
     "choice_d": "12.0",
     "choice_e": "15.0",
     "answer": "d",
-    "correct_rate": "30%"
+    "correct_rate": "30%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KC014.jpg"],
+    "keywords": ["食塩摂取量", "高血圧", "生活習慣病", "公衆衛生", "減塩"]
   },
   {
     "exam_number": "115",
@@ -3020,7 +2751,8 @@
     "choice_d": "マラリアは感染症法に基づく入院勧告の対象となる。",
     "choice_e": "新型インフルエンザは、診断後直ちに都道府県知事に届け出る。",
     "answer": "e",
-    "correct_rate": "54%"
+    "correct_rate": "54%",
+    "keywords": ["感染症法", "届出義務", "新型インフルエンザ", "感染症分類", "公費負担"]
   },
   {
     "exam_number": "115",
@@ -3034,7 +2766,8 @@
     "choice_d": "ヒト乾燥硬膜の使用 Creutzfeldt-Jakob病",
     "choice_e": "プレドニゾロン長期内服 二次性副腎機能不全",
     "answer": "c",
-    "correct_rate": "63%"
+    "correct_rate": "63%",
+    "keywords": ["医原性疾患", "生物学的製剤", "HIV感染症", "Creutzfeldt-Jakob病", "副腎機能不全"]
   },
   {
     "exam_number": "115",
@@ -3048,7 +2781,8 @@
     "choice_d": "嚥下障害",
     "choice_e": "萎縮性胃炎",
     "answer": "e",
-    "correct_rate": "58%"
+    "correct_rate": "58%",
+    "keywords": ["悪性貧血", "萎縮性胃炎", "ビタミンB12欠乏", "内因子", "自己免疫疾患"]
   },
   {
     "exam_number": "115",
@@ -3062,7 +2796,8 @@
     "choice_d": "疱疹状皮膚炎",
     "choice_e": "水疱性類天疱瘡",
     "answer": "c",
-    "correct_rate": "59%"
+    "correct_rate": "59%",
+    "keywords": ["瘙痒", "皮膚結核", "尋常性狼瘡", "水疱症", "疥癬"]
   },
   {
     "exam_number": "115",
@@ -3076,7 +2811,8 @@
     "choice_d": "自然に軽快することはまれである。",
     "choice_e": "分娩か月後に発症のピークがある。",
     "answer": "c",
-    "correct_rate": "88%"
+    "correct_rate": "88%",
+    "keywords": ["マタニティ・ブルーズ", "産褥期", "情緒不安定", "産後うつ病"]
   },
   {
     "exam_number": "115",
@@ -3090,7 +2826,8 @@
     "choice_d": "国際疾病分類˝ICDの改訂",
     "choice_e": "国際保健規則に基づく感染症対策",
     "answer": "b",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "keywords": ["WHO", "国際保健", "公衆衛生", "国際機関"]
   },
   {
     "exam_number": "115",
@@ -3104,7 +2841,8 @@
     "choice_d": "低体重 巨大児出産",
     "choice_e": "子宮筋腫術後 子宮破裂",
     "answer": "d",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "keywords": ["周産期合併症", "母体リスク因子", "低出生体重児", "巨大児", "子宮破裂"]
   },
   {
     "exam_number": "115",
@@ -3118,7 +2856,8 @@
     "choice_d": "入院中は連日膀胱洗浄を行う。",
     "choice_e": "留置中は安静臥床を促す。",
     "answer": "b",
-    "correct_rate": "91%"
+    "correct_rate": "91%",
+    "keywords": ["尿道カテーテル", "カテーテル関連尿路感染症", "閉鎖式回路", "尿道損傷", "カテーテル管理"]
   },
   {
     "exam_number": "115",
@@ -3132,7 +2871,9 @@
     "choice_d": "うつ病性障害",
     "choice_e": "注意欠陥多動性障害˝ADHD",
     "answer": "d",
-    "correct_rate": "97%"
+    "correct_rate": "97%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KC023.jpg"],
+    "keywords": ["電気けいれん療法", "ECT", "うつ病", "難治性うつ病", "精神科治療"]
   },
   {
     "exam_number": "115",
@@ -3146,7 +2887,8 @@
     "choice_d": "最大の寄与を有する単一リスクファクターは塩分過剰摂取である。",
     "choice_e": "低・中所得国においては、富裕層の方が貧困層より死亡率が高い。",
     "answer": "c",
-    "correct_rate": "50%"
+    "correct_rate": "50%",
+    "keywords": ["非感染性疾患", "国際保健", "都市化", "生活習慣病", "健康格差"]
   },
   {
     "exam_number": "115",
@@ -3160,7 +2902,8 @@
     "choice_d": "Blood should be applied to both sides of the filter paper card.",
     "choice_e": "Blood should be collected while the skin is still wet with alcohol.",
     "answer": "b",
-    "correct_rate": "97%"
+    "correct_rate": "97%",
+    "keywords": ["新生児スクリーニング", "先天性代謝異常症", "ろ紙法", "踵採血"]
   },
   {
     "exam_number": "115",
@@ -3174,7 +2917,8 @@
     "choice_d": "乳幼児の主な造血組織は肝臓である。",
     "choice_e": "血小板は巨核球の核が断片化して産生される。",
     "answer": "bc",
-    "correct_rate": "85%"
+    "correct_rate": "85%",
+    "keywords": ["造血幹細胞", "好中球", "赤血球寿命", "血小板産生", "造血組織"]
   },
   {
     "exam_number": "115",
@@ -3188,7 +2932,8 @@
     "choice_d": "業務中に結核に感染した労働者の労働災害を認定する。",
     "choice_e": "カルバペネム耐性腸内細菌科細菌感染症の届出を受ける。",
     "answer": "ae",
-    "correct_rate": "60%"
+    "correct_rate": "60%",
+    "keywords": ["保健所", "医療法", "感染症法", "公衆衛生", "行政機関"]
   },
   {
     "exam_number": "115",
@@ -3202,7 +2947,8 @@
     "choice_d": "抗甲状腺薬",
     "choice_e": "NSAID",
     "answer": "ae",
-    "correct_rate": "62%"
+    "correct_rate": "62%",
+    "keywords": ["羊水過少", "ACE阻害薬", "NSAID", "胎児腎機能", "プロスタグランジン"]
   },
   {
     "exam_number": "115",
@@ -3216,7 +2962,9 @@
     "choice_d": "股関節脱臼",
     "choice_e": "膝蓋骨脱臼",
     "answer": "ac",
-    "correct_rate": "93%"
+    "correct_rate": "93%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KC029.jpg"],
+    "keywords": ["足関節装具", "AFO", "下垂足", "内反尖足", "装具療法"]
   },
   {
     "exam_number": "115",
@@ -3230,7 +2978,8 @@
     "choice_d": "陣痛周期が10分以内",
     "choice_e": "陣痛頻度が時間に回以上",
     "answer": "de",
-    "correct_rate": "93%"
+    "correct_rate": "93%",
+    "keywords": ["分娩開始", "陣痛", "子宮口開大", "産科"]
   },
   {
     "exam_number": "115",
@@ -3244,7 +2993,8 @@
     "choice_d": "重複処方、相互作用による健康被害の防止",
     "choice_e": "薬局薬剤師の判断による処方内容の修正・改善",
     "answer": "cd",
-    "correct_rate": "91%"
+    "correct_rate": "91%",
+    "keywords": ["お薬手帳", "薬剤情報共有", "重複投薬防止", "薬物相互作用", "患者自己管理"]
   },
   {
     "exam_number": "115",
@@ -3258,7 +3008,8 @@
     "choice_d": "カテーテルアブレーションが無効な心房細動",
     "choice_e": "失神を伴う器質的心疾患による持続性心室頻拍",
     "answer": "ae",
-    "correct_rate": "85%"
+    "correct_rate": "85%",
+    "keywords": ["植込み型除細動器", "心室細動", "心室頻拍", "突然死", "不整脈"]
   },
   {
     "exam_number": "115",
@@ -3272,7 +3023,8 @@
     "choice_d": "｢電車の客が会話する様子を見て 自分の悪口を話している｣",
     "choice_e": "｢隣家を見て あの玄関の形は明日自分が死ぬことを意味している｣",
     "answer": "ace",
-    "correct_rate": "70%"
+    "correct_rate": "70%",
+    "keywords": ["統合失調症", "一次妄想", "妄想気分", "妄想知覚", "妄想着想"]
   },
   {
     "exam_number": "115",
@@ -3286,7 +3038,8 @@
     "choice_d": "いびき",
     "choice_e": "嚥下障害",
     "answer": "bcd",
-    "correct_rate": "54%"
+    "correct_rate": "54%",
+    "keywords": ["アデノイド増殖症", "滲出性中耳炎", "鼻閉", "いびき", "睡眠時無呼吸症候群"]
   },
   {
     "exam_number": "115",
@@ -3300,7 +3053,8 @@
     "choice_d": "定期的なHbA1c測定",
     "choice_e": "肺がん検診での胸部エックス線撮影",
     "answer": "a",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "keywords": ["一次予防", "二次予防", "三次予防", "予防医学", "生活習慣病"]
   },
   {
     "exam_number": "115",
@@ -3314,7 +3068,8 @@
     "choice_d": "赤血球液-LRとの交差適合試験",
     "choice_e": "血液準備量について院内輸血部門と調整",
     "answer": "d",
-    "correct_rate": "85%"
+    "correct_rate": "85%",
+    "keywords": ["子宮頸癌", "広汎子宮全摘術", "鉄欠乏性貧血", "自己血貯血", "輸血前検査"]
   },
   {
     "exam_number": "115",
@@ -3328,7 +3083,8 @@
     "choice_d": "塩分制限食の調理指導",
     "choice_e": "生活習慣の改善に伴う精神的ストレスのケア",
     "answer": "b",
-    "correct_rate": "88%"
+    "correct_rate": "88%",
+    "keywords": ["トータルヘルスプロモーションプラン", "THP", "高血圧", "生活習慣病", "公衆衛生"]
   },
   {
     "exam_number": "115",
@@ -3342,7 +3098,8 @@
     "choice_d": "食道静脈瘤",
     "choice_e": "慢性C型肝炎",
     "answer": "d",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["食道静脈瘤", "肝硬変", "慢性C型肝炎", "死亡診断書", "吐血"]
   },
   {
     "exam_number": "115",
@@ -3356,7 +3113,9 @@
     "choice_d": "眼球マッサージ",
     "choice_e": "全層角膜移植術",
     "answer": "c",
-    "correct_rate": "74%"
+    "correct_rate": "74%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KC039.jpg"],
+    "keywords": ["外傷性白内障", "続発緑内障", "高眼圧", "水晶体摘出術"]
   },
   {
     "exam_number": "115",
@@ -3370,7 +3129,8 @@
     "choice_d": "興奮状態だが、簡単な指示に従うことができる。",
     "choice_e": "腹部に挫創があり、意識レベルがJCSⅢ-100である。",
     "answer": "e",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["災害医療", "トリアージ", "ドクターヘリ", "意識障害", "重症外傷"]
   },
   {
     "exam_number": "115",
@@ -3384,7 +3144,9 @@
     "choice_d": "25 25",
     "choice_e": "50 50",
     "answer": "e",
-    "correct_rate": "96%"
+    "correct_rate": "96%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KC041.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KC041J01.png"],
+    "keywords": ["常染色体優性多発性嚢胞腎", "ADPKD", "遺伝形式", "遺伝カウンセリング", "脳動脈瘤"]
   },
   {
     "exam_number": "115",
@@ -3398,7 +3160,9 @@
     "choice_d": "右胸膜",
     "choice_e": "後縦隔",
     "answer": "c",
-    "correct_rate": "73%"
+    "correct_rate": "73%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KC042A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KC042B.jpg"],
+    "keywords": ["胸部X線写真", "胸部CT", "肺葉解剖", "画像診断", "肺がん検診"]
   },
   {
     "exam_number": "115",
@@ -3412,7 +3176,8 @@
     "choice_d": "β 刺激薬投与 3",
     "choice_e": "抗コリン薬投与",
     "answer": "a",
-    "correct_rate": "94%"
+    "correct_rate": "94%",
+    "keywords": ["尿失禁", "尿閉", "前立腺肥大症", "導尿", "溢流性尿失禁"]
   },
   {
     "exam_number": "115",
@@ -3426,7 +3191,9 @@
     "choice_d": "種混合ワクチン",
     "choice_e": "おたふくかぜワクチン",
     "answer": "d",
-    "correct_rate": "84%"
+    "correct_rate": "84%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KC044.jpg"],
+    "keywords": ["予防接種スケジュール", "4種混合ワクチン", "乳児期ワクチン", "定期接種", "小児科"]
   },
   {
     "exam_number": "115",
@@ -3440,7 +3207,8 @@
     "choice_d": "｢糖質を含まないアルコール飲料は問題ありません｣",
     "choice_e": "｢日の摂取エネルギーを1,200kcalにしましょう｣",
     "answer": "b",
-    "correct_rate": "96%"
+    "correct_rate": "96%",
+    "keywords": ["糖尿病", "肥満", "高血圧", "脂質異常症", "メタボリックシンドローム"]
   },
   {
     "exam_number": "115",
@@ -3454,7 +3222,8 @@
     "choice_d": "気管支拡張薬の静脈投与",
     "choice_e": "自動体外式除細動器の使用",
     "answer": "c",
-    "correct_rate": "77%"
+    "correct_rate": "77%",
+    "keywords": ["アナフィラキシー", "アドレナリン", "低血圧", "呼吸困難", "蕁麻疹"]
   },
   {
     "exam_number": "115",
@@ -3468,7 +3237,8 @@
     "choice_d": "急性心筋梗塞",
     "choice_e": "急性腸管壊死",
     "answer": "c",
-    "correct_rate": "96%"
+    "correct_rate": "96%",
+    "keywords": ["クラッシュ症候群", "横紋筋融解症", "急性腎障害", "ミオグロビン尿症", "ショック"]
   },
   {
     "exam_number": "115",
@@ -3482,7 +3252,8 @@
     "choice_d": "｢ご遺体は病理解剖後か月間病院でお預かりします｣",
     "choice_e": "｢病理解剖を行わないと死亡診断書が発行できません｣",
     "answer": "b",
-    "correct_rate": "96%"
+    "correct_rate": "96%",
+    "keywords": ["病理解剖", "死因究明", "インフォームド・コンセント", "医療倫理"]
   },
   {
     "exam_number": "115",
@@ -3496,7 +3267,8 @@
     "choice_d": "蛋白質摂取量を現状の倍にする。",
     "choice_e": "日総エネルギー摂取量を1,200kcalにする。",
     "answer": "c",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["慢性腎臓病", "高血圧性腎硬化症", "食事療法", "腎保護", "eGFR"]
   },
   {
     "exam_number": "115",
@@ -3510,7 +3282,9 @@
     "choice_d": "副腎皮質ステロイド",
     "choice_e": "エンドセリン受容体拮抗薬",
     "answer": "a",
-    "correct_rate": "96%"
+    "correct_rate": "96%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KC050.jpg"],
+    "keywords": ["急性心不全", "肺水腫", "BNP", "ループ利尿薬", "心臓喘息"]
   },
   {
     "exam_number": "115",
@@ -3524,7 +3298,8 @@
     "choice_d": "IgA血管炎˝Schönlein-Henoch紫斑病",
     "choice_e": "遺伝性出血性末血管拡張症˝Osler病",
     "answer": "b",
-    "correct_rate": "84%"
+    "correct_rate": "84%",
+    "keywords": ["von Willebrand病", "出血傾向", "一次止血", "二次止血", "APTT延長"]
   },
   {
     "exam_number": "115",
@@ -3538,7 +3313,9 @@
     "choice_d": "アルブミン製剤投与",
     "choice_e": "オピオイドスイッチング˝オピオイドローテーション",
     "answer": "e",
-    "correct_rate": "28%"
+    "correct_rate": "28%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KC052.jpg"],
+    "keywords": ["濾胞性リンパ腫", "緩和ケア", "オピオイド誘発性腸機能不全", "オピオイドスイッチング", "悪心・嘔吐"]
   },
   {
     "exam_number": "115",
@@ -3552,7 +3329,8 @@
     "choice_d": "④",
     "choice_e": "⑤",
     "answer": "e",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["乳幼児健診", "発達遅滞", "共同注意", "自閉スペクトラム症", "小児発達"]
   },
   {
     "exam_number": "115",
@@ -3566,7 +3344,9 @@
     "choice_d": "乳酸アシドーシスをきたす。",
     "choice_e": "カテーテル交換が必要である。",
     "answer": "a",
-    "correct_rate": "85%"
+    "correct_rate": "85%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KC054.jpg"],
+    "keywords": ["膀胱全摘術", "尿路変更術", "回腸導管", "ストーマ", "集尿袋"]
   },
   {
     "exam_number": "115",
@@ -3580,7 +3360,8 @@
     "choice_d": "文章完成法テスト˝SCT",
     "choice_e": "リバーミード行動記憶検査˝RBMT",
     "answer": "ad",
-    "correct_rate": "72%"
+    "correct_rate": "72%",
+    "keywords": ["抜毛症", "強迫関連症群", "投映法検査", "パーソナリティ評価"]
   },
   {
     "exam_number": "115",
@@ -3594,7 +3375,8 @@
     "choice_d": "脂肪制限",
     "choice_e": "蛋白制限",
     "answer": "ad",
-    "correct_rate": "97%"
+    "correct_rate": "97%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KC056.jpg"]
   },
   {
     "exam_number": "115",
@@ -3608,7 +3390,8 @@
     "choice_d": "特発性膝骨壊死",
     "choice_e": "変形性膝関節症",
     "answer": "ac",
-    "correct_rate": "93%"
+    "correct_rate": "93%",
+    "keywords": ["急性関節炎", "偽痛風", "化膿性関節炎", "関節液検査", "高齢者"]
   },
   {
     "exam_number": "115",
@@ -3622,7 +3405,8 @@
     "choice_d": "分時換気量増加",
     "choice_e": "分時心拍出量低下",
     "answer": "bd",
-    "correct_rate": "24%"
+    "correct_rate": "24%",
+    "keywords": ["脱水", "低容量性ショック", "代償性反応", "末梢循環不全", "代謝性アシドーシス"]
   },
   {
     "exam_number": "115",
@@ -3636,7 +3420,9 @@
     "choice_d": "後方後頭位",
     "choice_e": "低在横定位",
     "answer": "bce",
-    "correct_rate": "71%"
+    "correct_rate": "71%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KC059.jpg"],
+    "keywords": ["パルトグラム", "微弱陣痛", "分娩停止", "低在横定位", "異常分娩"]
   },
   {
     "exam_number": "115",
@@ -3650,7 +3436,8 @@
     "choice_d": "点",
     "choice_e": "点",
     "answer": "d",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "keywords": ["qSOFAスコア", "敗血症", "意識障害", "術後合併症", "ショック"]
   },
   {
     "exam_number": "115",
@@ -3664,7 +3451,8 @@
     "choice_d": "急性腎盂腎炎",
     "choice_e": "誤嚥性肺炎",
     "answer": "b",
-    "correct_rate": "66%"
+    "correct_rate": "66%",
+    "keywords": ["カテーテル関連血流感染症", "敗血症", "中心静脈カテーテル", "術後合併症", "意識障害"]
   },
   {
     "exam_number": "115",
@@ -3678,7 +3466,9 @@
     "choice_d": "メロペネム",
     "choice_e": "レボフロキサシン",
     "answer": "b",
-    "correct_rate": "30%"
+    "correct_rate": "30%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KC062.jpg"],
+    "keywords": ["敗血症", "カテーテル関連血流感染症", "グラム陽性球菌", "MRSA", "バンコマイシン"]
   },
   {
     "exam_number": "115",
@@ -3692,7 +3482,8 @@
     "choice_d": "輪状甲状靱帯刺",
     "choice_e": "経鼻エアウェイ挿入",
     "answer": "b",
-    "correct_rate": "82%"
+    "correct_rate": "82%",
+    "keywords": ["コリン作動性クリーゼ", "誤嚥性肺炎", "気道確保", "ドネペジル", "意識障害"]
   },
   {
     "exam_number": "115",
@@ -3706,7 +3497,8 @@
     "choice_d": "血清補体値",
     "choice_e": "コリンエステラーゼ",
     "answer": "e",
-    "correct_rate": "97%"
+    "correct_rate": "97%",
+    "keywords": ["コリン作動性クリーゼ", "ドネペジル", "アセチルコリンエステラーゼ阻害薬", "有機リン中毒", "意識障害"]
   },
   {
     "exam_number": "115",
@@ -3720,7 +3512,8 @@
     "choice_d": "硫酸アトロピン投与",
     "choice_e": "アセトアミノフェン投与 次の文を読み、66〜68の問いに答えよ。 75歳の男性。腹痛を主訴に来院した。 現病歴 ： 週前から食思不振と\\怠感を自覚していた。日前から上腹部の鈍痛 が出現したため受診した。 既往歴 ： 45歳から高血圧症と糖尿病で内服加療中である。血糖コントロールは 良好であった。61歳時に早期胃癌の診断で幽門側胃切除Billroth I法再建 術。 生活歴 ： 妻と長男夫婦と人暮らし。喫煙は20本/日を45年間。飲酒は機会飲 酒。 家族歴 ： 特記すべきことはない。 現 症 ： 意識は清明。身長166cm、体重57kg。体温36.7℃。脈拍76/分、整。 血圧134/86mmHg。呼吸数14/分。SpO 98%room air 。眼瞼結膜と眼球結膜と 2 に異常を認めない。心音と呼吸音とに異常を認めない。腹部は平坦、軟で、手術痕 を認める。圧痛のない腫大した胆囊を触知する。肝・脾を触知しない。腸雑音に異 常を認めない。 検査所見 ： 血液所見：赤血球411万、Hb13.8g/dL、Ht41%、白血球8,600、 血小板18万。血液生化学所見：総蛋白7.1g/dL、アルブミン3.7g/dL、総ビリ ルビン2.1mg/dL、直接ビリルビン1.3mg/dL、AST328U/L、ALT216U/L、 LD564U/L基準120〜245 、ALP1,235U/L基準115〜359 、γ-GT602U/L基 準〜50 、アミラーゼ101U/L基準37〜160 、尿素窒素24mg/dL、クレアチニ ン1.2mg/dL、 尿 酸5.4mg/dL、 血 糖123mg/dL、 HbA1c7.0% 基 準 4.6〜6.2 、総コレステロール196mg/dL、トリグリセリド110mg/dL、Na139 mEq/L、K4.4mEq/L、Cl99mEq/L、CEA5.3ng/mL基準以下 、CA19-9 133U/mL基準37以下 。CRP1.5mg/dL。",
     "answer": "cd",
-    "correct_rate": "84%"
+    "correct_rate": "84%",
+    "keywords": ["コリン作動性クリーゼ", "ドネペジル", "アセチルコリンエステラーゼ阻害薬", "アトロピン", "中毒"]
   },
   {
     "exam_number": "115",
@@ -3734,7 +3527,8 @@
     "choice_d": "Murphy徴候",
     "choice_e": "Reynolds五徴",
     "answer": "b",
-    "correct_rate": "96%"
+    "correct_rate": "96%",
+    "keywords": ["Courvoisier徴候", "閉塞性黄疸", "膵頭部癌", "胆道癌", "CA19-9"]
   },
   {
     "exam_number": "115",
@@ -3748,7 +3542,9 @@
     "choice_d": "④",
     "choice_e": "⑤",
     "answer": "d",
-    "correct_rate": "71%"
+    "correct_rate": "71%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KC067J01.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KC067J02.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KC067J03.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KC067J04.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KC067J05.jpg"],
+    "keywords": ["膵頭部癌", "Courvoisier徴候", "閉塞性黄疸", "CA19-9"]
   },
   {
     "exam_number": "115",
@@ -3762,7 +3558,8 @@
     "choice_d": "内視鏡的胆管ドレナージ",
     "choice_e": "内視鏡的十二指腸ステント留置 次の文を読み、69〜71の問いに答えよ。 78歳の女性。胸部不快感を主訴に来院した。 現病歴 ： 週前から労作時に胸部の不快感を自覚するようになり受診した。 既往歴 ： 61歳時に糖尿病、65歳時に高血圧症、高尿酸血症と診断され、内服加 療中。76歳時に肺炎で入院加療を受けた。年前から椎間板ヘルニアによる腰痛 に対し鎮痛薬の処方も受けている。腰痛のため運動量の減少に伴い、最近は筋肉量 の減少も指摘されていた。 生活歴 ： 80歳の夫と人暮らし。喫煙は24歳から20本/日を37年間。飲酒は 機会飲酒。 家族歴 ： 父親が70歳時に心不全で死亡。 現 症 ： 意識は清明。身長154cm、体重41kg。体温35.8℃。脈拍84/分、整。 血圧142/88mmHg。呼吸数16/分。SpO 96%room air 。眼瞼結膜に異常を認め 2 ない。頸静脈の怒張を認めない。胸骨左縁第肋間を最強点とするLevine/の 収縮期雑音を聴取する。呼吸音に異常を認めない。腹部は平坦、軟で、肝・脾を触 知しない。左足背動脈は触知が不良で冷感を認める。 検査所見 ： 尿所見：蛋白袷、潜血安 、糖安 、尿蛋白1.5g/日。血液所見： 赤血球362万、Hb11.0g/dL、Ht35%、白血球6,800、血小板16万。血液生化学 所見：総蛋白6.2g/dL、アルブミン3.2g/dL、AST20U/L、ALT12U/L、LD 198U/L 基 準120〜245 、ALP288U/L 基 準115〜359 、CK28U/L 基 準 30〜140 、尿素窒素32mg/dL、クレアチニン0.9mg/dL、eGFR37ml/分/1.73 m2、尿酸8.2mg/dL、血糖118mg/dL、HbA1c6.6%基準4.6〜6.2 、総コレス テ ロ ー ル142mg/dL、Na136mEq/L、K4.0mEq/L、Cl104mEq/L。CRP0.8 mg/dL。12誘導心電図でⅡ、Ⅲ、aV 、V4-6誘導のST低下を認める。胸部エッ F クス線写真で心胸郭比56%。 虚血性心疾患が疑われ、冠動脈造影検査の実施を検討することとなった。",
     "answer": "d",
-    "correct_rate": "77%"
+    "correct_rate": "77%",
+    "keywords": ["閉塞性黄疸", "Courvoisier徴候", "膵頭部癌", "胆管癌", "胆道ドレナージ"]
   },
   {
     "exam_number": "115",
@@ -3776,7 +3573,8 @@
     "choice_d": "血液尿素窒素/血清クレアチニン比",
     "choice_e": "血清シスタチンCによるGFR推算値",
     "answer": "e",
-    "correct_rate": "77%"
+    "correct_rate": "77%",
+    "keywords": ["腎機能評価", "シスタチンC", "eGFR", "高齢者腎機能", "慢性腎臓病"]
   },
   {
     "exam_number": "115",
@@ -3790,7 +3588,8 @@
     "choice_d": "αグルコシダーゼ阻害薬",
     "choice_e": "アンジオテンシン変換酵素˝ACE阻害薬",
     "answer": "b",
-    "correct_rate": "76%"
+    "correct_rate": "76%",
+    "keywords": ["造影剤腎症", "NSAID", "腎機能障害", "冠動脈造影", "薬剤性腎障害"]
   },
   {
     "exam_number": "115",
@@ -3804,7 +3603,8 @@
     "choice_d": "ドーパミン点滴静注",
     "choice_e": "ヒト心房利尿ペプチド˝hANP点滴静注 次の文を読み、72〜74の問いに答えよ。 80歳の男性。胸痛のため救急車で搬入された。 現病歴 ： 昨日午後時ころ夕食中に急に胸部絞扼感を感じた。胸痛は約30分持 続したが自然に軽快し、その日は就寝した。本日朝時、起床時に昨晩と同様の胸 痛が出現した。昨夜より症状が強く動けない状態が持続し、その後呼吸困難も生じ てきたため救急車を要請し、午前時に救急搬送された。 既往歴 ： 10年前から高血圧症で通院加療中。 生活歴 ： 妻と人暮らし。喫煙は20本/日、60年間。飲酒は機会飲酒。 家族歴 ： 特記すべきことはない。 現 症 ： 意識は清明。身長155cm、体重60kg。心拍数108/分、整。血圧106/86 mmHgで明らかな左右差を認めない。呼吸数20/分。SpO 94%リザーバー付マ 2 スク10L/分酸素投与下 。冷汗を認める。眼瞼結膜と眼球結膜とに異常を認めな い。頸静脈の怒張を認める。心音はⅢ音ギャロップを呈しており、心尖部を最強点 とするLevine/の収縮期雑音を聴取する。呼吸音は両側中下胸部に湿性ラ音を 聴取する。腹部は平坦、軟で、肝・脾を触知しない。下•に浮腫を認めない。 検査所見 ： 赤血球 463万、Hb13.2g/dL、Ht40%、白血球 9,800、血小板 28万、総ビリルビン0.5mg/dL、AST118U/L、ALT32U/L、LD320U/L基準 120〜245 、CK346U/L基準30〜140 、尿素窒素12mg/dL、クレアチニン0.8 mg/dL、血 糖98mg/dL、Na138mEq/L、K4.4mEq/L、Cl97mEq/L。心 筋 ト ロポニンT迅速検査陽性。心電図は心拍数108/分の洞調律で、広範な誘導でST 低下を認めた。",
     "answer": "c",
-    "correct_rate": "90%"
+    "correct_rate": "90%",
+    "keywords": ["冠動脈造影", "造影剤腎症", "慢性腎臓病", "虚血性心疾患", "周術期管理"]
   },
   {
     "exam_number": "115",
@@ -3818,7 +3618,8 @@
     "choice_d": "中心静脈圧は低下している。",
     "choice_e": "副交感神経の緊張状態である。",
     "answer": "ab",
-    "correct_rate": "91%"
+    "correct_rate": "91%",
+    "keywords": ["急性心筋梗塞", "急性心不全", "僧帽弁閉鎖不全症", "心原性ショック"]
   },
   {
     "exam_number": "115",
@@ -3832,7 +3633,9 @@
     "choice_d": "留置している補助循環装置により冠動脈血流量の増加が期待される。",
     "choice_e": "留置している補助循環装置は大静脈内に留置されている。",
     "answer": "ad",
-    "correct_rate": "83%"
+    "correct_rate": "83%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KC073A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KC073B.jpg"],
+    "keywords": ["急性冠症候群", "心筋梗塞", "大動脈バルーンパンピング", "冠動脈造影", "心原性ショック"]
   },
   {
     "exam_number": "115",
@@ -3846,7 +3649,8 @@
     "choice_d": "｢心臓リハビリは退院の時点で終了となります｣",
     "choice_e": "｢ご家族と一緒に食事やお薬についても勉強しましょう｣",
     "answer": "d",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["心臓リハビリテーション", "急性冠症候群", "心筋梗塞", "心不全", "生活習慣病"]
   },
   {
     "exam_number": "115",
@@ -3860,7 +3664,8 @@
     "choice_d": "",
     "choice_e": "",
     "answer": "27",
-    "correct_rate": "72%"
+    "correct_rate": "72%",
+    "keywords": ["肥満度", "小児肥満", "標準体重", "生活習慣病"]
   },
   {
     "exam_number": "115",
@@ -3874,7 +3679,8 @@
     "choice_d": "子 宮",
     "choice_e": "腟",
     "answer": "c",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "keywords": ["無月経", "FSH", "卵巣機能不全", "視床下部-下垂体-卵巣系", "ホルモンフィードバック"]
   },
   {
     "exam_number": "115",
@@ -3888,7 +3694,8 @@
     "choice_d": "ペニシリンG",
     "choice_e": "レボフロキサシン",
     "answer": "c",
-    "correct_rate": "60%"
+    "correct_rate": "60%",
+    "keywords": ["バンコマイシン", "治療薬物モニタリング", "TDM", "腎毒性", "抗生物質"]
   },
   {
     "exam_number": "115",
@@ -3902,7 +3709,8 @@
     "choice_d": "裂孔原性網膜剝離 副腎皮質ステロイド点眼",
     "choice_e": "網膜中心動脈閉塞症 眼球マッサージ",
     "answer": "e",
-    "correct_rate": "86%"
+    "correct_rate": "86%",
+    "keywords": ["網膜中心動脈閉塞症", "眼球マッサージ", "眼科救急", "網膜剥離", "ぶどう膜炎"]
   },
   {
     "exam_number": "115",
@@ -3916,7 +3724,8 @@
     "choice_d": "左室拡張障害による心不全を生じる。",
     "choice_e": "老人性全身性アミロイドーシスでは免疫グロブリンが心臓に沈着する。",
     "answer": "e",
-    "correct_rate": "60%"
+    "correct_rate": "60%",
+    "keywords": ["心アミロイドーシス", "拘束型心筋症", "ALアミロイドーシス", "ATTRアミロイドーシス", "低電位差"]
   },
   {
     "exam_number": "115",
@@ -3930,7 +3739,8 @@
     "choice_d": "治療反応性が不良な高血圧",
     "choice_e": "夜間発症の心血管イベントの既往",
     "answer": "a",
-    "correct_rate": "97%"
+    "correct_rate": "97%",
+    "keywords": ["睡眠時無呼吸症候群", "昼間の眠気", "高血圧", "心血管イベント", "呼吸器内科"]
   },
   {
     "exam_number": "115",
@@ -3944,7 +3754,8 @@
     "choice_d": "神経性食思不振症",
     "choice_e": "アセトン血性嘔吐症",
     "answer": "e",
-    "correct_rate": "97%"
+    "correct_rate": "97%",
+    "keywords": ["アセトン血性嘔吐症", "周期性嘔吐症", "自家中毒", "小児疾患", "自然寛解"]
   },
   {
     "exam_number": "115",
@@ -3958,7 +3769,8 @@
     "choice_d": "肺線維症",
     "choice_e": "降下性壊死性縦隔炎",
     "answer": "d",
-    "correct_rate": "97%"
+    "correct_rate": "97%",
+    "keywords": ["膿胸", "胸腔感染", "肺炎", "縦隔炎", "胸部外傷"]
   },
   {
     "exam_number": "115",
@@ -3972,7 +3784,8 @@
     "choice_d": "βラクタム系抗菌薬が有効である。",
     "choice_e": "迅速診断に尿中抗原検出キットが有用である。",
     "answer": "d",
-    "correct_rate": "97%"
+    "correct_rate": "97%",
+    "keywords": ["レジオネラ肺炎", "非定型肺炎", "細胞内寄生菌", "低ナトリウム血症", "尿中抗原"]
   },
   {
     "exam_number": "115",
@@ -3986,7 +3799,8 @@
     "choice_d": "心サルコイドーシス",
     "choice_e": "全身性エリテマトーデス⁄SLE§",
     "answer": "d",
-    "correct_rate": "97%"
+    "correct_rate": "97%",
+    "keywords": ["心サルコイドーシス", "完全房室ブロック", "不整脈", "伝導障害", "肉芽腫性疾患"]
   },
   {
     "exam_number": "115",
@@ -4000,7 +3814,8 @@
     "choice_d": "膀胱結石",
     "choice_e": "前立腺肥大症",
     "answer": "de",
-    "correct_rate": "88%"
+    "correct_rate": "88%",
+    "keywords": ["経尿道的手術", "膀胱結石", "前立腺肥大症", "TURP", "泌尿器科手術"]
   },
   {
     "exam_number": "115",
@@ -4014,7 +3829,8 @@
     "choice_d": "長期アルコール多飲",
     "choice_e": "ヒトパルボウイルスB19感染",
     "answer": "cd",
-    "correct_rate": "89%"
+    "correct_rate": "89%",
+    "keywords": ["大球性貧血", "骨髄異形成症候群", "アルコール性貧血", "葉酸欠乏"]
   },
   {
     "exam_number": "115",
@@ -4028,7 +3844,8 @@
     "choice_d": "診断時に約半数で全身転移を認める。",
     "choice_e": "副腎皮質ステロイドは根治的な治療薬である。",
     "answer": "bc",
-    "correct_rate": "22%"
+    "correct_rate": "22%",
+    "keywords": ["中枢神経原発悪性リンパ腫", "びまん性大細胞型B細胞リンパ腫", "ぶどう膜炎", "高用量メトトレキサート", "免疫不全"]
   },
   {
     "exam_number": "115",
@@ -4042,7 +3859,8 @@
     "choice_d": "食道カンジダ症",
     "choice_e": "機能性ディスペプシア",
     "answer": "ac",
-    "correct_rate": "72%"
+    "correct_rate": "72%",
+    "keywords": ["慢性咳嗽", "後鼻漏", "逆流性食道炎", "上気道咳嗽症候群", "胃食道逆流症"]
   },
   {
     "exam_number": "115",
@@ -4056,7 +3874,8 @@
     "choice_d": "月経随伴性気胸",
     "choice_e": "肺リンパ脈管筋腫症⁄LAM§",
     "answer": "be",
-    "correct_rate": "89%"
+    "correct_rate": "89%",
+    "keywords": ["乳び胸", "胸管損傷", "食道癌手術", "肺リンパ脈管筋腫症", "リンパ液漏出"]
   },
   {
     "exam_number": "115",
@@ -4070,7 +3889,8 @@
     "choice_d": "切符の買い方",
     "choice_e": "日本で一番高い山の名前",
     "answer": "de",
-    "correct_rate": "58%"
+    "correct_rate": "58%",
+    "keywords": ["全生活史健忘", "解離性健忘", "記憶の種類", "エピソード記憶", "手続き記憶"]
   },
   {
     "exam_number": "115",
@@ -4084,7 +3904,9 @@
     "choice_d": "脱 髄",
     "choice_e": "浮 腫",
     "answer": "e",
-    "correct_rate": "92%"
+    "correct_rate": "92%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD016A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD016B.jpg"],
+    "keywords": ["子癇", "妊娠高血圧症候群", "PRES", "脳浮腫", "MRI"]
   },
   {
     "exam_number": "115",
@@ -4098,7 +3920,8 @@
     "choice_d": "アセトアミノフェン経口投与",
     "choice_e": "ビスホスホネート製剤静脈投与",
     "answer": "b",
-    "correct_rate": "90%"
+    "correct_rate": "90%",
+    "keywords": ["肺扁平上皮癌", "骨転移", "癌性疼痛", "WHO方式がん疼痛治療ガイドライン", "疼痛緩和"]
   },
   {
     "exam_number": "115",
@@ -4112,7 +3935,8 @@
     "choice_d": "橋",
     "choice_e": "延 髄",
     "answer": "c",
-    "correct_rate": "88%"
+    "correct_rate": "88%",
+    "keywords": ["動眼神経麻痺", "錐体路障害", "中脳", "Weber症候群", "脳幹症候群"]
   },
   {
     "exam_number": "115",
@@ -4126,7 +3950,9 @@
     "choice_d": "抗VEGF薬硝子体注射",
     "choice_e": "副腎皮質ステロイド内服",
     "answer": "d",
-    "correct_rate": "69%"
+    "correct_rate": "69%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD019A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD019B.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD019C.jpg"],
+    "keywords": ["加齢黄斑変性", "脈絡膜新生血管", "抗VEGF薬", "蛍光眼底造影", "光干渉断層計"]
   },
   {
     "exam_number": "115",
@@ -4140,7 +3966,9 @@
     "choice_d": "頭部MRA",
     "choice_e": "鼻腔内生検",
     "answer": "e",
-    "correct_rate": "78%"
+    "correct_rate": "78%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD020A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD020B.jpg"],
+    "keywords": ["副鼻腔癌", "顔面痛", "骨破壊", "生検", "悪性腫瘍"]
   },
   {
     "exam_number": "115",
@@ -4154,7 +3982,8 @@
     "choice_d": "｢血液検査で貧血の有無を確認しましょう｣",
     "choice_e": "｢ブドウ果汁入りジュースをやめて、明日の便を観察してください｣",
     "answer": "e",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "keywords": ["偽性血便", "ブドウ果汁", "乳児の血便", "便潜血検査", "腸重積症（鑑別）"]
   },
   {
     "exam_number": "115",
@@ -4168,7 +3997,8 @@
     "choice_d": "広域抗菌薬投与",
     "choice_e": "リハビリテーション開始",
     "answer": "d",
-    "correct_rate": "54%"
+    "correct_rate": "54%",
+    "keywords": ["術後発熱", "人工膝関節全置換術", "抗菌薬適正使用", "早期離床", "炎症反応"]
   },
   {
     "exam_number": "115",
@@ -4182,7 +4012,9 @@
     "choice_d": "マイコプラズマ感染症",
     "choice_e": "サイトメガロウイルス感染症",
     "answer": "d",
-    "correct_rate": "87%"
+    "correct_rate": "87%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD023A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD023B.jpg"],
+    "keywords": ["マイコプラズマ肺炎", "非定型肺炎", "小児肺炎", "胸部画像診断", "気管支肺炎"]
   },
   {
     "exam_number": "115",
@@ -4196,7 +4028,9 @@
     "choice_d": "メトロニダゾール",
     "choice_e": "レボフロキサシン",
     "answer": "d",
-    "correct_rate": "97%"
+    "correct_rate": "97%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD024.jpg"],
+    "keywords": ["ジアルジア症", "ランブル鞭毛虫症", "旅行者下痢症", "メトロニダゾール", "寄生虫感染症"]
   },
   {
     "exam_number": "115",
@@ -4210,7 +4044,8 @@
     "choice_d": "短下肢装具と杖での歩行",
     "choice_e": "下顎コントロール電動車いす",
     "answer": "a",
-    "correct_rate": "74%"
+    "correct_rate": "74%",
+    "keywords": ["頸髄損傷", "脊髄損傷", "徒手筋力テスト", "車いす", "リハビリテーション"]
   },
   {
     "exam_number": "115",
@@ -4224,7 +4059,9 @@
     "choice_d": "｢男性不妊の原因になります｣",
     "choice_e": "｢腹圧時に陰囊が大きくなります｣",
     "answer": "d",
-    "correct_rate": "88%"
+    "correct_rate": "88%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD026.jpg"],
+    "keywords": ["停留精巣", "男性不妊", "精巣固定術", "造精機能障害"]
   },
   {
     "exam_number": "115",
@@ -4238,7 +4075,9 @@
     "choice_d": "気管支鏡検査",
     "choice_e": "骨シンチグラフィ",
     "answer": "d",
-    "correct_rate": "70%"
+    "correct_rate": "70%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD027A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD027B.jpg"],
+    "keywords": ["肺結節", "直腸癌肺転移", "原発性肺癌", "気管支鏡検査", "組織診断"]
   },
   {
     "exam_number": "115",
@@ -4252,7 +4091,8 @@
     "choice_d": "完全癖のため物事を終了できない。",
     "choice_e": "自分が注目の的になっていることを求める。",
     "answer": "c",
-    "correct_rate": "31%"
+    "correct_rate": "31%",
+    "keywords": ["境界性パーソナリティ障害", "パーソナリティ障害", "感情不安定性", "衝動性", "自傷行為"]
   },
   {
     "exam_number": "115",
@@ -4266,7 +4106,8 @@
     "choice_d": "赤血球濃厚液輸血",
     "choice_e": "エリスロポエチン製剤投与",
     "answer": "c",
-    "correct_rate": "54%"
+    "correct_rate": "54%",
+    "keywords": ["ビタミンB12欠乏症", "乳児期ビタミンB12欠乏症", "胃全摘術", "母乳栄養", "発達遅滞"]
   },
   {
     "exam_number": "115",
@@ -4280,7 +4121,8 @@
     "choice_d": "エストロゲン",
     "choice_e": "黄体ホルモン",
     "answer": "a",
-    "correct_rate": "93%"
+    "correct_rate": "93%",
+    "keywords": ["抗リン脂質症候群", "習慣流産", "ヘパリン", "血栓症", "自己免疫疾患"]
   },
   {
     "exam_number": "115",
@@ -4294,7 +4136,8 @@
     "choice_d": "ポリソムノグラフィ",
     "choice_e": "ドパミントランスポーターSPECT",
     "answer": "d",
-    "correct_rate": "93%"
+    "correct_rate": "93%",
+    "keywords": ["ナルコレプシー", "過眠症", "カタプレキシー", "ポリソムノグラフィ", "睡眠障害"]
   },
   {
     "exam_number": "115",
@@ -4308,7 +4151,8 @@
     "choice_d": "副腎皮質ステロイドの投与",
     "choice_e": "トロンボポエチン受容体作動薬の投与",
     "answer": "a",
-    "correct_rate": "69%"
+    "correct_rate": "69%",
+    "keywords": ["骨髄異形成症候群", "MDS", "汎血球減少症", "貧血", "赤血球輸血"]
   },
   {
     "exam_number": "115",
@@ -4322,7 +4166,9 @@
     "choice_d": "蜂巣炎⁄蜂窩織炎§",
     "choice_e": "スポロトリコーシス",
     "answer": "c",
-    "correct_rate": "88%"
+    "correct_rate": "88%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD033.jpg"],
+    "keywords": ["非結核性抗酸菌症", "水槽肉芽腫", "Mycobacterium marinum", "類上皮細胞肉芽腫", "慢性皮膚感染症"]
   },
   {
     "exam_number": "115",
@@ -4336,7 +4182,8 @@
     "choice_d": "指への血液付着の有無",
     "choice_e": "指に付着した便の培養結果",
     "answer": "e",
-    "correct_rate": "95%"
+    "correct_rate": "95%",
+    "keywords": ["便秘", "排便時出血", "直腸がん", "痔核", "裂肛"]
   },
   {
     "exam_number": "115",
@@ -4364,7 +4211,8 @@
     "choice_d": "基礎体温は二相性を示す。",
     "choice_e": "男性ホルモンが欠損している。",
     "answer": "a",
-    "correct_rate": "79%"
+    "correct_rate": "79%",
+    "keywords": ["アンドロゲン不応症", "原発性無月経", "46, XY", "停留精巣", "抗ミュラー管ホルモン"]
   },
   {
     "exam_number": "115",
@@ -4378,7 +4226,9 @@
     "choice_d": "胸腰椎MRI",
     "choice_e": "骨シンチグラフィ",
     "answer": "d",
-    "correct_rate": "74%"
+    "correct_rate": "74%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD037.jpg"],
+    "keywords": ["脊髄圧迫", "乳癌骨転移", "病的骨折", "腰椎圧迫骨折", "神経学的異常"]
   },
   {
     "exam_number": "115",
@@ -4392,7 +4242,9 @@
     "choice_d": "多発性骨融解像",
     "choice_e": "びまん性腎腫大",
     "answer": "d",
-    "correct_rate": "95%"
+    "correct_rate": "95%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD038.jpg"],
+    "keywords": ["IgG4関連疾患", "自己免疫性膵炎", "IgG4関連硬化性胆管炎", "ミクリッツ病", "多臓器病変"]
   },
   {
     "exam_number": "115",
@@ -4406,7 +4258,9 @@
     "choice_d": "MIBG心筋シンチグラフィ",
     "choice_e": "脳脊髄液排出試験⁄Tap test§",
     "answer": "e",
-    "correct_rate": "85%"
+    "correct_rate": "85%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD039A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD039B.jpg"],
+    "keywords": ["特発性正常圧水頭症", "Tap test", "歩行障害", "認知機能障害", "尿失禁"]
   },
   {
     "exam_number": "115",
@@ -4420,7 +4274,8 @@
     "choice_d": "網血小板比率低下",
     "choice_e": "JAK遺伝子変異陽性",
     "answer": "e",
-    "correct_rate": "89%"
+    "correct_rate": "89%",
+    "keywords": ["真性多血症", "骨髄増殖性腫瘍", "JAK2遺伝子変異", "エリスロポエチン", "赤血球増多症"]
   },
   {
     "exam_number": "115",
@@ -4434,7 +4289,9 @@
     "choice_d": "播種性真菌感染症",
     "choice_e": "多発血管炎性肉芽腫症⁄Wegener肉芽腫症§",
     "answer": "e",
-    "correct_rate": "94%"
+    "correct_rate": "94%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD041A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD041B.jpg"],
+    "keywords": ["多発血管炎性肉芽腫症", "Wegener肉芽腫症", "血管炎", "急速進行性糸球体腎炎", "c-ANCA"]
   },
   {
     "exam_number": "115",
@@ -4448,7 +4305,8 @@
     "choice_d": "妊娠高血圧腎症",
     "choice_e": "加重型妊娠高血圧腎症",
     "answer": "d",
-    "correct_rate": "82%"
+    "correct_rate": "82%",
+    "keywords": ["妊娠高血圧腎症", "妊娠高血圧症候群", "高血圧合併妊娠", "HELLP症候群"]
   },
   {
     "exam_number": "115",
@@ -4462,7 +4320,8 @@
     "choice_d": "転移性肝腫瘍",
     "choice_e": "肝内胆汁うっ滞",
     "answer": "e",
-    "correct_rate": "78%"
+    "correct_rate": "78%",
+    "keywords": ["肝内胆汁うっ滞", "中心静脈栄養", "術後合併症", "黄疸", "直接ビリルビン優位"]
   },
   {
     "exam_number": "115",
@@ -4476,7 +4335,9 @@
     "choice_d": "｢全例届出が必要なので保健所へ届け出ます｣",
     "choice_e": "｢解熱して元気が回復すれば登園して構いません｣",
     "answer": "d",
-    "correct_rate": "88%"
+    "correct_rate": "88%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD044.jpg"],
+    "keywords": ["A群溶血性レンサ球菌咽頭炎", "猩紅熱", "急性糸球体腎炎", "感染症法", "定点把握疾患"]
   },
   {
     "exam_number": "115",
@@ -4490,7 +4351,8 @@
     "choice_d": "オセルタミビル",
     "choice_e": "プレドニゾロン",
     "answer": "b",
-    "correct_rate": "70%"
+    "correct_rate": "70%",
+    "keywords": ["伝染性単核球症", "EBウイルス", "異型リンパ球", "肝脾腫", "対症療法"]
   },
   {
     "exam_number": "115",
@@ -4504,7 +4366,9 @@
     "choice_d": "心タンポナーデ",
     "choice_e": "大動脈弁狭窄症",
     "answer": "a",
-    "correct_rate": "93%"
+    "correct_rate": "93%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD046A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD046B.jpg"],
+    "keywords": ["肺高血圧症", "右心不全", "Ⅱ音亢進", "右室肥大", "頸静脈怒張"]
   },
   {
     "exam_number": "115",
@@ -4518,7 +4382,9 @@
     "choice_d": "腫脹部位の抗酸菌塗抹・培養検査を行う。",
     "choice_e": "結核菌特異的全血インターフェロンγ遊離測定法⁄IGRA§を行う。",
     "answer": "a",
-    "correct_rate": "56%"
+    "correct_rate": "56%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD047.jpg"],
+    "keywords": ["BCG接種", "BCG局所反応", "コッホ現象", "予防接種", "小児科"]
   },
   {
     "exam_number": "115",
@@ -4532,7 +4398,8 @@
     "choice_d": "環境制御装置を用いたナースコール",
     "choice_e": "文字盤使用によるコミュニケーション",
     "answer": "c",
-    "correct_rate": "75%"
+    "correct_rate": "75%",
+    "keywords": ["脳梗塞後遺症", "回復期リハビリテーション", "片麻痺", "失語症", "ADL"]
   },
   {
     "exam_number": "115",
@@ -4546,7 +4413,9 @@
     "choice_d": "潰瘍性大腸炎",
     "choice_e": "過敏性腸症候群",
     "answer": "d",
-    "correct_rate": "91%"
+    "correct_rate": "91%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD049.jpg"],
+    "keywords": ["潰瘍性大腸炎", "炎症性腸疾患", "粘血便", "直腸炎", "内視鏡所見"]
   },
   {
     "exam_number": "115",
@@ -4560,7 +4429,8 @@
     "choice_d": "腹腔動脈造影検査",
     "choice_e": "磁気共鳴胆管膵管撮影⁄MRCP§",
     "answer": "b",
-    "correct_rate": "97%"
+    "correct_rate": "97%",
+    "keywords": ["急性胆管炎", "急性胆嚢炎", "胆石症", "閉塞性黄疸", "腹部超音波検査"]
   },
   {
     "exam_number": "115",
@@ -4574,7 +4444,8 @@
     "choice_d": "療法開始後の旅行はできない。",
     "choice_e": "療法選択前に認知機能評価が必要である。",
     "answer": "a",
-    "correct_rate": "57%"
+    "correct_rate": "57%",
+    "keywords": ["腎代替療法", "慢性腎臓病", "腹膜透析", "腎移植", "高齢者医療"]
   },
   {
     "exam_number": "115",
@@ -4588,7 +4459,9 @@
     "choice_d": "体外衝撃波結石破砕術",
     "choice_e": "内視鏡的胆道ドレナージ",
     "answer": "e",
-    "correct_rate": "91%"
+    "correct_rate": "91%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD052A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD052B.jpg"],
+    "keywords": ["閉塞性黄疸", "急性胆管炎", "十二指腸乳頭部腫瘍", "膵頭部癌", "内視鏡的胆道ドレナージ"]
   },
   {
     "exam_number": "115",
@@ -4602,7 +4475,9 @@
     "choice_d": "足を上げて寝ることが勧められる。",
     "choice_e": "診断に食道pHモニタリングが必須である。",
     "answer": "b",
-    "correct_rate": "89%"
+    "correct_rate": "89%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD053.jpg"],
+    "keywords": ["逆流性食道炎", "GERD", "胸やけ", "酸分泌抑制薬", "生活習慣改善"]
   },
   {
     "exam_number": "115",
@@ -4616,7 +4491,8 @@
     "choice_d": "皮膚生検",
     "choice_e": "骨シンチグラフィ",
     "answer": "d",
-    "correct_rate": "70%"
+    "correct_rate": "70%",
+    "keywords": ["関節リウマチ", "リウマチ性血管炎", "血管炎", "皮膚生検", "補体低下"]
   },
   {
     "exam_number": "115",
@@ -4630,7 +4506,8 @@
     "choice_d": "Bartter症候群",
     "choice_e": "Sjögren症候群",
     "answer": "a",
-    "correct_rate": "87%"
+    "correct_rate": "87%",
+    "keywords": ["Fabry病", "アンギオケラトーマ", "X連鎖遺伝", "ライソゾーム病", "多臓器障害"]
   },
   {
     "exam_number": "115",
@@ -4644,7 +4521,9 @@
     "choice_d": "④",
     "choice_e": "⑤",
     "answer": "b",
-    "correct_rate": "69%"
+    "correct_rate": "69%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD056J01.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD056J02.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD056J03.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD056J04.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD056J05.jpg"],
+    "keywords": ["真珠腫性中耳炎", "伝音難聴", "鼓膜陥凹", "骨破壊", "鼻すすり癖"]
   },
   {
     "exam_number": "115",
@@ -4658,7 +4537,8 @@
     "choice_d": "Alzheimer型認知症",
     "choice_e": "精神作用物質使用による精神および行動の障害",
     "answer": "d",
-    "correct_rate": "33%"
+    "correct_rate": "33%",
+    "keywords": ["認知症鑑別", "仮性認知症", "うつ病", "慢性硬膜下血腫", "甲状腺機能低下症"]
   },
   {
     "exam_number": "115",
@@ -4672,7 +4552,9 @@
     "choice_d": "免疫チェックポイント阻害薬",
     "choice_e": "EGFRチロシンキナーゼ阻害薬",
     "answer": "b",
-    "correct_rate": "97%"
+    "correct_rate": "97%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD058A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD058B.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD058C.jpg"],
+    "keywords": ["抗ARS抗体症候群", "間質性肺炎", "自己免疫疾患", "副腎皮質ステロイド", "KL-6"]
   },
   {
     "exam_number": "115",
@@ -4686,7 +4568,8 @@
     "choice_d": "クラミジア感染症",
     "choice_e": "尖圭コンジローマ",
     "answer": "a",
-    "correct_rate": "94%"
+    "correct_rate": "94%",
+    "keywords": ["梅毒", "性感染症", "外陰潰瘍", "硬性下疳", "無痛性リンパ節腫脹"]
   },
   {
     "exam_number": "115",
@@ -4700,7 +4583,9 @@
     "choice_d": "疱疹状皮膚炎",
     "choice_e": "落葉状天疱瘡",
     "answer": "b",
-    "correct_rate": "90%"
+    "correct_rate": "90%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD060A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD060B.jpg"],
+    "keywords": ["尋常性天疱瘡", "自己免疫性水疱症", "棘融解", "表皮細胞間IgG沈着", "口腔粘膜病変"]
   },
   {
     "exam_number": "115",
@@ -4714,7 +4599,8 @@
     "choice_d": "微小変化型ネフローゼ症候群",
     "choice_e": "特発性半月体形成性糸球体腎炎",
     "answer": "b",
-    "correct_rate": "29%"
+    "correct_rate": "29%",
+    "keywords": ["膜性腎症", "蛋白尿", "ネフローゼ症候群", "慢性腎臓病", "糸球体腎炎"]
   },
   {
     "exam_number": "115",
@@ -4728,7 +4614,8 @@
     "choice_d": "胃",
     "choice_e": "十二指腸",
     "answer": "c",
-    "correct_rate": "88%"
+    "correct_rate": "88%",
+    "keywords": ["重複癌", "食道扁平上皮癌", "飲酒・喫煙", "ALDH2欠損", "フィールド癌化"]
   },
   {
     "exam_number": "115",
@@ -4742,7 +4629,9 @@
     "choice_d": "膜性増殖性糸球体腎炎",
     "choice_e": "微小変化型ネフローゼ症候群",
     "answer": "a",
-    "correct_rate": "97%"
+    "correct_rate": "97%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD063A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD063B.jpg"],
+    "keywords": ["ループス腎炎", "全身性エリテマトーデス", "ネフローゼ症候群", "免疫複合体腎炎"]
   },
   {
     "exam_number": "115",
@@ -4756,7 +4645,8 @@
     "choice_d": "50%程度",
     "choice_e": "ほぼ100%",
     "answer": "a",
-    "correct_rate": "85%"
+    "correct_rate": "85%",
+    "keywords": ["18トリソミー", "エドワーズ症候群", "非転座型トリソミー", "染色体非分離", "再発リスク"]
   },
   {
     "exam_number": "115",
@@ -4770,7 +4660,9 @@
     "choice_d": "Staphylococcus aureus",
     "choice_e": "Streptococcus pneumoniae",
     "answer": "e",
-    "correct_rate": "80%"
+    "correct_rate": "80%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD065A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD065B.jpg"],
+    "keywords": ["肺炎球菌", "市中肺炎", "グラム染色", "細菌性肺炎", "吸入ステロイド"]
   },
   {
     "exam_number": "115",
@@ -4784,7 +4676,9 @@
     "choice_d": "粘液性腺癌",
     "choice_e": "顆粒膜細胞腫",
     "answer": "e",
-    "correct_rate": "89%"
+    "correct_rate": "89%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD066.jpg"],
+    "keywords": ["顆粒膜細胞腫", "エストロゲン産生腫瘍", "閉経後性器出血", "Call-Exner body", "核溝"]
   },
   {
     "exam_number": "115",
@@ -4798,7 +4692,9 @@
     "choice_d": "心タンポナーデ",
     "choice_e": "発作性上室頻拍",
     "answer": "bc",
-    "correct_rate": "92%"
+    "correct_rate": "92%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD067A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD067B.jpg"],
+    "keywords": ["急性心筋梗塞", "心室中隔穿孔", "心原性ショック", "ST上昇型心筋梗塞", "心エコー"]
   },
   {
     "exam_number": "115",
@@ -4812,7 +4708,8 @@
     "choice_d": "腹部超音波検査",
     "choice_e": "腫瘍マーカー測定",
     "answer": "de",
-    "correct_rate": "65%"
+    "correct_rate": "65%",
+    "keywords": ["C型肝炎", "肝細胞癌", "サーベイランス", "腹部超音波検査", "腫瘍マーカー"]
   },
   {
     "exam_number": "115",
@@ -4826,7 +4723,8 @@
     "choice_d": "｢加熱式タバコはこのままでいいです｣",
     "choice_e": "｢お酒は完全にやめるほうがよいでしょう｣",
     "answer": "bc",
-    "correct_rate": "31%"
+    "correct_rate": "31%",
+    "keywords": ["非アルコール性脂肪性肝疾患", "脂肪肝", "肝機能異常", "メタボリックシンドローム", "肝炎ウイルス"]
   },
   {
     "exam_number": "115",
@@ -4840,7 +4738,8 @@
     "choice_d": "伝染性紅斑",
     "choice_e": "A群β溶連菌感染症",
     "answer": "bc",
-    "correct_rate": "46%"
+    "correct_rate": "46%",
+    "keywords": ["先天性風疹症候群", "先天梅毒", "血小板減少", "動脈管開存症", "IgM高値"]
   },
   {
     "exam_number": "115",
@@ -4854,7 +4753,8 @@
     "choice_d": "広域セフェム系抗菌薬",
     "choice_e": "副腎皮質ステロイド薬",
     "answer": "bd",
-    "correct_rate": "27%"
+    "correct_rate": "27%",
+    "keywords": ["ワルファリン", "PT-INR", "ビタミンK", "薬物相互作用", "抗菌薬"]
   },
   {
     "exam_number": "115",
@@ -4868,7 +4768,8 @@
     "choice_d": "HBs抗体",
     "choice_e": "HBc-IgM抗体",
     "answer": "ad",
-    "correct_rate": "76%"
+    "correct_rate": "76%",
+    "keywords": ["びまん性大細胞型B細胞リンパ腫", "B型肝炎ウイルス再活性化", "リツキシマブ", "HBVスクリーニング", "免疫抑制療法"]
   },
   {
     "exam_number": "115",
@@ -4882,7 +4783,9 @@
     "choice_d": "抗アンドロゲン薬服薬",
     "choice_e": "動物性タンパク質の摂取",
     "answer": "ab",
-    "correct_rate": "45%"
+    "correct_rate": "45%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD073A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD073B.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KD073C.jpg"],
+    "keywords": ["尿路結石", "腎結石", "尿管結石", "再発予防", "食事療法"]
   },
   {
     "exam_number": "115",
@@ -4896,7 +4799,8 @@
     "choice_d": "カプセル内視鏡",
     "choice_e": "腹部血管造影検査",
     "answer": "bd",
-    "correct_rate": "72%"
+    "correct_rate": "72%",
+    "keywords": ["消化管出血", "原因不明の消化管出血 (OGIB)", "小腸出血", "カプセル内視鏡", "腹部造影CT"]
   },
   {
     "exam_number": "115",
@@ -4910,7 +4814,8 @@
     "choice_d": "20%ブドウ糖含有電解質輸液 1,500mL/日 なし なし",
     "choice_e": "%ブドウ糖含有電解質輸液 1,500mL/日 加える 加える ｆ %ブドウ糖含有電解質輸液 1,500mL/日 加える なし ｇ %ブドウ糖含有電解質輸液 1,500mL/日 なし 加える ｈ %ブドウ糖含有電解質輸液 1,500mL/日 なし なし",
     "answer": "e",
-    "correct_rate": "28%"
+    "correct_rate": "28%",
+    "keywords": ["リフィーディング症候群", "低リン血症", "アルコール性肝疾患", "栄養管理", "チアミン"]
   },
   {
     "exam_number": "115",
@@ -4924,7 +4829,8 @@
     "choice_d": "退院に向けた支援計画",
     "choice_e": "入院中に計画される検査",
     "answer": "b",
-    "correct_rate": "95%"
+    "correct_rate": "95%",
+    "keywords": ["入院診療計画書", "医療法", "インフォームド・コンセント", "患者の権利"]
   },
   {
     "exam_number": "115",
@@ -4938,7 +4844,9 @@
     "choice_d": "体格指数",
     "choice_e": "平均血圧",
     "answer": "c",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KE002.jpg"],
+    "keywords": ["慢性腎臓病", "CKD", "重症度分類", "eGFR", "蛋白尿"]
   },
   {
     "exam_number": "115",
@@ -4952,7 +4860,8 @@
     "choice_d": "施用・交付時に診療録に必要事項を記載する。",
     "choice_e": "施用・交付には麻薬施用者免許が必要である。",
     "answer": "b",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["麻薬及び向精神薬取締法", "麻薬管理", "麻薬施用者免許", "麻薬廃棄"]
   },
   {
     "exam_number": "115",
@@ -4966,7 +4875,8 @@
     "choice_d": "明日から食後のジョギングを始めるつもりでいる。",
     "choice_e": "半年後にくる誕生日から間食を減らそうと思っている。",
     "answer": "d",
-    "correct_rate": "97%"
+    "correct_rate": "97%",
+    "keywords": ["行動変容ステージモデル", "健康行動", "高血圧症", "肥満", "動機づけ面接"]
   },
   {
     "exam_number": "115",
@@ -4980,7 +4890,8 @@
     "choice_d": "医師の過失責任を回避する目的で行う。",
     "choice_e": "最新の治療法を推奨しなければならない。",
     "answer": "b",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["インフォームド・コンセント", "患者の自己決定権", "医療倫理", "説明義務"]
   },
   {
     "exam_number": "115",
@@ -4994,7 +4905,8 @@
     "choice_d": "細い刺針の方が刺後頭痛のリスクが高い。",
     "choice_e": "側臥位で両膝を両手で抱え首を前屈した体位をとらせる。",
     "answer": "e",
-    "correct_rate": "91%"
+    "correct_rate": "91%",
+    "keywords": ["腰椎穿刺", "脳脊髄液", "脳ヘルニア", "穿刺後頭痛", "体位"]
   },
   {
     "exam_number": "115",
@@ -5008,7 +4920,8 @@
     "choice_d": "適正診療",
     "choice_e": "臨床医学",
     "answer": "a",
-    "correct_rate": "91%"
+    "correct_rate": "91%",
+    "keywords": ["医師法", "公衆衛生", "保健指導", "国民の健康", "医療法規"]
   },
   {
     "exam_number": "115",
@@ -5022,7 +4935,8 @@
     "choice_d": "治験参加への同意書が未取得の段階で治験用の降圧薬を使用した。",
     "choice_e": "輸血開始時までに血液型が判明しなかったためO型Rh:安<の赤血球輸血を 行った。",
     "answer": "d",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "keywords": ["救急医療", "インフォームド・コンセント", "医療倫理", "出血性ショック", "緊急輸血"]
   },
   {
     "exam_number": "115",
@@ -5036,7 +4950,8 @@
     "choice_d": "大動脈径",
     "choice_e": "体腔内出血",
     "answer": "e",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["FAST", "外傷初期診療", "体腔内出血", "超音波検査", "救急医療"]
   },
   {
     "exam_number": "115",
@@ -5050,7 +4965,8 @@
     "choice_d": "頭位変換時に眼振を示す。",
     "choice_e": "浮遊耳石は半規管由来である。",
     "answer": "d",
-    "correct_rate": "94%"
+    "correct_rate": "94%",
+    "keywords": ["良性発作性頭位めまい症", "めまい", "眼振", "耳石", "Dix-Hallpike"]
   },
   {
     "exam_number": "115",
@@ -5064,7 +4980,8 @@
     "choice_d": "採取後の血液は好気ボトル、嫌気ボトルの順に入れる。",
     "choice_e": "ボトルに検体を注入後、ボトル内の培地と血液を転倒混和する。",
     "answer": "e",
-    "correct_rate": "96%"
+    "correct_rate": "96%",
+    "keywords": ["血液培養", "検体採取", "敗血症", "菌血症", "感染症診断"]
   },
   {
     "exam_number": "115",
@@ -5078,7 +4995,8 @@
     "choice_d": "膝関節",
     "choice_e": "足関節",
     "answer": "a",
-    "correct_rate": "84%"
+    "correct_rate": "84%",
+    "keywords": ["肩関節", "関節可動域", "内旋", "外旋", "球関節"]
   },
   {
     "exam_number": "115",
@@ -5092,7 +5010,8 @@
     "choice_d": "中枢性尿崩症",
     "choice_e": "低カリウム血症",
     "answer": "a",
-    "correct_rate": "97%"
+    "correct_rate": "97%",
+    "keywords": ["浸透圧利尿", "高血糖", "糖尿病", "多尿", "抗利尿ホルモン"]
   },
   {
     "exam_number": "115",
@@ -5106,7 +5025,8 @@
     "choice_d": "脊髄損傷",
     "choice_e": "脳梗塞",
     "answer": "a",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["末梢神経伝導検査", "肘部管症候群", "末梢神経障害", "絞扼性神経障害", "神経筋疾患"]
   },
   {
     "exam_number": "115",
@@ -5120,7 +5040,8 @@
     "choice_d": "ペスト",
     "choice_e": "発疹チフス",
     "answer": "d",
-    "correct_rate": "92%"
+    "correct_rate": "92%",
+    "keywords": ["ペスト", "黒死病", "パンデミック", "Yersinia pestis", "歴史的感染症"]
   },
   {
     "exam_number": "115",
@@ -5134,7 +5055,8 @@
     "choice_d": "超音波内視鏡検査",
     "choice_e": "磁気共鳴胆管膵管撮影MRCP",
     "answer": "e",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["ペースメーカー", "MRI", "MRCP", "電磁干渉", "医療機器安全"]
   },
   {
     "exam_number": "115",
@@ -5148,7 +5070,8 @@
     "choice_d": "交絡因子は原因と結果の両方に関連する。",
     "choice_e": "情報バイアスは統計的手法で調整できる。",
     "answer": "e",
-    "correct_rate": "58%"
+    "correct_rate": "58%",
+    "keywords": ["臨床研究", "バイアス", "交絡", "疫学", "研究デザイン"]
   },
   {
     "exam_number": "115",
@@ -5162,7 +5085,8 @@
     "choice_d": "簡単な計算でも間違った答えを言う。",
     "choice_e": "自殺せよという命令がテレパシーで頭に入ってくる。",
     "answer": "a",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "keywords": ["うつ病", "抑うつ症状", "精神疾患", "DSM-5"]
   },
   {
     "exam_number": "115",
@@ -5176,7 +5100,8 @@
     "choice_d": "危険予知トレーニング",
     "choice_e": "指さし呼称確認",
     "answer": "c",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["医療安全", "ヒューマンエラー", "エラー防止策", "システム思考", "リスクマネジメント"]
   },
   {
     "exam_number": "115",
@@ -5190,7 +5115,8 @@
     "choice_d": "Lactate 20mEq/L",
     "choice_e": "Glucose 20%",
     "answer": "e",
-    "correct_rate": "95%"
+    "correct_rate": "95%",
+    "keywords": ["PICC", "中心静脈カテーテル", "高浸透圧液", "静脈炎", "輸液療法"]
   },
   {
     "exam_number": "115",
@@ -5204,7 +5130,8 @@
     "choice_d": "食道裂孔ヘルニア",
     "choice_e": "腹壁瘢痕ヘルニア",
     "answer": "d",
-    "correct_rate": "88%"
+    "correct_rate": "88%",
+    "keywords": ["内ヘルニア", "食道裂孔ヘルニア", "外ヘルニア", "横隔膜"]
   },
   {
     "exam_number": "115",
@@ -5218,7 +5145,8 @@
     "choice_d": "目標とするBMIは18〜20の範囲である。",
     "choice_e": "エネルギーと栄養素の摂取量の基準を示すものである。",
     "answer": "e",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "keywords": ["日本人の食事摂取基準", "栄養素摂取基準", "BMI", "生活習慣病予防", "公衆衛生"]
   },
   {
     "exam_number": "115",
@@ -5232,7 +5160,8 @@
     "choice_d": "Parkinson病",
     "choice_e": "間質性膀胱炎",
     "answer": "a",
-    "correct_rate": "86%"
+    "correct_rate": "86%",
+    "keywords": ["蓄尿症状", "神経因性膀胱", "過活動膀胱", "間質性膀胱炎", "腎結石"]
   },
   {
     "exam_number": "115",
@@ -5246,7 +5175,8 @@
     "choice_d": "非結核性抗酸菌症",
     "choice_e": "マイコプラズマ肺炎",
     "answer": "c",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["急性好酸球性肺炎", "喫煙", "肺疾患", "好酸球", "ステロイド治療"]
   },
   {
     "exam_number": "115",
@@ -5260,7 +5190,9 @@
     "choice_d": "④",
     "choice_e": "⑤",
     "answer": "c",
-    "correct_rate": "95%"
+    "correct_rate": "95%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KE025.png"],
+    "keywords": ["動眼神経麻痺", "外眼筋", "眼球運動", "眼瞼下垂", "散瞳"]
   },
   {
     "exam_number": "115",
@@ -5274,7 +5206,8 @@
     "choice_d": "本人の意思",
     "choice_e": "受け入れ施設の状況",
     "answer": "d",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "keywords": ["自己決定権", "アドバンス・ディレクティブ", "医療倫理", "終末期医療", "胃瘻造設"]
   },
   {
     "exam_number": "115",
@@ -5288,7 +5221,8 @@
     "choice_d": "トリコモナス腟炎",
     "choice_e": "クラミジア子宮頸管炎",
     "answer": "d",
-    "correct_rate": "93%"
+    "correct_rate": "93%",
+    "keywords": ["トリコモナス腟炎", "帯下", "外陰部瘙痒", "性感染症", "黄色泡沫状帯下"]
   },
   {
     "exam_number": "115",
@@ -5302,7 +5236,8 @@
     "choice_d": "｢診療録には、当初の指示どおり10単位混注したと記載してください｣",
     "choice_e": "｢患者さんに聞かれたら意識障害の原因は不明と答えることにしましょう｣",
     "answer": "a",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["医療安全", "医療事故", "インシデント・アクシデント報告", "低血糖", "医療倫理"]
   },
   {
     "exam_number": "115",
@@ -5316,7 +5251,8 @@
     "choice_d": "｢お辛いのによく話してくださいました｣",
     "choice_e": "｢大したことではないので早く忘れた方がいいです｣",
     "answer": "e",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["性暴力被害", "危機介入", "患者中心の医療", "共感的コミュニケーション"]
   },
   {
     "exam_number": "115",
@@ -5330,7 +5266,8 @@
     "choice_d": "採血行為による侵襲の程度は倫理審査委員会で判断する。",
     "choice_e": "保護者が同意しなくても当人が同意すれば研究参加は可能である。",
     "answer": "e",
-    "correct_rate": "77%"
+    "correct_rate": "77%",
+    "keywords": ["インフォームド・コンセント", "インフォームド・アセント", "倫理審査委員会", "未成年者の研究参加", "臨床研究"]
   },
   {
     "exam_number": "115",
@@ -5344,7 +5281,8 @@
     "choice_d": "意識レベルが短時間で変動する。",
     "choice_e": "ベンゾジアゼピン系薬剤が有効である。",
     "answer": "e",
-    "correct_rate": "95%"
+    "correct_rate": "95%",
+    "keywords": ["せん妄", "術後合併症", "高齢者医療", "意識障害", "精神症状"]
   },
   {
     "exam_number": "115",
@@ -5358,7 +5296,8 @@
     "choice_d": "薬剤師 内服薬の剤型検討",
     "choice_e": "理学療法士 呼吸リハビリテーション",
     "answer": "a",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["誤嚥性肺炎", "多職種連携", "医療チーム", "職種役割"]
   },
   {
     "exam_number": "115",
@@ -5372,7 +5311,9 @@
     "choice_d": "徒手整復",
     "choice_e": "抗菌薬投与",
     "answer": "c",
-    "correct_rate": "93%"
+    "correct_rate": "93%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KE033A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KE033B.jpg"],
+    "keywords": ["嵌頓鼠径ヘルニア", "乳児外科疾患", "腸閉塞", "緊急手術"]
   },
   {
     "exam_number": "115",
@@ -5386,7 +5327,8 @@
     "choice_d": "インスリン投与",
     "choice_e": "経口血糖降下薬投与",
     "answer": "c",
-    "correct_rate": "86%"
+    "correct_rate": "86%",
+    "keywords": ["妊娠糖尿病", "75g経口ブドウ糖負荷試験", "食事療法", "インスリン療法", "妊婦健診"]
   },
   {
     "exam_number": "115",
@@ -5400,7 +5342,8 @@
     "choice_d": "右母趾背屈筋力の低下",
     "choice_e": "右下肢伸展挙上テスト陽性",
     "answer": "b",
-    "correct_rate": "61%"
+    "correct_rate": "61%",
+    "keywords": ["腰椎椎間板ヘルニア", "L5神経根症", "馬尾症候群", "坐骨神経痛", "神経学的診察"]
   },
   {
     "exam_number": "115",
@@ -5414,7 +5357,9 @@
     "choice_d": "心筋トロポニンT",
     "choice_e": "脳性ナトリウム利尿ペプチドBNP",
     "answer": "d",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KE036.jpg"],
+    "keywords": ["急性冠症候群", "心筋梗塞", "心筋トロポニン", "胸痛", "心電図"]
   },
   {
     "exam_number": "115",
@@ -5428,7 +5373,8 @@
     "choice_d": "Goodpasture症候群",
     "choice_e": "好酸球性多発血管炎性肉芽腫症Churg-Strauss症候群",
     "answer": "c",
-    "correct_rate": "73%"
+    "correct_rate": "73%",
+    "keywords": ["急性気管支炎", "血痰", "咳嗽", "呼吸器感染症", "事前確率"]
   },
   {
     "exam_number": "115",
@@ -5442,7 +5388,8 @@
     "choice_d": "吸入酸素濃度増加",
     "choice_e": "バッグバルブマスク換気",
     "answer": "e",
-    "correct_rate": "90%"
+    "correct_rate": "90%",
+    "keywords": ["小児蘇生", "低酸素性徐脈", "呼吸不全", "バッグバルブマスク換気"]
   },
   {
     "exam_number": "115",
@@ -5456,7 +5403,8 @@
     "choice_d": "下肢麻痺",
     "choice_e": "呼吸困難",
     "answer": "c",
-    "correct_rate": "92%"
+    "correct_rate": "92%",
+    "keywords": ["緩和ケア", "オピオイド副作用", "癌性疼痛", "脊髄圧迫症候群", "転移性癌"]
   },
   {
     "exam_number": "115",
@@ -5470,7 +5418,8 @@
     "choice_d": "副腎皮質ステロイド",
     "choice_e": "t-PAtissue plasminogen activator 次の文を読み、41、42の問いに答えよ。 75歳の男性。呼吸困難を主訴に受診した。 現病歴 ： 日前に飛行機で泊日の旅行をし、日前に帰宅した。機内では約 時間座っていた。帰宅した翌日に右下肢のむくみと痛みが出現した。受診日の朝 起床後に急に労作時の息切れが出現したため、受診した。受診時、呼吸困難を訴え ている。 既往歴 ： 60歳時に進行胃癌で胃全摘を受けた。術後年間再発なく、通院終了 となった。70歳から高血圧症、糖尿病に対し、降圧薬、経口血糖降下薬を内服中。 アレルギー歴 ： 特記すべきことはない。 生活歴 ： 喫煙は40本/日を40年間、15年前に禁煙。飲酒は日本酒合を週 回。妻と人暮らし。偏食はない。 家族歴 ： 特記すべきことはない。 現 症 ： 意識は清明。身長162cm、体重60kg。体温36.1℃。脈拍112/分、 整。血圧90/55mmHg、左右差はない。呼吸数28/分。SpO 91%:room air<。眼 2 瞼結膜は貧血様で、眼球結膜に黄染を認めない。口腔内と咽頭に異常を認めない。 頸静脈怒張を認める。甲状腺と頸部リンパ節を触知しない。心音と呼吸音とに異常 を認めない。腹部は平坦、軟で、正中に手術痕を認める。右下Uは腫脹しており、 圧痕性浮腫、熱感および発赤を認める。両側足背動脈は触知良好である。 検査所見 ： 尿所見：蛋白:安<、糖:安<、ケトン体:安<、潜血:安<。血液所見：赤 血球250万、Hb8.4g/dL、Ht33%、MCV132fL、白血球10,200:好中球80%、 好酸球%、好塩基球%、単球%、リンパ球16%、好中球の核過分葉を認め る<、血小板10万、PT-INR1.0:基準0.9〜1.1<、APTT31.6秒:基準対照32.2<、 Dダイマー2.3μg/mL:基準1.0以下<。血液生化学所見：総ビリルビン1.0 mg/dL、AST21U/L、ALT9U/L、LD306U/L :基 準120〜245<、ALP187U/L :基準115〜359<、CK60U/L:基準30〜140<、尿素窒素11mg/dL、クレアチニン 0.6mg/dL、血糖114mg/dL、HbA1c6.9%:基準4.6〜6.2<、Na140mEq/L、K 4.1mEq/L、Cl105mEq/L、Ca8.4mg/dL。CRP2.9mg/dL。 心電図:",
     "answer": "e",
-    "correct_rate": "89%"
+    "correct_rate": "89%",
+    "keywords": ["急性期脳梗塞", "t-PA", "拡散強調画像", "血栓溶解療法", "治療時間窓"]
   },
   {
     "exam_number": "115",
@@ -5484,7 +5433,8 @@
     "choice_d": "大動脈解離",
     "choice_e": "肺血栓塞栓症",
     "answer": "e",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KE041A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KE041B.jpg"]
   },
   {
     "exam_number": "115",
@@ -5498,7 +5448,9 @@
     "choice_d": "Romberg徴候陽性",
     "choice_e": "Chvostek徴候陽性 次の文を読み、43、44の問いに答えよ。 84歳男性。発熱と左側胸部痛を主訴に来院した。 現病歴 ： 日前から咽頭痛と37℃前後の微熱があり、市販の感冒薬を内服した が発熱は持続していた。日前から徐々に左側胸部の持続性の痛が出現した。痛 みは呼吸に伴い増悪する。今朝になって、左側胸部痛が強くなっており心配になっ て受診した。冷汗や意識消失はない。 既往歴 ： 徐脈性心房細動、Ⅱ度の僧帽弁閉鎖不全、心不全、高血圧症で、抗血栓 薬とアンジオテンシン変換酵素ACE阻害薬、利尿薬を内服中である。年前に 徐脈性心房細動に対し、ペースメーカー植込み術を受けた。 家族歴 ： 父が85歳時に脳出血で死亡。母が80歳時に胃癌で死亡。 現 症 ： 意識は清明。身長158cm、体重56kg。体温37.6℃。脈拍60/分、整。 血圧120/80mmHg。呼吸数18/分。SpO 98%:room air<。 2 左下胸部に、打診で濁音、聴診で呼吸音の減弱および胸膜摩擦音を認める。胸部 に圧痛を認めない。心音は、Ⅲ音と心尖部を最強とするLevine/の全収縮期雑 音を聴取する。 心電図:",
     "answer": "d",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KE041A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KE041B.jpg"],
+    "keywords": ["ビタミンB12欠乏症", "巨赤芽球性貧血", "亜急性連合性脊髄変性症", "Romberg徴候", "胃全摘後"]
   },
   {
     "exam_number": "115",
@@ -5512,7 +5464,9 @@
     "choice_d": "完全右脚ブロック",
     "choice_e": "完全房室ブロック 検査結果を示す。 検査所見 ： 尿所見：蛋白:安<、糖:安<。血液所見：赤血球450万、Hb13.3 g/dL、Ht40%、白血球9,800:桿状核好中球%、分葉核好中球58%、好酸球 %、好塩基球%、単球%、リンパ球28%<、血小板18万。血液生化学所見： AST36U/L、ALT38U/L、LD263U/L :基 準120〜245<、CK88U/L :基 準 30〜140<、尿素窒素12mg/dL、クレアチニン0.8mg/dL。CRP8.2mg/dL。",
     "answer": "c",
-    "correct_rate": "80%"
+    "correct_rate": "80%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KE043A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KE043B.jpg"],
+    "keywords": ["心室ペーシング", "ペースメーカー", "心電図", "徐脈性心房細動", "胸部X線"]
   },
   {
     "exam_number": "115",
@@ -5526,7 +5480,9 @@
     "choice_d": "肺血栓塞栓症",
     "choice_e": "ウイルス性心筋炎 次の文を読み、45、46の問いに答えよ。 28歳の女性。意識障害のため救急車で搬入された。 現病歴 ： 自室内のベッドで仰向けに倒れているのを友人が発見し、呼びかけに反 応が乏しいため救急車を要請した。友人とはその時間前に電話にて口論となり ｢死にたい｣などと話した後に連絡が取れなくなったという。救急車到着時、自室内 の戸棚に錠剤の空包が多数あった。 既往歴 ： うつ病の診断でか月前から三環系抗うつ薬とベンゾジアゼピン系睡眠 薬を服用中。か月前にも過量服薬による意識障害で他院に緊急入院している。 生活歴 ： 喫煙歴と飲酒歴はない。仕事は事務職で半年前に部署が変わり、ストレ スが多いと感じていたという。 家族歴 ： 特記すべきことはない。 現 症 ： 意識レベルはJCSⅢ-100。身長158cm、体重45kg。体温36.7℃。心 拍数108/分、整。血圧108/60mmHg。呼吸数24/分。SpO 91%:リザーバー付マ 2 スク10L/分酸素投与下<。舌根沈下が強く、いびき様の呼吸をしている。皮膚は やや乾燥している。眼瞼結膜と眼球結膜とに異常を認めない。瞳孔径は両側6.0 mm正円で、対光反射は両側で遅延している。頸静脈の怒張は認めない。甲状腺腫 と頸部リンパ節とを触知しない。心音に異常を認めない。腹部は平坦、軟で、肝・ 脾を触知しない。腸雑音はやや弱い。四肢に麻痺はなく、腱反射は正常である。心 電図は洞調律で不整はないが、QRS幅が広がりQT間隔の延長を認める。ST-T 変化は認めない。",
     "answer": "b",
-    "correct_rate": "95%"
+    "correct_rate": "95%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KE043A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KE043B.jpg"],
+    "keywords": ["胸膜炎", "胸膜摩擦音", "胸膜性胸痛", "呼吸器感染症", "胸水"]
   },
   {
     "exam_number": "115",
@@ -5540,7 +5496,8 @@
     "choice_d": "フロセミド静注",
     "choice_e": "プレドニゾロン静注",
     "answer": "b",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["過量服薬", "中毒", "三環系抗うつ薬", "気道確保", "意識障害"]
   },
   {
     "exam_number": "115",
@@ -5554,7 +5511,8 @@
     "choice_d": "聴診によるcoarse cracklesの聴取",
     "choice_e": "聴診による呼吸音の減弱 次の文を読み、47、48の問いに答えよ。 75歳の男性。発熱、腹痛および下痢のため救急車で搬入された。 現病歴 ： 10日前から左下U蜂窩織炎のために入院して抗菌薬の点滴を行い、改 善したため抗菌薬を内服投与に切り替えて日前に退院した。日前から発熱、腹 痛および日回以上の水様下痢が出現した。経口摂取と体動が困難となったため 同居する妻が救急車を要請した。退院後に食中毒の原因となり得る食物の摂取歴は ない。周囲に同じ症状の人はいない。 既往歴 ： 50歳台から高血圧症で降圧薬を服用中である。66歳時に型糖尿病と 診断され年前からインスリン治療を行っている。 生活歴 ： 妻と人暮らし。喫煙歴はない。飲酒は機会飲酒。 家族歴 ： 兄が糖尿病で治療中である。 現 症 ： 意識は清明。身長168cm、体重73kg。体温38.6℃。心拍数120/分、 整。血圧136/70mmHg。呼吸数20/分。SpO 96%:room air<。皮膚のツルゴール 2 は低下している。眼瞼結膜と眼球結膜とに異常は認めない。口腔内は乾燥してい る。心音と呼吸音とに異常を認めない。腹部は平坦、軟で肝・脾を触知しない。下 腹部に圧痛があるが反跳痛はない。腸雑音は亢進している。四肢は下Uに発赤や熱 感を認めない。 検査所見 ： 血液所見：赤血球490万、Hb14.3g/dL、Ht42%、白血球18,200 :好中球84%、好酸球%、単球%、リンパ球12%<、血小板20万、血液生化学 所見：総蛋白6.2g/dL、アルブミン3.8g/dL、総ビリルビン0.4mg/dL、AST 30U/L、ALT38U/L、尿素窒素40mg/dL、クレアチニン1.8mg/dL、尿酸9.6 mg/dL、血糖158mg/dL。CRP4.3mg/dL。",
     "answer": "b",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "keywords": ["誤嚥性肺炎", "身体診察", "意識障害", "薬物過量服薬", "呼吸器症状"]
   },
   {
     "exam_number": "115",
@@ -5568,7 +5526,8 @@
     "choice_d": "便検体採取時のサージカルマスクの着用",
     "choice_e": "診察後の次亜塩素酸ナトリウムによる手指衛生",
     "answer": "e",
-    "correct_rate": "86%"
+    "correct_rate": "86%",
+    "keywords": ["Clostridioides difficile感染症", "偽膜性大腸炎", "抗菌薬関連下痢症", "接触感染対策", "手指衛生"]
   },
   {
     "exam_number": "115",
@@ -5582,7 +5541,8 @@
     "choice_d": "毒素検出",
     "choice_e": "培 養 次の文を読み、49、50の問いに答えよ。 68歳の男性。ふらつき感を主訴に来院した。 現病歴 ： 本日起床時から、頭がふらふらする感じを自覚したため受診した。 既往歴 ： 年前に自宅近くの診療所で糖尿病と診断されたが、その後通院してい ない。 生活歴 ： 長男夫婦と同居している。偏食が激しく、近所で買って来た菓子などで 不規則な食事をし、しばしば居酒屋で大量飲酒している。 現 症 ： 意識は清明。身長165cm、体重70kg。体温36.2℃。脈拍104/分、 整。血圧104/64mmHg。呼吸数20/分。眼瞼結膜と眼球結膜とに異常を認めない。 眼振を認めない。心音と呼吸音とに異常を認めない。腹部は平坦、軟で、肝・脾を 触知しない。四肢の筋力低下を認めず、四肢・体幹の運動失調を認めない。起立と 歩行に異常を認めないが両側アキレス腱の腱反射が消失している。 検査所見 ： 来院時、簡易血糖測定器で測定した血糖は350mg/dLであった。",
     "answer": "d",
-    "correct_rate": "72%"
+    "correct_rate": "72%",
+    "keywords": ["Clostridioides difficile感染症", "抗菌薬関連下痢症", "偽膜性大腸炎", "腸炎", "毒素検出"]
   },
   {
     "exam_number": "115",
@@ -5596,7 +5556,8 @@
     "choice_d": "｢糖尿病についてどのようにご理解されていますか｣",
     "choice_e": "｢医師の言うことを守れないのであれば通院する必要はありません｣",
     "answer": "d",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["糖尿病", "医師患者関係", "患者教育", "コミュニケーションスキル", "共有意思決定"]
   },
   {
     "exam_number": "115",
@@ -5624,7 +5585,8 @@
     "choice_d": "カルシウム 貧 血",
     "choice_e": "亜 鉛 夜 盲",
     "answer": "c",
-    "correct_rate": "92%"
+    "correct_rate": "92%",
+    "keywords": ["ビタミンC欠乏症", "壊血病", "出血傾向", "栄養素欠乏症", "コラーゲン合成"]
   },
   {
     "exam_number": "115",
@@ -5638,7 +5600,9 @@
     "choice_d": "④",
     "choice_e": "⑤",
     "answer": "d",
-    "correct_rate": "73%"
+    "correct_rate": "73%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF002J01.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF002J02.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF002J03.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF002J04.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF002J05.jpg"],
+    "keywords": ["個人防護具", "PPE", "感染制御", "放射線防護具", "医療安全"]
   },
   {
     "exam_number": "115",
@@ -5652,7 +5616,8 @@
     "choice_d": "できるだけ多くの研究を選択して出版バイアスを防止する。",
     "choice_e": "対象者をプールすることでデータを統合して再解析する研究である。",
     "answer": "c",
-    "correct_rate": "66%"
+    "correct_rate": "66%",
+    "keywords": ["メタ分析", "系統的レビュー", "エビデンスレベル", "統計的統合", "出版バイアス"]
   },
   {
     "exam_number": "115",
@@ -5666,7 +5631,8 @@
     "choice_d": "的はずれの応答が多い。",
     "choice_e": "左右対象であることにこだわる。",
     "answer": "c",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "keywords": ["ADHD", "自閉症スペクトラム障害", "不注意", "神経発達症", "鑑別診断"]
   },
   {
     "exam_number": "115",
@@ -5680,7 +5646,8 @@
     "choice_d": "胎児貧血",
     "choice_e": "母体発熱",
     "answer": "a",
-    "correct_rate": "33%"
+    "correct_rate": "33%",
+    "keywords": ["胎児心拍数陣痛図", "遅発一過性徐脈", "子宮胎盤機能不全", "過強陣痛", "胎児仮死"]
   },
   {
     "exam_number": "115",
@@ -5694,7 +5661,8 @@
     "choice_d": "ジアゼパム",
     "choice_e": "メタンフェタミン",
     "answer": "e",
-    "correct_rate": "67%"
+    "correct_rate": "67%",
+    "keywords": ["メタンフェタミン", "覚醒剤精神病", "逆耐性現象", "薬物乱用", "精神病症状"]
   },
   {
     "exam_number": "115",
@@ -5708,7 +5676,8 @@
     "choice_d": "82",
     "choice_e": "107",
     "answer": "c",
-    "correct_rate": "79%"
+    "correct_rate": "79%",
+    "keywords": ["呼吸機能検査", "1秒率 (FEV1%)", "1秒量 (FEV1)", "努力性肺活量 (FVC)", "閉塞性換気障害"]
   },
   {
     "exam_number": "115",
@@ -5722,7 +5691,8 @@
     "choice_d": "がん登録推進法",
     "choice_e": "高齢者医療確保法",
     "answer": "a",
-    "correct_rate": "56%"
+    "correct_rate": "56%",
+    "keywords": ["健康増進法", "がん検診", "公衆衛生", "がん対策基本法", "予防医学"]
   },
   {
     "exam_number": "115",
@@ -5736,7 +5706,8 @@
     "choice_d": "65歳以上の者のみの世帯は全世帯の過半数を占める。",
     "choice_e": "核家族世帯の中ではひとり親と未婚の子のみの世帯が最も多い。",
     "answer": "a",
-    "correct_rate": "59%"
+    "correct_rate": "59%",
+    "keywords": ["世帯構成", "単独世帯", "核家族世帯", "高齢者世帯", "人口統計"]
   },
   {
     "exam_number": "115",
@@ -5750,7 +5721,8 @@
     "choice_d": "糖尿病性ケトアシドーシスにおけるインスリン 皮下注射",
     "choice_e": "熱性けいれんにおけるジアゼパム 皮下注射",
     "answer": "a",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["アナフィラキシーショック", "アドレナリン", "薬剤投与経路", "救急処置", "高血圧緊急症"]
   },
   {
     "exam_number": "115",
@@ -5764,7 +5736,8 @@
     "choice_d": "おたふくかぜワクチン",
     "choice_e": "ヒトパピローマウイルス˝HPVワクチン",
     "answer": "d",
-    "correct_rate": "66%"
+    "correct_rate": "66%",
+    "keywords": ["予防接種法", "定期接種", "任意接種", "おたふくかぜワクチン"]
   },
   {
     "exam_number": "115",
@@ -5778,7 +5751,8 @@
     "choice_d": "72",
     "choice_e": "78",
     "answer": "c",
-    "correct_rate": "79%"
+    "correct_rate": "79%",
+    "keywords": ["クレアチニンクリアランス", "腎機能評価", "糸球体濾過量", "計算問題"]
   },
   {
     "exam_number": "115",
@@ -5792,7 +5766,8 @@
     "choice_d": "国民はいずれかの医療保険に加入する。",
     "choice_e": "小学校就学前の自己負担は割である。",
     "answer": "a",
-    "correct_rate": "97%"
+    "correct_rate": "97%",
+    "keywords": ["公的医療保険", "国民皆保険", "現物給付", "現金給付", "自己負担割合"]
   },
   {
     "exam_number": "115",
@@ -5806,7 +5781,8 @@
     "choice_d": "硝子円柱",
     "choice_e": "平上皮",
     "answer": "c",
-    "correct_rate": "78%"
+    "correct_rate": "78%",
+    "keywords": ["尿沈渣", "顆粒円柱", "腎疾患", "尿検査", "腎炎"]
   },
   {
     "exam_number": "115",
@@ -5820,7 +5796,8 @@
     "choice_d": "36〜42時間",
     "choice_e": "48時間以上",
     "answer": "b",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["死後経過時間推定", "死斑", "死後硬直", "体温低下", "角膜混濁"]
   },
   {
     "exam_number": "115",
@@ -5834,7 +5811,8 @@
     "choice_d": "子宮頸癌 EBウイルス",
     "choice_e": "中咽頭癌 ヒトパピローマウイルス˝HPV",
     "answer": "e",
-    "correct_rate": "96%"
+    "correct_rate": "96%",
+    "keywords": ["悪性腫瘍", "リスクファクター", "ヒトパピローマウイルス", "中咽頭癌", "子宮頸癌"]
   },
   {
     "exam_number": "115",
@@ -5848,7 +5826,9 @@
     "choice_d": "右心室",
     "choice_e": "左心室",
     "answer": "d",
-    "correct_rate": "91%"
+    "correct_rate": "91%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF017.jpg"],
+    "keywords": ["心臓CT", "右心室腫瘍", "心臓内腫瘤", "造影CT", "心臓解剖"]
   },
   {
     "exam_number": "115",
@@ -5862,7 +5842,8 @@
     "choice_d": "骨格筋からアミノ酸が放出される。",
     "choice_e": "中枢神経で遊離脂肪酸が利用される。",
     "answer": "d",
-    "correct_rate": "71%"
+    "correct_rate": "71%",
+    "keywords": ["絶食代謝", "糖新生", "ケトン体", "アミノ酸", "脂肪酸"]
   },
   {
     "exam_number": "115",
@@ -5876,7 +5857,8 @@
     "choice_d": "非感染創は一期的に縫合する。",
     "choice_e": "Ⅲ度熱傷では植皮が必要である。",
     "answer": "b",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["創傷治癒", "デブリードマン", "壊死組織", "熱傷", "創傷管理"]
   },
   {
     "exam_number": "115",
@@ -5890,7 +5872,8 @@
     "choice_d": "パラシュート反射",
     "choice_e": "非対称性緊張性頸反射",
     "answer": "d",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["原始反射", "姿勢反射", "乳児期の発達", "神経学的診察", "パラシュート反射"]
   },
   {
     "exam_number": "115",
@@ -5904,7 +5887,8 @@
     "choice_d": "受精15〜25週",
     "choice_e": "受精25週以降",
     "answer": "b",
-    "correct_rate": "60%"
+    "correct_rate": "60%",
+    "keywords": ["放射線被曝", "胎児奇形", "器官形成期", "催奇形性", "妊娠初期"]
   },
   {
     "exam_number": "115",
@@ -5918,7 +5902,8 @@
     "choice_d": "精神科救急医療システムは都道府県や政令指定都市が取り組む。",
     "choice_e": "精神保健福祉センターでは精神障害者福祉手帳の障害等級の判定を行う。",
     "answer": "c",
-    "correct_rate": "93%"
+    "correct_rate": "93%",
+    "keywords": ["精神保健福祉法", "医療観察法", "精神科救急医療システム", "精神障害者保健福祉手帳", "精神科病床数"]
   },
   {
     "exam_number": "115",
@@ -5932,7 +5917,8 @@
     "choice_d": "ヒスタミン遊離試験",
     "choice_e": "抗原特異的IgE検査",
     "answer": "a",
-    "correct_rate": "96%"
+    "correct_rate": "96%",
+    "keywords": ["即時型食物アレルギー", "遅延型アレルギー", "IgE抗体", "アレルギー検査", "パッチテスト"]
   },
   {
     "exam_number": "115",
@@ -5946,7 +5932,8 @@
     "choice_d": "生命表から作成した生存率曲線下の面積",
     "choice_e": "生命表から算出した生存率が50%になった年齢",
     "answer": "d",
-    "correct_rate": "76%"
+    "correct_rate": "76%",
+    "keywords": ["平均寿命", "生命表", "平均余命", "生存率曲線", "公衆衛生"]
   },
   {
     "exam_number": "115",
@@ -5960,7 +5947,8 @@
     "choice_d": "有機溶剤中毒",
     "choice_e": "電離放射線障害",
     "answer": "d",
-    "correct_rate": "73%"
+    "correct_rate": "73%",
+    "keywords": ["生物学的モニタリング", "有機溶剤中毒", "労働衛生管理", "職業性曝露", "健康管理"]
   },
   {
     "exam_number": "115",
@@ -5974,7 +5962,8 @@
     "choice_d": "他の年齢層に比べて高齢者の致死率が高い。",
     "choice_e": "オセルタミビル耐性のウイルス株が90%以上を占める。",
     "answer": "d",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "keywords": ["インフルエンザ", "疫学", "致死率", "高齢者", "小児"]
   },
   {
     "exam_number": "115",
@@ -5988,7 +5977,8 @@
     "choice_d": "鼻閉の程度",
     "choice_e": "声門閉鎖の程度",
     "answer": "d",
-    "correct_rate": "77%"
+    "correct_rate": "77%",
+    "keywords": ["最長発声持続時間", "音声機能検査", "喉頭機能", "呼吸機能"]
   },
   {
     "exam_number": "115",
@@ -6002,7 +5992,8 @@
     "choice_d": "子は親より重症化する傾向がある。",
     "choice_e": "ミトコンドリア遺伝子の点変異は母から子に伝達する。",
     "answer": "e",
-    "correct_rate": "81%"
+    "correct_rate": "81%",
+    "keywords": ["ミトコンドリア遺伝病", "母系遺伝", "ミトコンドリアDNA", "ヘテロプラスミー"]
   },
   {
     "exam_number": "115",
@@ -6016,7 +6007,8 @@
     "choice_d": "タンパク質の過剰摂取 胆石形成",
     "choice_e": "動物性脂肪の過剰摂取 血中LDLコレステロールの低下",
     "answer": "a",
-    "correct_rate": "23%"
+    "correct_rate": "23%",
+    "keywords": ["高尿酸血症", "痛風", "アルコール代謝", "再栄養症候群", "脂質異常症"]
   },
   {
     "exam_number": "115",
@@ -6030,7 +6022,9 @@
     "choice_d": "④",
     "choice_e": "⑤",
     "answer": "bd",
-    "correct_rate": "71%"
+    "correct_rate": "71%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF030J01.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF030J02.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF030J03.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF030J04.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF030J05.jpg"],
+    "keywords": ["双胎妊娠", "絨毛膜性診断", "ラムダサイン", "Tサイン", "超音波検査"]
   },
   {
     "exam_number": "115",
@@ -6044,7 +6038,8 @@
     "choice_d": "形質細胞",
     "choice_e": "マクロファージ",
     "answer": "ce",
-    "correct_rate": "73%"
+    "correct_rate": "73%",
+    "keywords": ["自然免疫", "獲得免疫", "ウイルス感染", "NK細胞", "マクロファージ"]
   },
   {
     "exam_number": "115",
@@ -6058,7 +6053,8 @@
     "choice_d": "ビタミンD製剤",
     "choice_e": "ベンゾジアゼピン系抗不安薬",
     "answer": "ae",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "keywords": ["高齢者", "転倒", "薬剤性転倒", "起立性低血圧", "ベンゾジアゼピン"]
   },
   {
     "exam_number": "115",
@@ -6086,7 +6082,8 @@
     "choice_d": "ビタミンB ˝コバラミン 12",
     "choice_e": "ビタミンC˝アスコルビン酸",
     "answer": "bcd",
-    "correct_rate": "83%"
+    "correct_rate": "83%",
+    "keywords": ["ビタミン欠乏症", "認知機能障害", "ウェルニッケ・コルサコフ症候群", "ペラグラ", "巨赤芽球性貧血"]
   },
   {
     "exam_number": "115",
@@ -6100,7 +6097,9 @@
     "choice_d": "Leser-Trélat徴候",
     "choice_e": "Nikolsky現象",
     "answer": "c",
-    "correct_rate": "96%"
+    "correct_rate": "96%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF035.jpg"],
+    "keywords": ["乾癬", "乾癬性関節炎", "Köbner現象", "皮膚疾患"]
   },
   {
     "exam_number": "115",
@@ -6114,7 +6113,9 @@
     "choice_d": "グロムス腫瘍",
     "choice_e": "巨細胞性動脈炎˝側頭動脈炎",
     "answer": "a",
-    "correct_rate": "96%"
+    "correct_rate": "96%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF036A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF036B.jpg"],
+    "keywords": ["血管肉腫", "悪性血管腫瘍", "頭皮病変", "内皮細胞腫瘍", "高齢者皮膚腫瘍"]
   },
   {
     "exam_number": "115",
@@ -6128,7 +6129,9 @@
     "choice_d": "子宮腺筋症",
     "choice_e": "子宮内膜増殖症",
     "answer": "d",
-    "correct_rate": "72%"
+    "correct_rate": "72%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF037.jpg"],
+    "keywords": ["子宮腺筋症", "月経困難症", "過多月経", "MRI T2強調像", "子宮腫大"]
   },
   {
     "exam_number": "115",
@@ -6142,7 +6145,8 @@
     "choice_d": "水道水 クリプトスポリジウム",
     "choice_e": "プールの水 病原性大腸菌",
     "answer": "a",
-    "correct_rate": "89%"
+    "correct_rate": "89%",
+    "keywords": ["食中毒", "水系感染症", "集団発生", "レジオネラ症", "急性胃腸炎"]
   },
   {
     "exam_number": "115",
@@ -6156,7 +6160,8 @@
     "choice_d": "安静時PaO 58Torr、労作後PaO 42Torr 2 2",
     "choice_e": "安静時PaO 116Torr、労作後PaO 60Torr 2 2",
     "answer": "c",
-    "correct_rate": "87%"
+    "correct_rate": "87%",
+    "keywords": ["酸素解離曲線", "労作時低酸素血症", "6分間歩行試験", "動脈血ガス分析"]
   },
   {
     "exam_number": "115",
@@ -6170,7 +6175,9 @@
     "choice_d": "胸水貯留",
     "choice_e": "心囊液貯留",
     "answer": "e",
-    "correct_rate": "97%"
+    "correct_rate": "97%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF040A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF040B.jpg"],
+    "keywords": ["心嚢液貯留", "心タンポナーデ", "Beckの三徴", "大動脈弁置換術後合併症", "術後心不全"]
   },
   {
     "exam_number": "115",
@@ -6184,7 +6191,8 @@
     "choice_d": "放射線食道炎",
     "choice_e": "放射線皮膚炎",
     "answer": "c",
-    "correct_rate": "82%"
+    "correct_rate": "82%",
+    "keywords": ["肺がん", "放射線治療", "放射線肺炎", "有害事象", "晩期合併症"]
   },
   {
     "exam_number": "115",
@@ -6198,7 +6206,8 @@
     "choice_d": "｢爬行性線状疹の有無を確認します｣",
     "choice_e": "｢café au lait斑の有無を確認します｣",
     "answer": "a",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["IgA血管炎", "Henoch-Schönlein purpura", "紫斑", "腹痛", "関節痛"]
   },
   {
     "exam_number": "115",
@@ -6212,7 +6221,8 @@
     "choice_d": "ビタミンK製剤静注",
     "choice_e": "%アルブミン製剤点滴",
     "answer": "d",
-    "correct_rate": "97%"
+    "correct_rate": "97%",
+    "keywords": ["ビタミンK欠乏性出血", "新生児メレナ", "凝固異常", "PIVKA-II", "完全母乳栄養"]
   },
   {
     "exam_number": "115",
@@ -6226,7 +6236,8 @@
     "choice_d": "直ちに最寄りの警察に保護入所を依頼する。",
     "choice_e": "地域包括支援センターに虐待の可能性について相談する。",
     "answer": "e",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["高齢者虐待", "地域包括支援センター", "高齢者虐待防止法", "ネグレクト", "身体的虐待"]
   },
   {
     "exam_number": "115",
@@ -6240,7 +6251,8 @@
     "choice_d": "｢入院して安静にする必要があります｣",
     "choice_e": "｢分娩予定日は最終月経から決定します｣",
     "answer": "b",
-    "correct_rate": "92%"
+    "correct_rate": "92%",
+    "keywords": ["妊娠初期", "超音波検査", "頭殿長 (CRL)", "胎児心拍", "分娩予定日"]
   },
   {
     "exam_number": "115",
@@ -6254,7 +6266,9 @@
     "choice_d": "帝王切開",
     "choice_e": "オキシトシン投与",
     "answer": "d",
-    "correct_rate": "71%"
+    "correct_rate": "71%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF046.jpg"],
+    "keywords": ["遷延分娩", "分娩停止", "児頭骨盤不均衡", "巨大児", "胎児機能不全", "帝王切開"]
   },
   {
     "exam_number": "115",
@@ -6268,7 +6282,8 @@
     "choice_d": "ビタミンK製剤と併用する。",
     "choice_e": "直接経口抗凝固薬direct oral anticoagulant˝DOAC\"に変更する。",
     "answer": "a",
-    "correct_rate": "95%"
+    "correct_rate": "95%",
+    "keywords": ["心房細動", "機械弁", "ワルファリン", "抗凝固療法", "カテーテルアブレーション"]
   },
   {
     "exam_number": "115",
@@ -6282,7 +6297,8 @@
     "choice_d": "甲状腺ホルモンの測定",
     "choice_e": "手根骨エックス線撮影",
     "answer": "a",
-    "correct_rate": "81%"
+    "correct_rate": "81%",
+    "keywords": ["思春期遅発", "体質性思春期遅発症", "思春期徴候", "成長曲線", "精巣容積"]
   },
   {
     "exam_number": "115",
@@ -6296,7 +6312,8 @@
     "choice_d": "免疫グロブリン製剤を投与する。",
     "choice_e": "半年間現在の治療で様子をみるよう勧める。",
     "answer": "b",
-    "correct_rate": "96%"
+    "correct_rate": "96%",
+    "keywords": ["関節リウマチ", "メトトレキサート", "生物学的製剤", "DMARDs", "治療抵抗性"]
   },
   {
     "exam_number": "115",
@@ -6310,7 +6327,9 @@
     "choice_d": "Ⅳ型",
     "choice_e": "Ⅴ型",
     "answer": "d",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF050.jpg"],
+    "keywords": ["パッチテスト", "接触皮膚炎", "Ⅳ型アレルギー", "Gell and Coombs分類", "金属アレルギー"]
   },
   {
     "exam_number": "115",
@@ -6324,7 +6343,8 @@
     "choice_d": "多発肋骨骨折",
     "choice_e": "心タンポナーデ",
     "answer": "d",
-    "correct_rate": "96%"
+    "correct_rate": "96%",
+    "keywords": ["フレイルチェスト", "多発肋骨骨折", "奇異呼吸", "胸部外傷", "呼吸不全"]
   },
   {
     "exam_number": "115",
@@ -6338,7 +6358,9 @@
     "choice_d": "制吐薬投与",
     "choice_e": "右側臥位保持",
     "answer": "e",
-    "correct_rate": "46%"
+    "correct_rate": "46%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF052.jpg"],
+    "keywords": ["胃食道逆流症", "乳児嘔吐", "非胆汁性嘔吐", "体位療法", "上部消化管造影"]
   },
   {
     "exam_number": "115",
@@ -6352,7 +6374,9 @@
     "choice_d": "胃体部大彎",
     "choice_e": "胃幽門部",
     "answer": "c",
-    "correct_rate": "75%"
+    "correct_rate": "75%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF053.jpg"],
+    "keywords": ["胃潰瘍", "上部消化管内視鏡", "胃角部", "消化器疾患"]
   },
   {
     "exam_number": "115",
@@ -6366,7 +6390,8 @@
     "choice_d": "医師の指示で理学療法士が家屋環境の退院前訪問指導を行う。",
     "choice_e": "医療資格のない療養者家族は在宅褥瘡処置を行えないと説明する。",
     "answer": "cd",
-    "correct_rate": "76%"
+    "correct_rate": "76%",
+    "keywords": ["退院調整", "多職種連携", "在宅医療", "患者中心の医療", "褥瘡管理"]
   },
   {
     "exam_number": "115",
@@ -6380,7 +6405,8 @@
     "choice_d": "家族の希望による自宅外泊",
     "choice_e": "精神医療審査会への退院請求",
     "answer": "cd",
-    "correct_rate": "44%"
+    "correct_rate": "44%",
+    "keywords": ["医療保護入院", "精神保健福祉法", "患者の権利", "行動制限", "精神科入院"]
   },
   {
     "exam_number": "115",
@@ -6394,7 +6420,8 @@
     "choice_d": "④",
     "choice_e": "⑤",
     "answer": "de",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["ADL", "IADL", "脳梗塞", "機能評価", "リハビリテーション"]
   },
   {
     "exam_number": "115",
@@ -6408,7 +6435,8 @@
     "choice_d": "④",
     "choice_e": "⑤",
     "answer": "bc",
-    "correct_rate": "63%"
+    "correct_rate": "63%",
+    "keywords": ["新生児バイタルサイン", "低出生体重児", "新生児生理", "新生児管理"]
   },
   {
     "exam_number": "115",
@@ -6422,7 +6450,9 @@
     "choice_d": "子宮収縮抑制剤投与",
     "choice_e": "副腎皮質ステロイド投与",
     "answer": "de",
-    "correct_rate": "88%"
+    "correct_rate": "88%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF058A.jpg", "https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF058B.jpg"],
+    "keywords": ["切迫早産", "子宮頸管短縮", "胎児肺成熟促進", "子宮収縮抑制剤", "妊娠31週"]
   },
   {
     "exam_number": "115",
@@ -6436,7 +6466,8 @@
     "choice_d": "浮遊粒子状物質",
     "choice_e": "揮発性有機化合物 次の文を読み、60〜62の問いに答えよ。 22歳の男性。墜落外傷のため救急車で搬入された。 現病歴 ： 地面から約mの高所での作業中、誤って下肢から地面に墜落した。 強い腰痛と左下肢の痛みを訴える。 既往歴 ： 特記すべきことはない。 生活歴 ： 工事現場作業員。 家族歴 ： 祖父が糖尿病。 現 症 ： 意識レベルJCSⅠ-3。身長170cm、体重60kg。体温35.6℃。心拍数 128/分、整。血圧88/60mmHg。呼吸数24/分。SpO 97%リザーバー付マスク 2 10L/分酸素投与下 。毛細血管再充満時間は秒と延長している。瞳孔径は右 mm 左mm、対光反射は正常。顔面に挫創がみられる。口腔からの出血はない。 頸静脈の怒張はない。胸部は左前胸部に圧痛がみられる。両側呼吸音は正常で左右 差を認めない。皮下気腫はない。左下肢は外旋位で痛みのため動かそうとしない が、知覚異常は認めない。左下ˆの創部から持続出血がみられ、土が多量に付着し ている。左足趾の動きに異常を認めない。離握手や開眼、閉眼の指示に応じる。皮 膚には冷汗と湿潤がみられる。 検査所見 ： 尿所見：蛋白安 、糖安 、ケトン体安 、潜血安 、沈渣に白血球 を認めない。血液所見：赤血球360万、Hb10.8g/dL、Ht32%、白血球12,600、 血小板30万、PT-INR1.4基準0.9〜1.1 、APTT41.0秒基準対照32.2秒 、 血漿フィブリノゲン168mg/dL基準200〜400 。血液生化学所見：総蛋白5.0 g/dL、アルブミン2.9g/dL、総ビリルビン0.9mg/dL、AST60U/L、ALT22 U/L、CK130U/L 基 準30〜140 、尿 素 窒 素30mg/dL、ク レ ア チ ニ ン0.9 mg/dL、血 糖124mg/dL、Na133mEq/L、K4.8mEq/L、Cl104mEq/L。12誘 導心電図：正常。画像所見：迅速簡易超音波検査˝FASTで心囊腔、胸腔および腹 腔内の液体貯留はみられない。胸部エックス線写真で左4-7肋骨骨折と左肺野の透 過性低下がみられる。骨盤エックス線写真で左第腰椎横突起骨折、左腸骨骨折、 左恥坐骨骨折および左仙腸関節の離開がみられる。下ˆエックス線写真で左脛骨骨 幹部骨折がみられる。",
     "answer": "abe",
-    "correct_rate": "21%"
+    "correct_rate": "21%",
+    "keywords": ["シックハウス症候群", "室内空気汚染", "揮発性有機化合物", "カビ", "ダニ"]
   },
   {
     "exam_number": "115",
@@ -6450,7 +6481,8 @@
     "choice_d": "心原性ショック",
     "choice_e": "閉塞性ショック",
     "answer": "b",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "keywords": ["出血性ショック", "多発外傷", "骨盤骨折", "ショックの分類", "外傷初期診療"]
   },
   {
     "exam_number": "115",
@@ -6464,7 +6496,8 @@
     "choice_d": "骨盤骨折に対する創外固定",
     "choice_e": "破傷風トキソイドの筋肉内投与",
     "answer": "bde",
-    "correct_rate": "81%"
+    "correct_rate": "81%",
+    "keywords": ["出血性ショック", "不安定型骨盤骨折", "開放骨折", "破傷風予防", "外傷初期診療"]
   },
   {
     "exam_number": "115",
@@ -6478,7 +6511,8 @@
     "choice_d": "心囊刺",
     "choice_e": "鎮痛薬投与 次の文を読み、63〜65の問いに答えよ。 83歳の男性。食欲が低下し元気がないため妻とともに来院した。 現病歴 ： 約年前から物忘れが目立ち、Alzheimer型認知症と診断されていた。 年前から記憶の低下がさらに進行し、分前のことも忘れていることが多かっ た。同居する妻によると、週前に38℃の発熱があったが市販の総合感冒薬を内 服して解熱したという。その頃から家でうとうとしながら座っていることが増え、 食事量も半分くらいに減った。週前、通い慣れている施設から家へ帰る道が初め て分からなくなった。昨日トイレ動作にも介助を要するようになったため、他院に おいて緊急で頭部単純CTを行ったが、異常はなかった。本人は特に苦痛を訴えな いが、妻によると日前から喀痰がみられるという。 既往歴 ： 糖尿病でDPP-4阻害薬を服用中である。 生活歴 ： 喫煙は20本/日を40年間。飲酒は機会飲酒。妻と人暮らし。 家族歴 ： 父母とも老衰で死亡。 現 症 ： 意識レベルはJCSⅠ-2。身長165cm、体重60kg。体温37.0℃。脈拍 96/分、整。血圧106/60mmHg。呼吸数22/分。SpO 94%room air 。眼瞼結膜 2 と眼球結膜とに異常を認めない。心音に異常を認めない。右下背部にcoarse cracklesを聴取する。腹部は平坦、軟で、肝・脾を触知しない。浮腫を認めない。 瞳孔と眼球運動とに異常を認めない。腱反射は正常で運動麻痺、感覚障害および運 動失調を認めない。 検査所見 ： 尿所見：蛋白安 、糖安 、潜血安 、沈渣に赤血球、白血球を認め ない。血液所見：赤血球370万、Hb12.0g/dL、Ht36%、白血球11,300好中球 79%、好酸球%、好塩基球%、単球%、リンパ球13% 、血小板26万。血液 生化学所見：総蛋白7.5g/dL、アルブミン3.5g/dL、AST22U/L、ALT11 U/L、ALP217U/L基準115〜359 、γ-GT29U/L基準〜50 、アミラーゼ94 U/L基準37〜160 、尿素窒素29mg/dL、クレアチニン1.1mg/dL、血糖140 mg/dL、HbA1c6.8% 基 準4.6〜6.2 、Na136mEq/L、K4.6mEq/L、Cl96 mEq/L、Ca8.2mg/dL。CRP20mg/dL。",
     "answer": "a",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "keywords": ["緊張性気胸", "外傷性ショック", "多発外傷", "胸腔穿刺", "緊急処置"]
   },
   {
     "exam_number": "115",
@@ -6492,7 +6526,8 @@
     "choice_d": "胸部エックス線撮影",
     "choice_e": "上部消化管内視鏡検査",
     "answer": "d",
-    "correct_rate": "97%"
+    "correct_rate": "97%",
+    "keywords": ["肺炎", "誤嚥性肺炎", "高齢者肺炎", "認知症", "せん妄"]
   },
   {
     "exam_number": "115",
@@ -6506,7 +6541,8 @@
     "choice_d": "心エコー検査を実施する。",
     "choice_e": "動脈血を採取しなおして分析する。",
     "answer": "e",
-    "correct_rate": "93%"
+    "correct_rate": "93%",
+    "keywords": ["動脈血ガス分析", "PaO2とSpO2の乖離", "静脈血混入", "検査値の解釈", "臨床推論"]
   },
   {
     "exam_number": "115",
@@ -6520,7 +6556,8 @@
     "choice_d": "食事嗜好の確認",
     "choice_e": "地域の福祉事務所との相談 次の文を読み、66〜68の問いに答えよ。 68歳の男性。歩行時の息苦しさとわずかな喀痰を主訴に来院した。 現病歴 ： 週前から歩行時の息苦しさとわずかな喀痰を自覚していた。 既往歴 ： 30歳時に虫垂炎のため虫垂切除術を受けた。65歳時にHIV感染症と診 断されたが治療を受けずに通院を中断していた。同時期から不眠となり、ベンゾジ アゼピン系薬を時折内服している。 生活歴 ： 会社員としてアメリカやヨーロッパで勤務した後に帰国、その後相談役 として週回程度出社している。喫煙は15本/日を20歳から40歳の20年間。飲 酒は機会飲酒。 家族歴 ： 父が高血圧症。 現 症 ： 意識は清明。身長172cm、体重58kg。体温37.5℃。脈拍120/分、 整。血圧120/40mmHg。呼吸数28/分。SpO 90%room air 。頸部リンパ節に腫 2 大を認めない。心音に異常を認めない。両側背部でfine cracklesを聴取する。腹 部は平坦、軟で、肝・脾を触知しない。腹部の手術痕以外に異常を認めない。背部 に叩打痛を認めない。皮膚に異常を認めない。 検査所見 ： 血液所見：赤血球300万、Hb9.2g/dL、Ht30%、白血球4,800桿 状核好中球17%、分葉核好中球67%、好酸球%、好塩基球%、リンパ球 % 、CD陽性細胞数126/mm3基準800〜1,200 、血小板25万。血液生化学所 見：総蛋白6.2g/dL、アルブミン3.0g/dL、総ビリルビン0.8mg/dL、AST28 U/L、ALT18U/L、LD250U/L基準120〜245 、ALP120U/L基準115〜359 、 尿素窒素40mg/dL、クレアチニン1.0mg/dL、Na131mEq/L、K4.2mEq/L、 Cl97mEq/L。免疫血清学所見：CRP3.2mg/dL、HBc抗体陰性、HBs抗原陰性、 HCV抗体陰性、HIV抗原・抗体陽性。動脈血ガス分析room air ：pH7.43、 PaCO 35Torr、PaO 58Torr、HCO 安24mEq/L。 2 2 3 胸部造影CT",
     "answer": "b",
-    "correct_rate": "99%"
+    "correct_rate": "99%",
+    "keywords": ["嚥下障害", "誤嚥性肺炎", "認知症", "高齢者医療", "栄養管理"]
   },
   {
     "exam_number": "115",
@@ -6534,7 +6571,9 @@
     "choice_d": "肺胞低換気が低酸素血症の原因である。",
     "choice_e": "ベンゾジアゼピン系薬の過量内服を疑う。",
     "answer": "a",
-    "correct_rate": "94%"
+    "correct_rate": "94%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF066.jpg"],
+    "keywords": ["HIV感染症", "ニューモシスチス肺炎", "呼吸不全", "肺胞動脈血酸素分圧較差", "動脈血ガス分析"]
   },
   {
     "exam_number": "115",
@@ -6548,7 +6587,9 @@
     "choice_d": "血中β-D-グルカン測定",
     "choice_e": "血中結核菌特異的全血インターフェロンγ遊離測定",
     "answer": "c",
-    "correct_rate": "53%"
+    "correct_rate": "53%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF066.jpg"],
+    "keywords": ["HIV感染症", "日和見感染症", "肺結核", "ニューモシスチス肺炎", "抗酸菌染色"]
   },
   {
     "exam_number": "115",
@@ -6562,7 +6603,9 @@
     "choice_d": "インテグラーゼ阻害薬種類と核酸系逆転写酵素阻害薬種類の併用",
     "choice_e": "ノイラミニダーゼ阻害薬種類と核酸系逆転写酵素阻害薬種類の併用 次の文を読み、69〜71の問いに答えよ。 69歳の男性。物忘れを心配した家族に伴われて来院した。 現病歴 ： 約年半前から予定を忘れてしまうことが多くなった。約年前から、 日中、呼びかけへの応答が鈍くなる時間帯があることに気付かれるようになった。 半年前から、時折、知らない子どもが隣の部屋で遊んでいると訴えるようになっ た。これらの症状が徐々に悪化するため来院した。 既往歴 ： 20歳時に急性虫垂炎で手術。 生活歴 ： 喫煙歴はない。飲酒は機会飲酒。 家族歴 ： 特記すべきことはない。 現 症 ： 意識は清明。意思疎通は可能である。礼節は保たれている。日付の失見 当識を認める。失語、失行は認めない。身長170cm、体重60kg。体温36.4℃。 脈拍92/分、整。血圧140/78mmHg。長谷川式簡易知能評価スケールは20点30 点満点 。脳神経系に異常を認めない。四肢筋力は正常だが、四肢に軽度の歯車様 筋強剛を認める。歩行時の姿勢は前傾しており、歩幅はやや小刻みである。腱反射 は正常。運動失調、感覚障害を認めない。 検査所見 ： 尿所見：蛋白安 、糖安 。血液所見：赤血球437万、Hb13.5 g/dL、Ht42%、白血球6,500、血小板22万。血液生化学所見：総蛋白6.7g/dL、 アルブミン4.6g/dL、総ビリルビン1.3mg/dL、AST21U/L、ALT17U/L、ア ンモニア45μg/dL基準18〜48 、尿素窒素15mg/dL、クレアチニン0.8mg/dL、 尿 酸7.2mg/dL、血 糖98mg/dL、HbA1c5.3% 基 準4.6〜6.2 、Na142 mEq/L、K4.1mEq/L、Cl102mEq/L。頭部MRIでは軽度の大脳萎縮がみられ る。脳血流SPECT",
     "answer": "d",
-    "correct_rate": "66%"
+    "correct_rate": "66%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF066.jpg"],
+    "keywords": ["HIV感染症", "抗レトロウイルス療法", "インテグラーゼ阻害薬", "核酸系逆転写酵素阻害薬", "ニューモシスチス肺炎"]
   },
   {
     "exam_number": "115",
@@ -6576,7 +6619,9 @@
     "choice_d": "末s神経伝導検査",
     "choice_e": "MIBG心筋シンチグラフィ",
     "answer": "e",
-    "correct_rate": "98%"
+    "correct_rate": "98%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF069.jpg"],
+    "keywords": ["レビー小体型認知症", "認知症", "パーキンソニズム", "幻視", "MIBG心筋シンチグラフィ"]
   },
   {
     "exam_number": "115",
@@ -6590,7 +6635,9 @@
     "choice_d": "羞 明",
     "choice_e": "尿 閉",
     "answer": "a",
-    "correct_rate": "92%"
+    "correct_rate": "92%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF069.jpg"],
+    "keywords": ["レビー小体型認知症", "認知機能変動", "幻視", "パーキンソニズム", "自律神経症状"]
   },
   {
     "exam_number": "115",
@@ -6604,7 +6651,9 @@
     "choice_d": "ベンゾジアゼピン系薬の投与",
     "choice_e": "照明の調整による生活リズムの確保 次の文を読み、72〜74の問いに答えよ。 42歳の男性。職場の健康診断で異常を指摘されて来院した。 現病歴 ： 20歳代の頃は体重68kg程度であったが、32歳での結婚を機に徐々に 増加し、特にこの年で10kg増加した。現在の体重は過去最大である。 既往歴 ： 特記すべきことはない。 生活歴 ： 喫煙歴はない。飲酒はビール500mL/日。仕事は事務作業で通勤以外の 運動習慣はない。 家族歴 ： 父親が糖尿病、高血圧症、脳梗塞。 現 症 ： 意識は清明。身長173cm、体重82kg、腹囲98cm。脈拍68/分。血圧 146/92mmHg。腹部は平坦、軟で、肝・脾は触知せず、皮膚線条は認めない。四 肢に浮腫を認めない。皮膚の菲薄化を認めない。 検査所見 ： 尿所見：蛋白安 、糖安 、ケトン体安 。血液所見：赤血球465 万、Hb14.6g/dL、Ht46%、白血球6,800、血小板28万。血液生化学所見：AST 38U/L、ALT78U/L、γ-GT52U/L基準〜50 、尿素窒素19mg/dL、クレア チニン0.9mg/dL、尿酸6.8mg/dL、空腹時血糖116mg/dL、HbA1c6.2%基準 4.6〜6.2 、総コレステロール264mg/dL、トリグリセリド212mg/dL、HDLコ レステロール34mg/dL、Na141mEq/L、K3.5mEq/L、Cl98mEq/L。",
     "answer": "e",
-    "correct_rate": "91%"
+    "correct_rate": "91%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF069.jpg"],
+    "keywords": ["レビー小体型認知症", "せん妄", "幻視", "パーキンソニズム", "非薬物療法"]
   },
   {
     "exam_number": "115",
@@ -6618,7 +6667,8 @@
     "choice_d": "脂質異常症",
     "choice_e": "メタボリックシンドローム",
     "answer": "bde",
-    "correct_rate": "96%"
+    "correct_rate": "96%",
+    "keywords": ["メタボリックシンドローム", "高血圧症", "脂質異常症", "肥満", "生活習慣病"]
   },
   {
     "exam_number": "115",
@@ -6632,7 +6682,8 @@
     "choice_d": "脂質を150g/日とする。",
     "choice_e": "食塩を10g/日とする。",
     "answer": "a",
-    "correct_rate": "88%"
+    "correct_rate": "88%",
+    "keywords": ["メタボリックシンドローム", "肥満", "食事療法", "生活習慣病", "高血圧"]
   },
   {
     "exam_number": "115",
@@ -6646,7 +6697,8 @@
     "choice_d": "LDLとHDL",
     "choice_e": "LDLとVLDL",
     "answer": "e",
-    "correct_rate": "80%"
+    "correct_rate": "80%",
+    "keywords": ["脂質異常症", "メタボリックシンドローム", "高LDLコレステロール血症", "高トリグリセリド血症", "VLDL"]
   },
   {
     "exam_number": "115",
@@ -6660,7 +6712,9 @@
     "choice_d": "",
     "choice_e": "",
     "answer": "85",
-    "correct_rate": "94%"
+    "correct_rate": "94%",
+    "external_images": ["https://s3-ap-northeast-1.amazonaws.com/prd.question-images-tecopla.com/images/115KF075J01.png"],
+    "keywords": ["リスク比", "罹患率", "コホート研究", "肺癌", "喫煙"]
   },
 {
   "exam_number": "102",
