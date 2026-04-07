@@ -19,7 +19,7 @@ const COLLECTIONS = {
         "category": "CoC探索",
         "image": "coc_old_library.png",
         "image_subdir": "trpg",
-        "audio": "dust_of_the_library_v1.mp3",
+        "audio": "antique_shop_twilight_v1.mp3",
         "status": "ready"
       },
       {
@@ -32,8 +32,8 @@ const COLLECTIONS = {
         "category": "CoC探索",
         "image": "coc_victorian_mansion.png",
         "image_subdir": "trpg",
-        "audio": null,
-        "status": "partial"
+        "audio": "beneath_the_chapel_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "coc_rainy_street_1920s",
@@ -45,8 +45,8 @@ const COLLECTIONS = {
         "category": "CoC探索",
         "image": "coc_rainy_street_1920s.png",
         "image_subdir": "trpg",
-        "audio": null,
-        "status": "partial"
+        "audio": "dust_of_the_library_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "coc_underground_tunnel",
@@ -143,8 +143,8 @@ const COLLECTIONS = {
     "stats": {
       "total": 10,
       "image": 10,
-      "bgm": 1,
-      "ready": 1
+      "bgm": 3,
+      "ready": 3
     }
   },
   "streaming": {
