@@ -85,8 +85,8 @@ const COLLECTIONS = {
         desc: "フェンスに囲まれた屋上。青空と街並みが見える",
         bgmStyle: "開放的なシンセポップ",
         image: "school-rooftop.png",
-        audio: null,
-        status: "pending"
+        audio: "rooftop_sky_v1.mp3",
+        status: "ready"
       },
       {
         id: "school-library",
@@ -95,8 +95,8 @@ const COLLECTIONS = {
         desc: "本棚に囲まれた静かな図書室。柔らかい光",
         bgmStyle: "静かなピアノソロ",
         image: "school-library.png",
-        audio: null,
-        status: "pending"
+        audio: "quiet_library_v1.mp3",
+        status: "ready"
       },
       {
         id: "club-room",
@@ -105,8 +105,8 @@ const COLLECTIONS = {
         desc: "雑然とした部活動の部室。ホワイトボードとパイプ椅子",
         bgmStyle: "カジュアルなジャズ",
         image: "club-room.png",
-        audio: null,
-        status: "pending"
+        audio: "club_room_jazz_v1.mp3",
+        status: "ready"
       },
       {
         id: "school-gate",
@@ -115,8 +115,8 @@ const COLLECTIONS = {
         desc: "校門と校舎の外観。登下校の場面",
         bgmStyle: "明るいマーチ風",
         image: "school-gate.png",
-        audio: null,
-        status: "pending"
+        audio: "school_gate_morning_v1.mp3",
+        status: "ready"
       },
       {
         id: "school-gym",
@@ -125,8 +125,8 @@ const COLLECTIONS = {
         desc: "広い体育館。バスケットゴールとステージ",
         bgmStyle: "アップテンポなロック",
         image: "school-gym.png",
-        audio: null,
-        status: "pending"
+        audio: "gym_energy_v1.mp3",
+        status: "ready"
       },
       {
         id: "shopping-street",
@@ -135,8 +135,8 @@ const COLLECTIONS = {
         desc: "アーケード付きの商店街。様々な店が並ぶ",
         bgmStyle: "にぎやかで楽しいBGM",
         image: "shopping-street.png",
-        audio: null,
-        status: "pending"
+        audio: "shopping_arcade_v1.mp3",
+        status: "ready"
       },
       {
         id: "convenience-store",
@@ -145,8 +145,8 @@ const COLLECTIONS = {
         desc: "明るい照明のコンビニエンスストア内部",
         bgmStyle: "ポップなエレクトロ",
         image: "convenience-store.png",
-        audio: null,
-        status: "pending"
+        audio: "convenience_store_nights_v1.mp3",
+        status: "ready"
       },
       {
         id: "fast-food",
@@ -155,8 +155,8 @@ const COLLECTIONS = {
         desc: "カラフルな内装のファーストフード店。窓際の席",
         bgmStyle: "チルホップ・LoFi",
         image: "fast-food.png",
-        audio: null,
-        status: "pending"
+        audio: "fast_food_lounge_v1.mp3",
+        status: "ready"
       },
       {
         id: "park",
@@ -165,8 +165,8 @@ const COLLECTIONS = {
         desc: "ベンチと遊具のある緑豊かな公園",
         bgmStyle: "アコースティックギターとフルート",
         image: "park.png",
-        audio: null,
-        status: "pending"
+        audio: "park_afternoon_v1.mp3",
+        status: "ready"
       },
       {
         id: "riverbank",
@@ -175,8 +175,8 @@ const COLLECTIONS = {
         desc: "広い河川敷。土手の上の道と遠くの橋",
         bgmStyle: "ゆったりしたアンビエント",
         image: "riverbank.png",
-        audio: null,
-        status: "pending"
+        audio: "riverbank_wind_v1.mp3",
+        status: "ready"
       },
       {
         id: "train-station",
@@ -185,8 +185,8 @@ const COLLECTIONS = {
         desc: "駅前ロータリーとバス停。人通りの多い場所",
         bgmStyle: "都会的なエレクトロポップ",
         image: "train-station.png",
-        audio: null,
-        status: "pending"
+        audio: "station_plaza_v1.mp3",
+        status: "ready"
       },
       {
         id: "cafe",
@@ -195,8 +195,8 @@ const COLLECTIONS = {
         desc: "落ち着いた雰囲気のカフェ。木の内装とコーヒーの香り",
         bgmStyle: "ジャズピアノトリオ",
         image: "cafe.png",
-        audio: null,
-        status: "pending"
+        audio: "cafe_reverie_v1.mp3",
+        status: "ready"
       },
       {
         id: "night-town",
@@ -205,8 +205,8 @@ const COLLECTIONS = {
         desc: "街灯とネオンに照らされた夜の通り",
         bgmStyle: "ムーディーなシンセウェーブ",
         image: "night-town.png",
-        audio: null,
-        status: "pending"
+        audio: "neon_night_town_v1.mp3",
+        status: "ready"
       }
     ]
   }
