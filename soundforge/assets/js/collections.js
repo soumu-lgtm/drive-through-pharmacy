@@ -58,8 +58,8 @@ const COLLECTIONS = {
         "category": "CoC恐怖",
         "image": "coc_underground_tunnel.png",
         "image_subdir": "trpg",
-        "audio": null,
-        "status": "partial"
+        "audio": "asylum_screams_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "coc_abandoned_chapel",
@@ -71,8 +71,8 @@ const COLLECTIONS = {
         "category": "CoC恐怖",
         "image": "coc_abandoned_chapel.png",
         "image_subdir": "trpg",
-        "audio": null,
-        "status": "partial"
+        "audio": "bell_of_the_end_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "fantasy_medieval_town",
@@ -84,8 +84,8 @@ const COLLECTIONS = {
         "category": "ファンタジー街",
         "image": "fantasy_medieval_town.png",
         "image_subdir": "trpg",
-        "audio": null,
-        "status": "partial"
+        "audio": "bustling_tavern_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "fantasy_tavern_interior",
@@ -97,8 +97,8 @@ const COLLECTIONS = {
         "category": "ファンタジー街",
         "image": "fantasy_tavern_interior.png",
         "image_subdir": "trpg",
-        "audio": null,
-        "status": "partial"
+        "audio": "city_of_scholars_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "fantasy_crystal_cave",
@@ -110,8 +110,8 @@ const COLLECTIONS = {
         "category": "ファンタジーDG",
         "image": "fantasy_crystal_cave.png",
         "image_subdir": "trpg",
-        "audio": null,
-        "status": "partial"
+        "audio": "crystal_cave_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "fantasy_ancient_ruins",
@@ -123,8 +123,8 @@ const COLLECTIONS = {
         "category": "ファンタジーDG",
         "image": "fantasy_ancient_ruins.png",
         "image_subdir": "trpg",
-        "audio": null,
-        "status": "partial"
+        "audio": "dragon_s_wrath_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "fantasy_dragon_lair",
@@ -136,15 +136,15 @@ const COLLECTIONS = {
         "category": "ファンタジーDG",
         "image": "fantasy_dragon_lair.png",
         "image_subdir": "trpg",
-        "audio": null,
-        "status": "partial"
+        "audio": "entrance_to_ancient_ruins_v1.mp3",
+        "status": "ready"
       }
     ],
     "stats": {
       "total": 10,
       "image": 10,
-      "bgm": 3,
-      "ready": 3
+      "bgm": 10,
+      "ready": 10
     }
   },
   "streaming": {
@@ -164,8 +164,8 @@ const COLLECTIONS = {
         "category": "待機画面",
         "image": "streaming_cute_cafe.png",
         "image_subdir": "streaming",
-        "audio": null,
-        "status": "partial"
+        "audio": "casual_chat_time_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "streaming_cozy_room",
@@ -177,8 +177,8 @@ const COLLECTIONS = {
         "category": "待機画面",
         "image": "streaming_cozy_room.png",
         "image_subdir": "streaming",
-        "audio": null,
-        "status": "partial"
+        "audio": "cozy_gaming_stream_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "streaming_night_window_city",
@@ -190,8 +190,8 @@ const COLLECTIONS = {
         "category": "深夜配信",
         "image": "streaming_night_window_city.png",
         "image_subdir": "streaming",
-        "audio": null,
-        "status": "partial"
+        "audio": "cute_morning_greeting_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "streaming_pastel_kitchen",
@@ -203,15 +203,15 @@ const COLLECTIONS = {
         "category": "朝配信",
         "image": "streaming_pastel_kitchen.png",
         "image_subdir": "streaming",
-        "audio": null,
-        "status": "partial"
+        "audio": "late_night_stream_work_v1.mp3",
+        "status": "ready"
       }
     ],
     "stats": {
       "total": 4,
       "image": 4,
-      "bgm": 0,
-      "ready": 0
+      "bgm": 4,
+      "ready": 4
     }
   }
 };
