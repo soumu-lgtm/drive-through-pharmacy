@@ -19,8 +19,8 @@ const COLLECTIONS = {
         "category": "CoC探索",
         "image": "coc_old_library.png",
         "image_subdir": "trpg",
-        "audio": null,
-        "status": "partial"
+        "audio": "dust_of_the_library_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "coc_victorian_mansion",
@@ -143,8 +143,8 @@ const COLLECTIONS = {
     "stats": {
       "total": 10,
       "image": 10,
-      "bgm": 0,
-      "ready": 0
+      "bgm": 1,
+      "ready": 1
     }
   },
   "streaming": {
