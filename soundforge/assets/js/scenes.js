@@ -6,7 +6,7 @@ const COLLECTIONS = {
     id: "student-life",
     title: "現代学生生活",
     titleEn: "Modern Student Life",
-    description: "TRPG・ストーリー動画向け。学校・街・日常の汎用背景+BGMセット",
+    description: "ストーリー動画・ゲーム向け。学校・街・日常の汎用背景+BGMセット",
     scenes: [
       {
         id: "bedroom-morning",

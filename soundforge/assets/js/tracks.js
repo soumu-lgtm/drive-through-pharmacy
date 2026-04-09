@@ -1,4 +1,4 @@
-// Track database — SoundForge AI
+// Track database — SoundForge
 // status: "ready" = 音源あり, "soon" = 近日公開（プレビュー用にvelvet_dreamsを仮当て）
 
 const TRACKS = [
@@ -318,7 +318,7 @@ const TRACKS = [
     status: "soon"
   },
 
-  // ── Dungeon / TRPG ──
+  // ── Dungeon / ファンタジー ──
   {
     id: "abyss_walker",
     title: "Abyss Walker",
@@ -331,7 +331,7 @@ const TRACKS = [
     key: "Bm",
     file_mp3: null,
     file_wav: null,
-    description: "TRPGダンジョン探索向けアンビエント。洞窟の反響と不気味なテクスチャ。",
+    description: "ダンジョン探索向けアンビエント。洞窟の反響と不気味なテクスチャ。",
     status: "soon"
   },
   {

@@ -4,9 +4,9 @@
 const COLLECTIONS = {
   "trpg": {
     "id": "trpg",
-    "title": "TRPG/ストーリー動画 BGM＆背景セット",
-    "titleEn": "TRPG & Story Video Pack",
-    "description": "CoC・ファンタジーTRPG・ストーリー動画向け素材集",
+    "title": "ファンタジー/ストーリー動画 BGM＆背景セット",
+    "titleEn": "Fantasy & Story Video Pack",
+    "description": "クトゥルフ・ダークファンタジー・ストーリー動画向け素材集",
     "image_subdir": "trpg",
     "scenes": [
       {
@@ -149,9 +149,9 @@ const COLLECTIONS = {
   },
   "streaming": {
     "id": "streaming",
-    "title": "配信者向け BGM＆背景セット",
-    "titleEn": "Streamer Pack",
-    "description": "VTuber・YouTuber・Twitch配信者向け待機画面&BGM素材集",
+    "title": "配信待機画面等 BGM＆背景セット",
+    "titleEn": "Stream Standby Pack",
+    "description": "VTuber・YouTuber・Twitch向け 待機画面/開始前/雑談 BGM素材集",
     "image_subdir": "streaming",
     "scenes": [
       {

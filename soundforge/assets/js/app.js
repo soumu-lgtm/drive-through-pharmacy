@@ -1,5 +1,5 @@
 // ============================================
-// SoundForge AI — P3R Faithful UI
+// SoundForge — P3R Faithful UI
 // ============================================
 (function(){
   'use strict';

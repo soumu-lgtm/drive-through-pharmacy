@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TRPG/ストーリー動画 BGM＆背景セット | SoundForge AI</title>
+  <title>ファンタジー/ストーリー動画 BGM＆背景セット | SoundForge AI</title>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     :root {
@@ -78,8 +78,8 @@
 <body>
 
   <div class="header">
-    <h1><span>TRPG</span> BGM＆背景セット</h1>
-    <div class="subtitle">クトゥルフ神話TRPG・ファンタジーTRPG・ストーリー動画向け</div>
+    <h1><span>ファンタジー</span> BGM＆背景セット</h1>
+    <div class="subtitle">クトゥルフ・ダークファンタジー・ストーリー動画向け</div>
     <div class="badge">シーン数: <strong id="scene-count">0</strong> | 完成済み: <strong id="ready-count">0</strong></div>
     <br><a class="back" href="index.html">← トップへ</a>
   </div>
@@ -99,8 +99,8 @@
   </div>
 
   <div class="footer">
-    SoundForge AI &mdash; AI-Generated BGM &amp; Backgrounds<br>
-    Powered by Suno AI &amp; Stable Diffusion (NovaAnimeXL v17)
+    SoundForge &mdash; Free BGM &amp; Backgrounds<br>
+    商用利用OK / クレジット不要
   </div>
 
   <script src="assets/js/collections.js"></script>
@@ -156,7 +156,7 @@
                   <div class="progress-bar" data-id="${scene.id}"><div class="progress-fill" id="progress-${scene.id}"></div></div>
                   <span class="time-display" id="time-${scene.id}">0:00</span>
                 </div>`
-              : `<div class="audio-pending">♪ BGM 準備中（Suno生成待ち）</div>`}
+              : `<div class="audio-pending">♪ BGM 準備中</div>`}
             <div class="download-row">
               ${hasImage
                 ? `<a class="dl-btn image-dl" href="assets/images/${imageSubdir}/${scene.image}" download="${scene.id}.png">${ICON_IMG} 背景DL</a>`
