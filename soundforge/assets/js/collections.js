@@ -1,5 +1,5 @@
 /**
- * SoundForge AI コレクションデータ — 自動生成 by build_collection_pages.py
+ * SoundForge コレクションデータ — 自動生成 by build_collection_pages.py
  */
 const COLLECTIONS = {
   "trpg": {
@@ -184,7 +184,7 @@ const COLLECTIONS = {
         "id": "streaming_night_window_city",
         "name": "夜の窓辺の街",
         "nameEn": "Night Window City",
-        "desc": "ネオン街を見下ろす雨の窓。深夜配信用",
+        "desc": "ネオン街を見下ろす雨の窓。深夜の待機画面向け",
         "bgmStyle": "Lo-Fi シティナイト",
         "audio_folder": "streaming_lofi",
         "category": "深夜配信",
