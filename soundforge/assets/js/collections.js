@@ -149,8 +149,8 @@ const COLLECTIONS = {
         "category": "和風ファンタジー",
         "image_subdir": "fantasy_wafu",
         "image": "wafu_shrine_dawn.png",
-        "audio": null,
-        "status": "partial"
+        "audio": "cherry_blossom_garden_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "wafu_yokai_forest",
@@ -162,8 +162,8 @@ const COLLECTIONS = {
         "category": "和風ファンタジー",
         "image_subdir": "fantasy_wafu",
         "image": "wafu_yokai_forest.png",
-        "audio": null,
-        "status": "partial"
+        "audio": "eve_of_battle_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "wafu_old_house_hearth",
@@ -175,8 +175,8 @@ const COLLECTIONS = {
         "category": "和風ファンタジー",
         "image_subdir": "fantasy_wafu",
         "image": "wafu_old_house_hearth.png",
-        "audio": null,
-        "status": "partial"
+        "audio": "forest_of_yokai_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "wafu_snow_mountain_pass",
@@ -188,8 +188,8 @@ const COLLECTIONS = {
         "category": "和風ファンタジー",
         "image_subdir": "fantasy_wafu",
         "image": "wafu_snow_mountain_pass.png",
-        "audio": null,
-        "status": "partial"
+        "audio": "hearth_of_the_old_house_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "wafu_battle_eve",
@@ -201,8 +201,8 @@ const COLLECTIONS = {
         "category": "和風ファンタジー",
         "image_subdir": "fantasy_wafu",
         "image": "wafu_battle_eve.png",
-        "audio": null,
-        "status": "partial"
+        "audio": "kitsunebi_moonlight_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "wafu_oni_roar",
@@ -214,8 +214,8 @@ const COLLECTIONS = {
         "category": "和風ファンタジー",
         "image_subdir": "fantasy_wafu",
         "image": "wafu_oni_roar.png",
-        "audio": null,
-        "status": "partial"
+        "audio": "oni_s_roar_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "wafu_cherry_garden",
@@ -227,8 +227,8 @@ const COLLECTIONS = {
         "category": "和風ファンタジー",
         "image_subdir": "fantasy_wafu",
         "image": "wafu_cherry_garden.png",
-        "audio": null,
-        "status": "partial"
+        "audio": "shrine_at_dawn_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "wafu_kitsunebi_moonlight",
@@ -240,8 +240,8 @@ const COLLECTIONS = {
         "category": "和風ファンタジー",
         "image_subdir": "fantasy_wafu",
         "image": "wafu_kitsunebi_moonlight.png",
-        "audio": null,
-        "status": "partial"
+        "audio": "snow_mountain_pass_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "modern_after_school",
@@ -253,8 +253,8 @@ const COLLECTIONS = {
         "category": "学園異能",
         "image_subdir": "fantasy_modern",
         "image": "modern_after_school.png",
-        "audio": null,
-        "status": "partial"
+        "audio": "abandoned_school_memories_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "modern_abandoned_school",
@@ -266,8 +266,8 @@ const COLLECTIONS = {
         "category": "学園異能",
         "image_subdir": "fantasy_modern",
         "image": "modern_abandoned_school.png",
-        "audio": null,
-        "status": "partial"
+        "audio": "after_school_calm_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "modern_back_alley",
@@ -279,8 +279,8 @@ const COLLECTIONS = {
         "category": "学園異能",
         "image_subdir": "fantasy_modern",
         "image": "modern_back_alley.png",
-        "audio": null,
-        "status": "partial"
+        "audio": "barrier_forest_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "modern_barrier_forest",
@@ -292,8 +292,8 @@ const COLLECTIONS = {
         "category": "学園異能",
         "image_subdir": "fantasy_modern",
         "image": "modern_barrier_forest.png",
-        "audio": null,
-        "status": "partial"
+        "audio": "city_back_alley_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "modern_power_awakening",
@@ -305,8 +305,8 @@ const COLLECTIONS = {
         "category": "学園異能",
         "image_subdir": "fantasy_modern",
         "image": "modern_power_awakening.png",
-        "audio": null,
-        "status": "partial"
+        "audio": "dream_boundary_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "modern_midnight_conbini",
@@ -318,8 +318,8 @@ const COLLECTIONS = {
         "category": "学園異能",
         "image_subdir": "fantasy_modern",
         "image": "modern_midnight_conbini.png",
-        "audio": null,
-        "status": "partial"
+        "audio": "midnight_convenience_store_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "modern_dream_boundary",
@@ -331,8 +331,8 @@ const COLLECTIONS = {
         "category": "学園異能",
         "image_subdir": "fantasy_modern",
         "image": "modern_dream_boundary.png",
-        "audio": null,
-        "status": "partial"
+        "audio": "power_awakening_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "modern_rooftop_twilight",
@@ -344,15 +344,15 @@ const COLLECTIONS = {
         "category": "学園異能",
         "image_subdir": "fantasy_modern",
         "image": "modern_rooftop_twilight.png",
-        "audio": null,
-        "status": "partial"
+        "audio": "rooftop_twilight_v1.mp3",
+        "status": "ready"
       }
     ],
     "stats": {
       "total": 26,
       "image": 26,
-      "bgm": 10,
-      "ready": 10
+      "bgm": 26,
+      "ready": 26
     }
   },
   "streaming": {
@@ -439,8 +439,8 @@ const COLLECTIONS = {
         "category": "導入・イントロ",
         "image": "yukkuri_peaceful_intro.png",
         "image_subdir": "story_yukkuri",
-        "audio": null,
-        "status": "partial"
+        "audio": "comic_beat_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "yukkuri_history",
@@ -452,8 +452,8 @@ const COLLECTIONS = {
         "category": "解説・語り",
         "image": "yukkuri_history.png",
         "image_subdir": "story_yukkuri",
-        "audio": null,
-        "status": "partial"
+        "audio": "countdown_ranking_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "yukkuri_trivia_pop",
@@ -465,8 +465,8 @@ const COLLECTIONS = {
         "category": "解説・語り",
         "image": "yukkuri_trivia_pop.png",
         "image_subdir": "story_yukkuri",
-        "audio": null,
-        "status": "partial"
+        "audio": "lab_notes_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "yukkuri_mystery",
@@ -478,8 +478,8 @@ const COLLECTIONS = {
         "category": "解説・語り",
         "image": "yukkuri_mystery.png",
         "image_subdir": "story_yukkuri",
-        "audio": null,
-        "status": "partial"
+        "audio": "mystery_thoughts_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "yukkuri_tension",
@@ -491,8 +491,8 @@ const COLLECTIONS = {
         "category": "演出・ブリッジ",
         "image": "yukkuri_tension.png",
         "image_subdir": "story_yukkuri",
-        "audio": null,
-        "status": "partial"
+        "audio": "occult_corner_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "yukkuri_occult",
@@ -504,8 +504,8 @@ const COLLECTIONS = {
         "category": "演出・ブリッジ",
         "image": "yukkuri_occult.png",
         "image_subdir": "story_yukkuri",
-        "audio": null,
-        "status": "partial"
+        "audio": "peaceful_intro_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "yukkuri_countdown",
@@ -517,8 +517,8 @@ const COLLECTIONS = {
         "category": "バラエティ",
         "image": "yukkuri_countdown.png",
         "image_subdir": "story_yukkuri",
-        "audio": null,
-        "status": "partial"
+        "audio": "tales_of_history_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "yukkuri_lab_notes",
@@ -530,8 +530,8 @@ const COLLECTIONS = {
         "category": "バラエティ",
         "image": "yukkuri_lab_notes.png",
         "image_subdir": "story_yukkuri",
-        "audio": null,
-        "status": "partial"
+        "audio": "tension_shift_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "yukkuri_comic_beat",
@@ -543,8 +543,8 @@ const COLLECTIONS = {
         "category": "バラエティ",
         "image": "yukkuri_comic_beat.png",
         "image_subdir": "story_yukkuri",
-        "audio": null,
-        "status": "partial"
+        "audio": "thanks_for_watching_v1.mp3",
+        "status": "ready"
       },
       {
         "id": "yukkuri_thanks",
@@ -556,15 +556,15 @@ const COLLECTIONS = {
         "category": "導入・イントロ",
         "image": "yukkuri_thanks.png",
         "image_subdir": "story_yukkuri",
-        "audio": null,
-        "status": "partial"
+        "audio": "trivia_pop_v1.mp3",
+        "status": "ready"
       }
     ],
     "stats": {
       "total": 10,
       "image": 10,
-      "bgm": 0,
-      "ready": 0
+      "bgm": 10,
+      "ready": 10
     }
   }
 };
