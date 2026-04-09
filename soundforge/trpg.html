@@ -113,7 +113,6 @@
     let currentAudio = null, currentBtn = null;
     const collection = COLLECTIONS["trpg"];
     const container = document.getElementById("container");
-    const imageSubdir = collection.image_subdir;
     let imgCount = 0, bgmCount = 0, readyCount = 0;
 
     // カテゴリでグループ化
@@ -137,6 +136,7 @@
         if (hasAudio) bgmCount++;
         if (hasImage && hasAudio) readyCount++;
 
+        const imageSubdir = scene.image_subdir || collection.image_subdir;
         const audioFolder = scene.audio_folder;
         const card = document.createElement("div");
         card.className = "card";
