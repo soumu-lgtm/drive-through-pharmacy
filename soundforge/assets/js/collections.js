@@ -566,5 +566,454 @@ const COLLECTIONS = {
       "bgm": 10,
       "ready": 10
     }
+  },
+  "cyberpunk": {
+    "id": "cyberpunk",
+    "title": "サイバーパンク / SF・近未来 BGM",
+    "titleEn": "Cyberpunk / Sci-Fi BGM",
+    "description": "AI解説動画、テック系YouTube、SF系ゲーム、サイバーパンク風動画向け",
+    "audio_folder": "cyberpunk_sf",
+    "scenes": [
+      {
+        "id": "neon_night_market",
+        "name": "ネオンナイトマーケット",
+        "nameEn": "Neon Night Market",
+        "desc": "ネオンが乱反射する闇市。違法パーツと屋台の喧騒",
+        "bgmStyle": "シンセウェーブ / ダーク・エレクトロ",
+        "category": "ストリート",
+        "audio_v1": "neon_night_market_v1.mp3",
+        "audio_v2": "neon_night_market_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "data_flood",
+        "name": "データフラッド",
+        "nameEn": "Data Flood",
+        "desc": "膨大なデータが流れる仮想空間。情報の洪水に溺れる",
+        "bgmStyle": "グリッチホップ / IDM",
+        "category": "サイバースペース",
+        "audio_v1": "data_flood_v1.mp3",
+        "audio_v2": "data_flood_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "orbital_dawn",
+        "name": "オービタル・ドーン",
+        "nameEn": "Orbital Dawn",
+        "desc": "宇宙ステーションから見える地球の夜明け。静寂と壮大さ",
+        "bgmStyle": "スペースアンビエント / シネマティック",
+        "category": "宇宙・SF",
+        "audio_v1": "orbital_dawn_v1.mp3",
+        "audio_v2": "orbital_dawn_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "heart_of_the_machine",
+        "name": "機械の心臓",
+        "nameEn": "Heart of the Machine",
+        "desc": "巨大な機械都市の中枢。歯車とパイプが脈動する",
+        "bgmStyle": "インダストリアル / メカニカル・ビート",
+        "category": "サイバースペース",
+        "audio_v1": "heart_of_the_machine_v1.mp3",
+        "audio_v2": "heart_of_the_machine_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "rebel_algorithm",
+        "name": "反逆のアルゴリズム",
+        "nameEn": "Rebel Algorithm",
+        "desc": "AIが自我に目覚めた瞬間。デジタルレジスタンスの始まり",
+        "bgmStyle": "アグレッシブ・シンセ / テクノ",
+        "category": "サイバースペース",
+        "audio_v1": "rebel_algorithm_v1.mp3",
+        "audio_v2": "rebel_algorithm_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "ruins_of_tomorrow",
+        "name": "明日の廃墟",
+        "nameEn": "Ruins of Tomorrow",
+        "desc": "崩壊した未来都市。錆びたビルとホログラムの残骸",
+        "bgmStyle": "ポストアポカリプス・アンビエント",
+        "category": "ストリート",
+        "audio_v1": "ruins_of_tomorrow_v1.mp3",
+        "audio_v2": "ruins_of_tomorrow_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "dream_of_ai",
+        "name": "AIの夢",
+        "nameEn": "Dream of AI",
+        "desc": "人工知能が見る夢の世界。有機的で幾何学的な幻想",
+        "bgmStyle": "ドリーミー・エレクトロニカ",
+        "category": "宇宙・SF",
+        "audio_v1": "dream_of_ai_v1.mp3",
+        "audio_v2": "dream_of_ai_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "high_speed_chase_2099",
+        "name": "ハイスピードチェイス 2099",
+        "nameEn": "High Speed Chase 2099",
+        "desc": "空中ハイウェイでの追跡劇。光の軌跡が交差する",
+        "bgmStyle": "ドラムンベース / ハイテンポ・シンセ",
+        "category": "ストリート",
+        "audio_v1": "high_speed_chase_2099_v1.mp3",
+        "audio_v2": "high_speed_chase_2099_v2.mp3",
+        "status": "ready"
+      }
+    ],
+    "stats": {
+      "total": 8,
+      "bgm": 16,
+      "ready": 8
+    }
+  },
+  "horror": {
+    "id": "horror",
+    "title": "ホラー・サスペンス BGM",
+    "titleEn": "Horror & Suspense BGM",
+    "description": "ホラーゲーム実況、心霊考察動画、怖い話、ミステリー動画向け",
+    "audio_folder": "horror_suspense",
+    "scenes": [
+      {
+        "id": "memory_of_ruins",
+        "name": "廃墟の記憶",
+        "nameEn": "Memory of Ruins",
+        "desc": "朽ちた建物に残された誰かの痕跡。不穏な静寂",
+        "bgmStyle": "ダークアンビエント / ドローン",
+        "category": "探索・雰囲気",
+        "audio_v1": "memory_of_ruins_v1.mp3",
+        "audio_v2": "memory_of_ruins_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "something_is_here",
+        "name": "何かがいる",
+        "nameEn": "Something Is Here",
+        "desc": "暗闇の向こうに気配を感じる。振り返ってはいけない",
+        "bgmStyle": "テンション・ホラー / 低音パルス",
+        "category": "探索・雰囲気",
+        "audio_v1": "something_is_here_v1.mp3",
+        "audio_v2": "something_is_here_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "prelude_to_carnage",
+        "name": "惨劇の序曲",
+        "nameEn": "Prelude to Carnage",
+        "desc": "嵐の前の静けさ。これから起きる惨劇の予感",
+        "bgmStyle": "不協和音ストリングス / ティンパニ",
+        "category": "クライマックス",
+        "audio_v1": "prelude_to_carnage_v1.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "nightmare_gate",
+        "name": "悪夢の門",
+        "nameEn": "Nightmare Gate",
+        "desc": "現実と悪夢の境界が崩れる。異形の世界への入口",
+        "bgmStyle": "リバースシンセ / ホラーパッド",
+        "category": "超常現象",
+        "audio_v1": "nightmare_gate_v1.mp3",
+        "audio_v2": "nightmare_gate_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "spirit_footage_analysis",
+        "name": "心霊映像解析",
+        "nameEn": "Spirit Footage Analysis",
+        "desc": "ノイズ混じりの映像を解析中。そこに映るものは――",
+        "bgmStyle": "グリッチノイズ / 電子ホラー",
+        "category": "超常現象",
+        "audio_v1": "spirit_footage_analysis_v1.mp3",
+        "audio_v2": "spirit_footage_analysis_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "run_for_your_life",
+        "name": "逃げろ",
+        "nameEn": "Run for Your Life",
+        "desc": "追われている。足音が近づく。息が止まりそうだ",
+        "bgmStyle": "ハイテンポ・パニック / パーカッション",
+        "category": "クライマックス",
+        "audio_v1": "run_for_your_life_v1.mp3",
+        "audio_v2": "run_for_your_life_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "midnight_ward",
+        "name": "深夜の病棟",
+        "nameEn": "Midnight Ward",
+        "desc": "消灯後の病院。廊下に響く足音と点滅する蛍光灯",
+        "bgmStyle": "ホスピタルホラー / 金属音",
+        "category": "探索・雰囲気",
+        "audio_v1": "midnight_ward_v1.mp3",
+        "audio_v2": "midnight_ward_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "the_ritual_night",
+        "name": "儀式の夜",
+        "nameEn": "The Ritual Night",
+        "desc": "蝋燭に照らされた魔法陣。禁断の儀式が始まる",
+        "bgmStyle": "オカルトコーラス / リチュアル・ドラム",
+        "category": "超常現象",
+        "audio_v1": "the_ritual_night_v1.mp3",
+        "audio_v2": "the_ritual_night_v2.mp3",
+        "status": "ready"
+      }
+    ],
+    "stats": {
+      "total": 8,
+      "bgm": 15,
+      "ready": 8
+    }
+  },
+  "rpg-battle": {
+    "id": "rpg-battle",
+    "title": "シネマティックRPGバトル BGM",
+    "titleEn": "Cinematic RPG Battle BGM",
+    "description": "インディーゲーム開発、ゲーム実況、PV動画、ファンタジー映像向け",
+    "audio_folder": "rpg_cinematic",
+    "scenes": [
+      {
+        "id": "return_to_the_capital",
+        "name": "王都への帰還",
+        "nameEn": "Return to the Capital",
+        "desc": "長い旅路の果て、王都の城壁が見える。凱旋のファンファーレ",
+        "bgmStyle": "オーケストラ / ファンファーレ",
+        "category": "フィールド",
+        "audio_v1": "return_to_the_capital_v1.mp3",
+        "audio_v2": "return_to_the_capital_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "blade_of_fate",
+        "name": "運命の剣",
+        "nameEn": "Blade of Fate",
+        "desc": "宿敵との一騎打ち。剣と剣がぶつかり火花が散る",
+        "bgmStyle": "シネマティック・オーケストラ / 弦楽バトル",
+        "category": "バトル",
+        "audio_v1": "blade_of_fate_v1.mp3",
+        "audio_v2": "blade_of_fate_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "guardian_of_the_abyss",
+        "name": "深淵の守護者",
+        "nameEn": "Guardian of the Abyss",
+        "desc": "地の底に潜む巨大な存在。ボス戦の緊張感",
+        "bgmStyle": "ヘビーオーケストラ / コーラス",
+        "category": "ボスバトル",
+        "audio_v1": "guardian_of_the_abyss_v1.mp3",
+        "audio_v2": "guardian_of_the_abyss_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "the_last_fortress",
+        "name": "最後の砦",
+        "nameEn": "The Last Fortress",
+        "desc": "包囲された城塞。味方を守るための最終防衛戦",
+        "bgmStyle": "エピック・パーカッション / 金管",
+        "category": "バトル",
+        "audio_v1": "the_last_fortress_v1.mp3",
+        "audio_v2": "the_last_fortress_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "heros_proof",
+        "name": "英雄の証明",
+        "nameEn": "Hero's Proof",
+        "desc": "試練を乗り越えた者だけが得る称号。勝利のテーマ",
+        "bgmStyle": "トライアンフ・オーケストラ / ピアノ",
+        "category": "フィールド",
+        "audio_v1": "heros_proof_v1.mp3",
+        "audio_v2": "heros_proof_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "overture_of_ruin",
+        "name": "破滅の序曲",
+        "nameEn": "Overture of Ruin",
+        "desc": "世界が崩壊する前兆。不穏な空気が立ち込める",
+        "bgmStyle": "ダーク・オーケストラ / 不協和音",
+        "category": "ボスバトル",
+        "audio_v1": "overture_of_ruin_v1.mp3",
+        "audio_v2": "overture_of_ruin_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "forgotten_temple",
+        "name": "忘れられた神殿",
+        "nameEn": "Forgotten Temple",
+        "desc": "古代の神殿深部。神秘的な光と石碑の謎",
+        "bgmStyle": "ミスティック・アンビエント / ハープ",
+        "category": "ダンジョン",
+        "audio_v1": "forgotten_temple_v1.mp3",
+        "audio_v2": "forgotten_temple_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "twilight_of_the_kingdom",
+        "name": "王国の黄昏",
+        "nameEn": "Twilight of the Kingdom",
+        "desc": "滅びゆく王国の最後の光。哀愁と決意が交差する",
+        "bgmStyle": "メランコリック・オーケストラ / ピアノ",
+        "category": "フィールド",
+        "audio_v1": "twilight_of_the_kingdom_v1.mp3",
+        "audio_v2": "twilight_of_the_kingdom_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "dawn_of_the_final_battle",
+        "name": "最終決戦の夜明け",
+        "nameEn": "Dawn of the Final Battle",
+        "desc": "全てを賭けた最後の戦い。夜明けと共に決着をつける",
+        "bgmStyle": "フルオーケストラ / エピック・コーラス",
+        "category": "ボスバトル",
+        "audio_v1": "dawn_of_the_final_battle_v1.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "a_new_horizon",
+        "name": "新たな地平",
+        "nameEn": "A New Horizon",
+        "desc": "戦いが終わり、新たな旅が始まる。希望に満ちた朝",
+        "bgmStyle": "ポジティブ・オーケストラ / フルート",
+        "category": "エンディング",
+        "audio_v1": "a_new_horizon_v1.mp3",
+        "audio_v2": "a_new_horizon_v2.mp3",
+        "status": "ready"
+      }
+    ],
+    "stats": {
+      "total": 10,
+      "bgm": 19,
+      "ready": 10
+    }
+  },
+  "vlog-cafe": {
+    "id": "vlog-cafe",
+    "title": "Vlog / カフェ / 料理動画 BGM",
+    "titleEn": "Vlog / Cafe / Cooking BGM",
+    "description": "YouTube料理チャンネル、日常Vlog、ルーティン動画、カフェ系動画向け",
+    "audio_folder": "vlog_cafe",
+    "scenes": [
+      {
+        "id": "sunset_pasta",
+        "name": "サンセットパスタ",
+        "nameEn": "Sunset Pasta",
+        "desc": "夕日に照らされたキッチンで作る手打ちパスタ",
+        "bgmStyle": "アコースティックギター / ボサノバ",
+        "category": "料理・キッチン",
+        "audio_v1": "sunset_pasta_v1.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "weekend_market",
+        "name": "ウィークエンドマーケット",
+        "nameEn": "Weekend Market",
+        "desc": "週末の朝市で新鮮な食材を探す。賑やかで楽しい時間",
+        "bgmStyle": "ウクレレ / ポップ",
+        "category": "お出かけ",
+        "audio_v1": "weekend_market_v1.mp3",
+        "audio_v2": "weekend_market_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "dessert_night",
+        "name": "デザートナイト",
+        "nameEn": "Dessert Night",
+        "desc": "夜のキッチンで作る特別なデザート。甘い香りが漂う",
+        "bgmStyle": "ジャズピアノ / チル",
+        "category": "料理・キッチン",
+        "audio_v1": "dessert_night_v1.mp3",
+        "audio_v2": "dessert_night_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "morning_smoothie",
+        "name": "モーニングスムージー",
+        "nameEn": "Morning Smoothie",
+        "desc": "朝のルーティン。フルーツをミキサーにかける健康的な朝",
+        "bgmStyle": "ブライト・ポップ / マリンバ",
+        "category": "ルーティン",
+        "audio_v1": "morning_smoothie_v1.mp3",
+        "audio_v2": "morning_smoothie_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "afternoon_kitchen",
+        "name": "アフタヌーンキッチン",
+        "nameEn": "Afternoon Kitchen",
+        "desc": "午後のゆったりとした時間。焼き菓子の香りが部屋に広がる",
+        "bgmStyle": "ソフト・アコースティック",
+        "category": "料理・キッチン",
+        "audio_v1": "afternoon_kitchen_v1.mp3",
+        "audio_v2": "afternoon_kitchen_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "window_seat_coffee",
+        "name": "窓辺のコーヒー",
+        "nameEn": "Window Seat Coffee",
+        "desc": "窓辺の席でハンドドリップコーヒーを淹れる至福の時間",
+        "bgmStyle": "Lo-Fi ジャズ / カフェ",
+        "category": "カフェ",
+        "audio_v1": "window_seat_coffee_v1.mp3",
+        "audio_v2": "window_seat_coffee_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "sunday_morning_routine",
+        "name": "日曜の朝のルーティン",
+        "nameEn": "Sunday Morning Routine",
+        "desc": "休日の朝。ゆっくり起きてブランチを作る",
+        "bgmStyle": "チルホップ / ピアノ",
+        "category": "ルーティン",
+        "audio_v1": "sunday_morning_routine_v1.mp3",
+        "audio_v2": "sunday_morning_routine_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "city_walk",
+        "name": "シティウォーク",
+        "nameEn": "City Walk",
+        "desc": "カメラを片手に街を散歩。お気に入りの場所を巡る",
+        "bgmStyle": "インディーポップ / シンセ",
+        "category": "お出かけ",
+        "audio_v1": "city_walk_v1.mp3",
+        "audio_v2": "city_walk_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "first_apartment",
+        "name": "はじめてのひとり暮らし",
+        "nameEn": "First Apartment",
+        "desc": "新生活の始まり。小さなキッチンで初めての自炊",
+        "bgmStyle": "アコースティック / ポジティブ",
+        "category": "ルーティン",
+        "audio_v1": "first_apartment_v1.mp3",
+        "audio_v2": "first_apartment_v2.mp3",
+        "status": "ready"
+      },
+      {
+        "id": "seoul_cafe_afternoon",
+        "name": "ソウルカフェの午後",
+        "nameEn": "Seoul Cafe Afternoon",
+        "desc": "韓国風カフェでのんびり過ごす午後。おしゃれな空間",
+        "bgmStyle": "K-インディー / ソフトR&B",
+        "category": "カフェ",
+        "audio_v1": "seoul_cafe_afternoon_v1.mp3",
+        "audio_v2": "seoul_cafe_afternoon_v2.mp3",
+        "status": "ready"
+      }
+    ],
+    "stats": {
+      "total": 10,
+      "bgm": 19,
+      "ready": 10
+    }
   }
 };
