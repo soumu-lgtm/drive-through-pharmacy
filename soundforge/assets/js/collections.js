@@ -583,6 +583,7 @@ const COLLECTIONS = {
         "category": "ストリート",
         "audio_v1": "neon_night_market_v1.mp3",
         "audio_v2": "neon_night_market_v2.mp3",
+        "image": "neon_night_market.png",
         "status": "ready"
       },
       {
@@ -594,6 +595,7 @@ const COLLECTIONS = {
         "category": "サイバースペース",
         "audio_v1": "data_flood_v1.mp3",
         "audio_v2": "data_flood_v2.mp3",
+        "image": "data_flood.png",
         "status": "ready"
       },
       {
@@ -605,6 +607,7 @@ const COLLECTIONS = {
         "category": "宇宙・SF",
         "audio_v1": "orbital_dawn_v1.mp3",
         "audio_v2": "orbital_dawn_v2.mp3",
+        "image": "orbital_dawn.png",
         "status": "ready"
       },
       {
@@ -616,6 +619,7 @@ const COLLECTIONS = {
         "category": "サイバースペース",
         "audio_v1": "heart_of_the_machine_v1.mp3",
         "audio_v2": "heart_of_the_machine_v2.mp3",
+        "image": "heart_of_the_machine.png",
         "status": "ready"
       },
       {
@@ -627,6 +631,7 @@ const COLLECTIONS = {
         "category": "サイバースペース",
         "audio_v1": "rebel_algorithm_v1.mp3",
         "audio_v2": "rebel_algorithm_v2.mp3",
+        "image": "rebel_algorithm.png",
         "status": "ready"
       },
       {
@@ -638,6 +643,7 @@ const COLLECTIONS = {
         "category": "ストリート",
         "audio_v1": "ruins_of_tomorrow_v1.mp3",
         "audio_v2": "ruins_of_tomorrow_v2.mp3",
+        "image": "ruins_of_tomorrow.png",
         "status": "ready"
       },
       {
@@ -649,6 +655,7 @@ const COLLECTIONS = {
         "category": "宇宙・SF",
         "audio_v1": "dream_of_ai_v1.mp3",
         "audio_v2": "dream_of_ai_v2.mp3",
+        "image": "dream_of_ai.png",
         "status": "ready"
       },
       {
@@ -660,6 +667,7 @@ const COLLECTIONS = {
         "category": "ストリート",
         "audio_v1": "high_speed_chase_2099_v1.mp3",
         "audio_v2": "high_speed_chase_2099_v2.mp3",
+        "image": "high_speed_chase_2099.png",
         "status": "ready"
       }
     ],
@@ -685,6 +693,7 @@ const COLLECTIONS = {
         "category": "探索・雰囲気",
         "audio_v1": "memory_of_ruins_v1.mp3",
         "audio_v2": "memory_of_ruins_v2.mp3",
+        "image": "memory_of_ruins.png",
         "status": "ready"
       },
       {
@@ -696,6 +705,7 @@ const COLLECTIONS = {
         "category": "探索・雰囲気",
         "audio_v1": "something_is_here_v1.mp3",
         "audio_v2": "something_is_here_v2.mp3",
+        "image": "something_is_here.png",
         "status": "ready"
       },
       {
@@ -706,6 +716,7 @@ const COLLECTIONS = {
         "bgmStyle": "不協和音ストリングス / ティンパニ",
         "category": "クライマックス",
         "audio_v1": "prelude_to_carnage_v1.mp3",
+        "image": "prelude_to_carnage.png",
         "status": "ready"
       },
       {
@@ -717,6 +728,7 @@ const COLLECTIONS = {
         "category": "超常現象",
         "audio_v1": "nightmare_gate_v1.mp3",
         "audio_v2": "nightmare_gate_v2.mp3",
+        "image": "nightmare_gate.png",
         "status": "ready"
       },
       {
@@ -728,6 +740,7 @@ const COLLECTIONS = {
         "category": "超常現象",
         "audio_v1": "spirit_footage_analysis_v1.mp3",
         "audio_v2": "spirit_footage_analysis_v2.mp3",
+        "image": "spirit_footage_analysis.png",
         "status": "ready"
       },
       {
@@ -739,6 +752,7 @@ const COLLECTIONS = {
         "category": "クライマックス",
         "audio_v1": "run_for_your_life_v1.mp3",
         "audio_v2": "run_for_your_life_v2.mp3",
+        "image": "run_for_your_life.png",
         "status": "ready"
       },
       {
@@ -750,6 +764,7 @@ const COLLECTIONS = {
         "category": "探索・雰囲気",
         "audio_v1": "midnight_ward_v1.mp3",
         "audio_v2": "midnight_ward_v2.mp3",
+        "image": "midnight_ward.png",
         "status": "ready"
       },
       {
@@ -761,6 +776,7 @@ const COLLECTIONS = {
         "category": "超常現象",
         "audio_v1": "the_ritual_night_v1.mp3",
         "audio_v2": "the_ritual_night_v2.mp3",
+        "image": "the_ritual_night.png",
         "status": "ready"
       }
     ],
@@ -786,6 +802,7 @@ const COLLECTIONS = {
         "category": "フィールド",
         "audio_v1": "return_to_the_capital_v1.mp3",
         "audio_v2": "return_to_the_capital_v2.mp3",
+        "image": "return_to_the_capital.png",
         "status": "ready"
       },
       {
@@ -797,6 +814,7 @@ const COLLECTIONS = {
         "category": "バトル",
         "audio_v1": "blade_of_fate_v1.mp3",
         "audio_v2": "blade_of_fate_v2.mp3",
+        "image": "blade_of_fate.png",
         "status": "ready"
       },
       {
@@ -808,6 +826,7 @@ const COLLECTIONS = {
         "category": "ボスバトル",
         "audio_v1": "guardian_of_the_abyss_v1.mp3",
         "audio_v2": "guardian_of_the_abyss_v2.mp3",
+        "image": "guardian_of_the_abyss.png",
         "status": "ready"
       },
       {
@@ -819,6 +838,7 @@ const COLLECTIONS = {
         "category": "バトル",
         "audio_v1": "the_last_fortress_v1.mp3",
         "audio_v2": "the_last_fortress_v2.mp3",
+        "image": "the_last_fortress.png",
         "status": "ready"
       },
       {
@@ -830,6 +850,7 @@ const COLLECTIONS = {
         "category": "フィールド",
         "audio_v1": "heros_proof_v1.mp3",
         "audio_v2": "heros_proof_v2.mp3",
+        "image": "heros_proof.png",
         "status": "ready"
       },
       {
@@ -841,6 +862,7 @@ const COLLECTIONS = {
         "category": "ボスバトル",
         "audio_v1": "overture_of_ruin_v1.mp3",
         "audio_v2": "overture_of_ruin_v2.mp3",
+        "image": "overture_of_ruin.png",
         "status": "ready"
       },
       {
@@ -852,6 +874,7 @@ const COLLECTIONS = {
         "category": "ダンジョン",
         "audio_v1": "forgotten_temple_v1.mp3",
         "audio_v2": "forgotten_temple_v2.mp3",
+        "image": "forgotten_temple.png",
         "status": "ready"
       },
       {
@@ -863,6 +886,7 @@ const COLLECTIONS = {
         "category": "フィールド",
         "audio_v1": "twilight_of_the_kingdom_v1.mp3",
         "audio_v2": "twilight_of_the_kingdom_v2.mp3",
+        "image": "twilight_of_the_kingdom.png",
         "status": "ready"
       },
       {
@@ -873,6 +897,7 @@ const COLLECTIONS = {
         "bgmStyle": "フルオーケストラ / エピック・コーラス",
         "category": "ボスバトル",
         "audio_v1": "dawn_of_the_final_battle_v1.mp3",
+        "image": "dawn_of_the_final_battle.png",
         "status": "ready"
       },
       {
@@ -884,6 +909,7 @@ const COLLECTIONS = {
         "category": "エンディング",
         "audio_v1": "a_new_horizon_v1.mp3",
         "audio_v2": "a_new_horizon_v2.mp3",
+        "image": "a_new_horizon.png",
         "status": "ready"
       }
     ],
@@ -908,6 +934,7 @@ const COLLECTIONS = {
         "bgmStyle": "アコースティックギター / ボサノバ",
         "category": "料理・キッチン",
         "audio_v1": "sunset_pasta_v1.mp3",
+        "image": "sunset_pasta.png",
         "status": "ready"
       },
       {
@@ -919,6 +946,7 @@ const COLLECTIONS = {
         "category": "お出かけ",
         "audio_v1": "weekend_market_v1.mp3",
         "audio_v2": "weekend_market_v2.mp3",
+        "image": "weekend_market.png",
         "status": "ready"
       },
       {
@@ -930,6 +958,7 @@ const COLLECTIONS = {
         "category": "料理・キッチン",
         "audio_v1": "dessert_night_v1.mp3",
         "audio_v2": "dessert_night_v2.mp3",
+        "image": "dessert_night.png",
         "status": "ready"
       },
       {
@@ -941,6 +970,7 @@ const COLLECTIONS = {
         "category": "ルーティン",
         "audio_v1": "morning_smoothie_v1.mp3",
         "audio_v2": "morning_smoothie_v2.mp3",
+        "image": "morning_smoothie.png",
         "status": "ready"
       },
       {
@@ -952,6 +982,7 @@ const COLLECTIONS = {
         "category": "料理・キッチン",
         "audio_v1": "afternoon_kitchen_v1.mp3",
         "audio_v2": "afternoon_kitchen_v2.mp3",
+        "image": "afternoon_kitchen.png",
         "status": "ready"
       },
       {
@@ -963,6 +994,7 @@ const COLLECTIONS = {
         "category": "カフェ",
         "audio_v1": "window_seat_coffee_v1.mp3",
         "audio_v2": "window_seat_coffee_v2.mp3",
+        "image": "window_seat_coffee.png",
         "status": "ready"
       },
       {
@@ -974,6 +1006,7 @@ const COLLECTIONS = {
         "category": "ルーティン",
         "audio_v1": "sunday_morning_routine_v1.mp3",
         "audio_v2": "sunday_morning_routine_v2.mp3",
+        "image": "sunday_morning_routine.png",
         "status": "ready"
       },
       {
@@ -985,6 +1018,7 @@ const COLLECTIONS = {
         "category": "お出かけ",
         "audio_v1": "city_walk_v1.mp3",
         "audio_v2": "city_walk_v2.mp3",
+        "image": "city_walk.png",
         "status": "ready"
       },
       {
@@ -996,6 +1030,7 @@ const COLLECTIONS = {
         "category": "ルーティン",
         "audio_v1": "first_apartment_v1.mp3",
         "audio_v2": "first_apartment_v2.mp3",
+        "image": "first_apartment.png",
         "status": "ready"
       },
       {
@@ -1007,6 +1042,7 @@ const COLLECTIONS = {
         "category": "カフェ",
         "audio_v1": "seoul_cafe_afternoon_v1.mp3",
         "audio_v2": "seoul_cafe_afternoon_v2.mp3",
+        "image": "seoul_cafe_afternoon.png",
         "status": "ready"
       }
     ],

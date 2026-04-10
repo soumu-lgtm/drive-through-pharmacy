@@ -46,6 +46,20 @@
     .card-desc { font-size: 0.8rem; color: var(--text-dim); flex: 1; }
     .card-bgm-style { font-size: 0.7rem; color: var(--accent); padding: 0.3rem 0.6rem;
                        background: rgba(232,168,124,0.08); border-radius: 4px; }
+    .card-thumb { position: relative; height: 160px; overflow: hidden; cursor: pointer; background: var(--surface2); }
+    .card-thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s; }
+    .card-thumb:hover img { transform: scale(1.05); }
+    .card-thumb .placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+                                color: var(--text-dim); font-size: 2rem; }
+    .card-thumb .scene-name { position: absolute; bottom: 0; left: 0; right: 0; padding: 0.5rem 0.7rem;
+                               background: linear-gradient(transparent, rgba(0,0,0,0.8));
+                               font-size: 0.85rem; font-weight: 600; }
+    .card-thumb .scene-name small { display: block; font-size: 0.7rem; font-weight: 400; color: var(--text-dim); }
+    .dl-btn.image-dl { color: var(--green); }
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9);
+                      z-index: 1000; align-items: center; justify-content: center; cursor: pointer; }
+    .modal-overlay.active { display: flex; }
+    .modal-overlay img { max-width: 95%; max-height: 95%; object-fit: contain; border-radius: 8px; }
     .variant-tabs { display: flex; gap: 0.3rem; margin-bottom: 0.4rem; }
     .variant-tab { padding: 0.25rem 0.6rem; font-size: 0.7rem; border: 1px solid var(--border);
                     border-radius: 4px; background: var(--surface2); color: var(--text-dim);
@@ -87,12 +101,17 @@
 
   <div class="stats-bar">
     <div class="stat">BGM: <strong id="bgm-count">0</strong>曲</div>
+    <div class="stat">背景画像: <strong id="img-count">0</strong>枚</div>
     <div class="stat">準備中: <strong id="pending-count">0</strong>曲</div>
     <div class="stat">形式: MP3</div>
     <div class="stat">ライセンス: 商用利用OK / クレジット不要</div>
   </div>
 
   <div class="container" id="container"></div>
+
+  <div class="modal-overlay" id="imageModal" onclick="closeModal()">
+    <img id="modalImage" src="" alt="">
+  </div>
 
   <div class="footer">
     SoundForge &mdash; Free BGM<br>
@@ -108,8 +127,10 @@
     let currentAudio = null, currentBtn = null;
     const collection = COLLECTIONS["vlog-cafe"];
     const audioBase = "assets/audio/" + collection.audio_folder + "/";
+    const imageBase = "assets/images/" + collection.audio_folder + "/";
     const container = document.getElementById("container");
     let bgmCount = 0, readyCount = 0, pendingCount = 0;
+    let imgCount = 0;
 
     const grouped = {};
     collection.scenes.forEach(s => {
@@ -145,11 +166,15 @@
         }
 
         const comingSoonBadge = isComingSoon ? '<span class="coming-soon-badge">Coming Soon</span>' : '';
+        const hasImage = !!scene.image;
+        if (hasImage) imgCount++;
 
         card.innerHTML = `
-          <div class="card-header">
-            <h3>${scene.name}${comingSoonBadge}</h3>
-            <small>${scene.nameEn}</small>
+          <div class="card-thumb" ${hasImage ? `onclick="openModal('${imageBase}${scene.image}')"` : ''}>
+            ${hasImage
+              ? `<img src="${imageBase}${scene.image}" alt="${scene.name}" loading="lazy">`
+              : '<div class="placeholder">🎵</div>'}
+            <div class="scene-name">${scene.name}${comingSoonBadge}<small>${scene.nameEn}</small></div>
           </div>
           <div class="card-body">
             <div class="card-desc">${scene.desc}</div>
@@ -163,7 +188,9 @@
                 </div>`
               : `<div class="audio-pending">&#9835; BGM 準備中</div>`}
             <div class="download-row">
-              ${hasV1 ? `<a class="dl-btn" href="${audioBase}${scene.audio_v1}" download="${scene.id}_v1.mp3">${ICON_DL} v1 DL</a>` : ''}
+              ${hasImage ? `<a class="dl-btn image-dl" href="${imageBase}${scene.image}" download="${scene.id}.png">
+                ${ICON_DL} 背景DL</a>` : `<span class="dl-btn image-dl disabled">${ICON_DL} 背景DL</span>`}
+              ${hasV1 ? `<a class="dl-btn" href="${audioBase}${scene.audio_v1}" download="${scene.id}_v1.mp3" id="dl-${scene.id}">${ICON_DL} v1 DL</a>` : ''}
               ${hasV2 ? `<a class="dl-btn" href="${audioBase}${scene.audio_v2}" download="${scene.id}_v2.mp3">${ICON_DL} v2 DL</a>` : ''}
               ${!hasV1 && !hasV2 ? `<span class="dl-btn disabled">${ICON_DL} 準備中</span>` : ''}
             </div>
@@ -178,6 +205,7 @@
     document.getElementById("ready-count").textContent = readyCount;
     document.getElementById("bgm-count").textContent = bgmCount;
     document.getElementById("pending-count").textContent = pendingCount;
+    document.getElementById("img-count").textContent = imgCount;
 
     // Variant tab switching
     document.querySelectorAll(".variant-tab").forEach(tab => {
@@ -234,6 +262,15 @@
       currentAudio.play();
       btn.innerHTML = ICON_PAUSE;
     }
+
+    function openModal(src) {
+      document.getElementById("modalImage").src = src;
+      document.getElementById("imageModal").classList.add("active");
+    }
+    function closeModal() {
+      document.getElementById("imageModal").classList.remove("active");
+    }
+    document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
   </script>
 </body>
 </html>
