@@ -1438,7 +1438,7 @@
 
         // コードの正規化（先頭ゼロの有無を吸収）
         function normalizeCode(code) {
-            return String(parseInt(String(code), 10));
+            var s = String(code).trim().toUpperCase(); if (/^M\d+$/i.test(s)) return s; if (/^\d+$/.test(s)) return String(parseInt(s, 10)); return s;
         }
 
         function onScanSuccess(decodedText) {
