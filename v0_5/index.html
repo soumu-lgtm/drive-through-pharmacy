@@ -1057,12 +1057,13 @@
     <div class="toast" id="toast"></div>
 
     <!-- スキャン通知ポップアップ -->
-    <div class="scan-popup-overlay" id="scan-popup-overlay" onclick="closeScanPopup()">
+    <div class="scan-popup-overlay" id="scan-popup-overlay">
         <div class="scan-popup" onclick="event.stopPropagation()">
             <div class="scan-popup-icon" id="scan-popup-icon">💊</div>
             <div class="scan-popup-name" id="scan-popup-name">-</div>
             <div class="scan-popup-detail" id="scan-popup-detail">-</div>
             <div class="scan-popup-badge stacked" id="scan-popup-badge">リストに追加しました</div>
+            <button id="scan-popup-ok-btn" onclick="closeScanPopup()" style="margin-top:16px;padding:10px 48px;font-size:16px;font-weight:700;background:#2196F3;color:#fff;border:none;border-radius:8px;cursor:pointer;">OK</button>
         </div>
     </div>
 
@@ -1441,8 +1442,12 @@
             var s = String(code).trim().toUpperCase(); if (/^M\d+$/i.test(s)) return s; if (/^\d+$/.test(s)) return String(parseInt(s, 10)); return s;
         }
 
+        let scannerPaused = false;
+
         function onScanSuccess(decodedText) {
-            // 重複防止（同じコードを1.5秒間無視）
+            // OKボタン押すまでスキャン停止
+            if (scannerPaused) return;
+
             const normalizedScanned = normalizeCode(decodedText);
             if (scanCooldown && lastScannedCode === normalizedScanned) return;
 
@@ -1451,7 +1456,7 @@
             if (medicine) {
                 lastScannedCode = normalizedScanned;
                 scanCooldown = true;
-                setTimeout(() => { scanCooldown = false; }, 1500);
+                scannerPaused = true;
 
                 if (navigator.vibrate) navigator.vibrate(100);
 
@@ -1700,15 +1705,13 @@
             overlay.classList.add('show');
 
             if (scanPopupTimer) clearTimeout(scanPopupTimer);
-            const duration = 1200;
-            scanPopupTimer = setTimeout(() => {
-                overlay.classList.remove('show');
-            }, duration);
         }
 
         function closeScanPopup() {
             document.getElementById('scan-popup-overlay').classList.remove('show');
             if (scanPopupTimer) clearTimeout(scanPopupTimer);
+            scannerPaused = false;
+            scanCooldown = false;
         }
 
         // ===== 即バッチ追加 =====
