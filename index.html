@@ -1267,7 +1267,8 @@
                     patient: h.patientName || null,
                     previousStock: h.previousStock,
                     diff: h.diff,
-                    reason: h.reason
+                    reason: h.reason,
+                    operator: h.operator || ''
                 }));
                 historyDisplayCount = HISTORY_PAGE_SIZE;
                 applyHistoryFilter();
@@ -1999,7 +2000,7 @@
                         <div class="history-icon ${h.type}">${icon}</div>
                         <div class="history-content">
                             <div class="history-medicine">${h.medicine}</div>
-                            <div class="history-detail">${h.date} ${h.time}${h.patient ? ' • ' + h.patient : ''}${h.type === 'adjust' ? ' • 棚卸修正' : ''}</div>
+                            <div class="history-detail">${h.date} ${h.time}${h.operator ? ' • ' + h.operator : ''}${h.patient ? ' • ' + h.patient : ''}${h.type === 'adjust' ? ' • 棚卸修正' : ''}</div>
                         </div>
                         <div class="history-qty ${qtyClass}">${qtyText}</div>
                     </div>
