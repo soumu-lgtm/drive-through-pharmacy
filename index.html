@@ -634,6 +634,23 @@
             color: #f59e0b;
         }
 
+        .adjust-input {
+            width: 60px;
+            padding: 4px 6px;
+            border: 2px solid #f59e0b;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 700;
+            text-align: center;
+            color: #f59e0b;
+            background: #fffbeb;
+        }
+        .adjust-input:focus {
+            outline: none;
+            border-color: #d97706;
+            box-shadow: 0 0 0 2px rgba(217,119,6,0.2);
+        }
+
         .batch-item-controls {
             display: flex;
             align-items: center;
@@ -1613,9 +1630,15 @@
 
         function changeBatchQty(index, delta) {
             const item = batchItems[index];
-            const minQty = item.mode === 'adjust' ? 0 : 1;
-            item.quantity = Math.max(minQty, item.quantity + delta);
+            item.quantity = Math.max(1, item.quantity + delta);
             renderBatchList();
+            if (navigator.vibrate) navigator.vibrate(30);
+        }
+
+        function setAdjustQty(index, value) {
+            const qty = parseInt(value, 10);
+            if (isNaN(qty) || qty < 0) return;
+            batchItems[index].quantity = qty;
             if (navigator.vibrate) navigator.vibrate(30);
         }
 
@@ -1639,9 +1662,16 @@
                         <div class="batch-item-detail">${item.patient ? item.patient.name : ''}</div>
                     </div>
                     <div class="batch-item-controls">
+                        ${item.mode === 'adjust' ? `
+                        <span style="color:#f59e0b;font-weight:700;font-size:13px;">→</span>
+                        <input type="number" class="adjust-input" min="0" value="${item.quantity}"
+                            onchange="setAdjustQty(${i}, this.value)" onfocus="this.select()">
+                        <span style="color:var(--text-muted);font-size:12px;">${item.medicine.unit || ''}</span>
+                        ` : `
                         <button class="batch-qty-btn" onclick="changeBatchQty(${i}, -1)">−</button>
-                        <span class="batch-item-qty ${item.mode}">${item.mode === 'adjust' ? '→' : item.mode === 'in' ? '+' : '-'}${item.quantity}</span>
+                        <span class="batch-item-qty ${item.mode}">${item.mode === 'in' ? '+' : '-'}${item.quantity}</span>
                         <button class="batch-qty-btn" onclick="changeBatchQty(${i}, 1)">＋</button>
+                        `}
                     </div>
                     <button class="batch-remove-btn" onclick="removeBatchItem(${i})">✕</button>
                 </div>
