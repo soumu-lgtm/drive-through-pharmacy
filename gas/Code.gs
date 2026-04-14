@@ -14,7 +14,8 @@ const SHEET_NAMES = {
   STOCK_IN: '入庫履歴',
   STOCK_OUT: '出庫履歴',
   CURRENT_STOCK: '在庫サマリー',
-  PATIENT_MASTER: '患者マスタ'
+  PATIENT_MASTER: '患者マスタ',
+  STOCK_ADJUST: '修正（棚卸）履歴'
 };
 
 /**
@@ -51,7 +52,7 @@ function doGet(e) {
       result = getCurrentStock();
       break;
     case 'getHistory':
-      result = getHistory(e.parameter.date);
+      result = getHistory(e.parameter.date, e.parameter.dateFrom, e.parameter.dateTo, e.parameter.search);
       break;
     case 'getPatients':
       result = getPatientList();
@@ -79,6 +80,9 @@ function doPost(e) {
       break;
     case 'stockOut':
       result = recordStockOut(data);
+      break;
+    case 'stockAdjust':
+      result = recordStockAdjust(data);
       break;
     default:
       result = { error: 'Unknown action' };
@@ -229,6 +233,44 @@ function recordStockOut(data) {
 }
 
 /**
+ * 棚卸修正を記録（在庫を指定数量に直接設定）
+ */
+function recordStockAdjust(data) {
+  const { code, newQuantity, reason, operator, note } = data;
+
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_NAMES.STOCK_ADJUST);
+
+  if (!sheet) {
+    return { error: 'シートが見つかりません' };
+  }
+
+  // 現在の在庫数を取得
+  const currentStock = getStockByCode(code);
+  const diff = newQuantity - currentStock;
+
+  const now = new Date();
+  const row = [
+    Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy-MM-dd HH:mm:ss'),
+    code,
+    getMedicineName(code),
+    currentStock,     // 修正前
+    newQuantity,      // 修正後
+    diff,             // 差分
+    reason || '棚卸',
+    operator || '',
+    note || ''
+  ];
+
+  sheet.appendRow(row);
+
+  // 在庫サマリーを直接更新（差分ではなく絶対値で設定）
+  setCurrentStock(code, newQuantity);
+
+  return { success: true, message: '在庫を修正しました', previousStock: currentStock, newStock: newQuantity, diff: diff };
+}
+
+/**
  * 在庫サマリーを更新
  */
 function updateCurrentStock(code, delta) {
@@ -269,21 +311,67 @@ function updateCurrentStock(code, delta) {
   }
 }
 
+/**
+ * 在庫サマリーを絶対値で設定（棚卸修正用）
+ */
+function setCurrentStock(code, newQuantity) {
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_NAMES.CURRENT_STOCK);
+
+  if (!sheet) return;
+
+  const data = sheet.getDataRange().getValues();
+  const normalizedInput = normalizeCode(code);
+
+  for (let i = 1; i < data.length; i++) {
+    if (normalizeCode(data[i][0]) === normalizedInput) {
+      const now = new Date();
+      sheet.getRange(i + 1, 3).setValue(newQuantity);
+      sheet.getRange(i + 1, 6).setValue(
+        Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy-MM-dd HH:mm:ss')
+      );
+      return;
+    }
+  }
+
+  // Not found - add new row
+  const medicine = getMedicineByCode(code);
+  if (medicine) {
+    sheet.appendRow([
+      code,
+      medicine.name,
+      newQuantity,
+      medicine.unit,
+      medicine.threshold || 10,
+      Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd HH:mm:ss')
+    ]);
+  }
+}
+
 // ===== 履歴取得 =====
 
 /**
  * 履歴を取得
  */
-function getHistory(dateStr) {
+function getHistory(dateStr, dateFrom, dateTo, search) {
   const ss = getSpreadsheet();
   const inSheet = ss.getSheetByName(SHEET_NAMES.STOCK_IN);
   const outSheet = ss.getSheetByName(SHEET_NAMES.STOCK_OUT);
+  const adjustSheet = ss.getSheetByName(SHEET_NAMES.STOCK_ADJUST);
 
-  const targetDate = dateStr || Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd');
+  // Date range: if dateFrom/dateTo provided, use range; else use single date
+  let targetDateStart, targetDateEnd;
+  if (dateFrom && dateTo) {
+    targetDateStart = dateFrom;
+    targetDateEnd = dateTo;
+  } else {
+    const singleDate = dateStr || Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd');
+    targetDateStart = singleDate;
+    targetDateEnd = singleDate;
+  }
 
-  const history = [];
+  const searchLower = search ? search.toLowerCase() : '';
 
-  // 日時セルをyyyy-MM-dd形式に変換して比較する関数
   function formatTimestamp(val) {
     if (val instanceof Date) {
       return Utilities.formatDate(val, 'Asia/Tokyo', 'yyyy-MM-dd HH:mm:ss');
@@ -291,22 +379,28 @@ function getHistory(dateStr) {
     return String(val);
   }
 
+  function matchesDateRange(ts) {
+    const dateOnly = ts.substring(0, 10);
+    return dateOnly >= targetDateStart && dateOnly <= targetDateEnd;
+  }
+
+  function matchesSearch(name) {
+    if (!searchLower) return true;
+    return String(name).toLowerCase().indexOf(searchLower) >= 0;
+  }
+
+  const history = [];
+
   // 入庫履歴
   if (inSheet) {
     const inData = inSheet.getDataRange().getValues();
     for (let i = 1; i < inData.length; i++) {
       const row = inData[i];
       const ts = formatTimestamp(row[0]);
-      if (row[0] && ts.startsWith(targetDate)) {
+      if (row[0] && matchesDateRange(ts) && matchesSearch(row[2])) {
         history.push({
-          timestamp: ts,
-          type: 'in',
-          code: row[1],
-          name: row[2],
-          quantity: row[3],
-          unit: row[4],
-          operator: row[5],
-          note: row[6]
+          timestamp: ts, type: 'in', code: row[1], name: row[2],
+          quantity: row[3], unit: row[4], operator: row[5], note: row[6]
         });
       }
     }
@@ -318,26 +412,33 @@ function getHistory(dateStr) {
     for (let i = 1; i < outData.length; i++) {
       const row = outData[i];
       const ts = formatTimestamp(row[0]);
-      if (row[0] && ts.startsWith(targetDate)) {
+      if (row[0] && matchesDateRange(ts) && matchesSearch(row[2])) {
         history.push({
-          timestamp: ts,
-          type: 'out',
-          code: row[1],
-          name: row[2],
-          quantity: row[3],
-          unit: row[4],
-          patientId: row[5],
-          patientName: row[6],
-          operator: row[7],
-          note: row[8]
+          timestamp: ts, type: 'out', code: row[1], name: row[2],
+          quantity: row[3], unit: row[4], patientId: row[5],
+          patientName: row[6], operator: row[7], note: row[8]
         });
       }
     }
   }
 
-  // 時刻順にソート
-  history.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  // 修正（棚卸）履歴
+  if (adjustSheet) {
+    const adjData = adjustSheet.getDataRange().getValues();
+    for (let i = 1; i < adjData.length; i++) {
+      const row = adjData[i];
+      const ts = formatTimestamp(row[0]);
+      if (row[0] && matchesDateRange(ts) && matchesSearch(row[2])) {
+        history.push({
+          timestamp: ts, type: 'adjust', code: row[1], name: row[2],
+          previousStock: row[3], newStock: row[4], diff: row[5],
+          reason: row[6], operator: row[7], note: row[8]
+        });
+      }
+    }
+  }
 
+  history.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   return { success: true, history };
 }
 
@@ -423,6 +524,14 @@ function initializeSheets() {
     sheet = ss.insertSheet(SHEET_NAMES.CURRENT_STOCK);
     sheet.appendRow(['コード', '薬品名', '現在庫', '単位', '発注点', '最終更新']);
     sheet.getRange(1, 1, 1, 6).setBackground('#fbbc04').setFontColor('#000000').setFontWeight('bold');
+  }
+
+  // 修正（棚卸）履歴シート
+  sheet = ss.getSheetByName(SHEET_NAMES.STOCK_ADJUST);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_NAMES.STOCK_ADJUST);
+    sheet.appendRow(['日時', 'コード', '薬品名', '修正前', '修正後', '差分', '理由', '担当者', '備考']);
+    sheet.getRange(1, 1, 1, 9).setBackground('#ff9800').setFontColor('#ffffff').setFontWeight('bold');
   }
 
   SpreadsheetApp.getUi().alert('シートを初期化しました');
