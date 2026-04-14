@@ -359,15 +359,18 @@ function getHistory(dateStr, dateFrom, dateTo, search) {
   const outSheet = ss.getSheetByName(SHEET_NAMES.STOCK_OUT);
   const adjustSheet = ss.getSheetByName(SHEET_NAMES.STOCK_ADJUST);
 
-  // Date range: if dateFrom/dateTo provided, use range; else use single date
+  // Date range: if dateFrom/dateTo provided, use range; if neither, return all
   let targetDateStart, targetDateEnd;
   if (dateFrom && dateTo) {
     targetDateStart = dateFrom;
     targetDateEnd = dateTo;
+  } else if (dateStr) {
+    targetDateStart = dateStr;
+    targetDateEnd = dateStr;
   } else {
-    const singleDate = dateStr || Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd');
-    targetDateStart = singleDate;
-    targetDateEnd = singleDate;
+    // No date params = return all history
+    targetDateStart = '2000-01-01';
+    targetDateEnd = '2099-12-31';
   }
 
   const searchLower = search ? search.toLowerCase() : '';

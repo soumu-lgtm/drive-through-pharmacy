@@ -1240,6 +1240,10 @@
         }
 
         // GASから履歴を取得
+        let allHistoryData = []; // full dataset from GAS
+        let historyDisplayCount = 50; // how many to show initially
+        const HISTORY_PAGE_SIZE = 50;
+
         async function loadHistoryFromGAS(dateFrom, dateTo, search) {
             let params = {};
             if (dateFrom && dateTo) {
@@ -1251,8 +1255,10 @@
             }
             const result = await gasGet('getHistory', params);
             if (result && result.success) {
-                historyData = result.history.map(h => ({
-                    time: new Date(h.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
+                allHistoryData = result.history.map(h => ({
+                    date: h.timestamp ? h.timestamp.substring(0, 10) : '',
+                    time: (() => { try { return new Date(h.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }); } catch(e) { return ''; } })(),
+                    timestamp: h.timestamp,
                     type: h.type,
                     medicine: h.name,
                     code: h.code,
@@ -1263,7 +1269,8 @@
                     diff: h.diff,
                     reason: h.reason
                 }));
-                renderHistory();
+                historyDisplayCount = HISTORY_PAGE_SIZE;
+                applyHistoryFilter();
             }
         }
 
@@ -1932,68 +1939,53 @@
 
         // ===== 履歴 =====
         function renderHistory() {
-            const container = document.getElementById('history-list');
-            if (historyData.length === 0) {
-                container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">履歴がありません</div>';
-                return;
-            }
-            container.innerHTML = historyData.map(h => {
-                let icon, qtyClass, qtyText;
-                if (h.type === 'adjust') {
-                    icon = '📝';
-                    qtyClass = 'adjust';
-                    qtyText = `→${h.quantity}${h.unit}`;
-                } else if (h.type === 'in') {
-                    icon = '📥';
-                    qtyClass = 'in';
-                    qtyText = `+${h.quantity}${h.unit}`;
-                } else {
-                    icon = '📤';
-                    qtyClass = 'out';
-                    qtyText = `-${h.quantity}${h.unit}`;
-                }
-                return `
-                    <div class="history-item">
-                        <div class="history-icon ${h.type}">${icon}</div>
-                        <div class="history-content">
-                            <div class="history-medicine">${h.medicine}</div>
-                            <div class="history-detail">${h.time}${h.patient ? ' • ' + h.patient : ''}${h.type === 'adjust' ? ' • 棚卸修正' : ''}</div>
-                        </div>
-                        <div class="history-qty ${qtyClass}">${qtyText}</div>
-                    </div>
-                `;
-            }).join('');
+            applyHistoryFilter();
         }
 
-        // 履歴フィルタ
+        // 履歴フィルタ（ローカルフィルタリング）
+        let filteredHistoryData = [];
+
         function filterHistory() {
             const dateFrom = document.getElementById('history-date-from').value;
             const dateTo = document.getElementById('history-date-to').value;
             const search = document.getElementById('history-search').value;
 
+            // If date range changed, re-fetch from GAS
             if (USE_GAS && (dateFrom || dateTo)) {
                 loadHistoryFromGAS(dateFrom, dateTo, search);
             } else {
-                // Local filter on already loaded data
-                renderFilteredHistory(search);
+                historyDisplayCount = HISTORY_PAGE_SIZE;
+                applyHistoryFilter();
             }
         }
 
-        function renderFilteredHistory(search) {
-            const container = document.getElementById('history-list');
-            const searchLower = (search || '').toLowerCase();
-            const filtered = historyData.filter(h => {
-                if (searchLower && !h.medicine.toLowerCase().includes(searchLower)) return false;
+        function applyHistoryFilter() {
+            const search = (document.getElementById('history-search')?.value || '').toLowerCase();
+            const dateFrom = document.getElementById('history-date-from')?.value || '';
+            const dateTo = document.getElementById('history-date-to')?.value || '';
+
+            filteredHistoryData = allHistoryData.filter(h => {
+                if (search && !h.medicine.toLowerCase().includes(search)) return false;
+                if (dateFrom && h.date < dateFrom) return false;
+                if (dateTo && h.date > dateTo) return false;
                 return true;
             });
 
-            if (filtered.length === 0) {
+            renderHistoryPaged();
+        }
+
+        function renderHistoryPaged() {
+            const container = document.getElementById('history-list');
+            const total = filteredHistoryData.length;
+            const showing = Math.min(historyDisplayCount, total);
+            const slice = filteredHistoryData.slice(0, showing);
+
+            if (total === 0) {
                 container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">該当する履歴がありません</div>';
                 return;
             }
 
-            // Use same rendering as renderHistory but with filtered data
-            container.innerHTML = filtered.map(h => {
+            let html = slice.map(h => {
                 let icon, qtyClass, qtyText;
                 if (h.type === 'adjust') {
                     icon = '📝'; qtyClass = 'adjust'; qtyText = `→${h.quantity}${h.unit}`;
@@ -2007,12 +1999,27 @@
                         <div class="history-icon ${h.type}">${icon}</div>
                         <div class="history-content">
                             <div class="history-medicine">${h.medicine}</div>
-                            <div class="history-detail">${h.time}${h.patient ? ' • ' + h.patient : ''}${h.type === 'adjust' ? ' • 棚卸修正' : ''}</div>
+                            <div class="history-detail">${h.date} ${h.time}${h.patient ? ' • ' + h.patient : ''}${h.type === 'adjust' ? ' • 棚卸修正' : ''}</div>
                         </div>
                         <div class="history-qty ${qtyClass}">${qtyText}</div>
                     </div>
                 `;
             }).join('');
+
+            // Show count + load more button
+            html += `<div style="text-align:center; padding:12px; color:var(--text-muted); font-size:13px;">
+                ${showing} / ${total} 件表示`;
+            if (showing < total) {
+                html += ` <button onclick="loadMoreHistory()" style="margin-left:8px; padding:6px 16px; border:1px solid var(--primary); border-radius:6px; background:white; color:var(--primary); font-size:13px; cursor:pointer;">さらに${Math.min(HISTORY_PAGE_SIZE, total - showing)}件読み込む</button>`;
+            }
+            html += `</div>`;
+
+            container.innerHTML = html;
+        }
+
+        function loadMoreHistory() {
+            historyDisplayCount += HISTORY_PAGE_SIZE;
+            renderHistoryPaged();
         }
 
         function setHistoryDatePreset(preset) {
