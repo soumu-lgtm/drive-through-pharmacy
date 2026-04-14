@@ -534,7 +534,7 @@ function initializeSheets() {
     sheet.getRange(1, 1, 1, 9).setBackground('#ff9800').setFontColor('#ffffff').setFontWeight('bold');
   }
 
-  SpreadsheetApp.getUi().alert('シートを初期化しました');
+  Logger.log('シートを初期化しました');
 }
 
 /**
