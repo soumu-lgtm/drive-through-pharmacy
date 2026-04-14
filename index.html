@@ -81,16 +81,15 @@
             gap: 8px;
         }
 
-        /* モード切替 */
-        .mode-toggle {
+        /* 大分類 */
+        .major-mode-toggle {
             display: flex;
             gap: 8px;
-            margin-bottom: 16px;
-            align-items: stretch;
+            margin-bottom: 8px;
         }
-
-        .mode-btn {
-            padding: 14px;
+        .major-mode-btn {
+            flex: 1;
+            padding: 12px;
             border: 2px solid var(--border);
             border-radius: 10px;
             background: white;
@@ -98,60 +97,110 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
+            text-align: center;
+        }
+        .major-mode-btn.active-manage {
+            border-color: var(--primary);
+            background: #eff6ff;
+            color: var(--primary);
+        }
+        .major-mode-btn.active-dispense {
+            border-color: var(--danger);
+            background: #fef2f2;
+            color: var(--danger);
+        }
+        /* 中分類 */
+        .sub-mode-toggle {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+        .sub-mode-btn {
+            flex: 1;
+            padding: 10px 8px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            background: white;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 4px;
-        }
-
-        .mode-btn#btn-out {
-            flex: 3;
-            padding: 18px 14px;
-            font-size: 17px;
-        }
-
-        .mode-btn#btn-in {
-            flex: 1;
-            padding: 10px 8px;
-            font-size: 12px;
+            gap: 2px;
             opacity: 0.7;
         }
-
-        .mode-btn.active-in {
+        .sub-mode-btn span { font-size: 18px; }
+        .sub-mode-btn.active-in {
             border-color: var(--success);
             background: #f0fdf4;
             color: var(--success);
             opacity: 1;
         }
-
-        .mode-btn.active-out {
-            border-color: var(--danger);
-            background: #fef2f2;
-            color: var(--danger);
-        }
-
-        .mode-btn#btn-out span {
-            font-size: 28px;
-        }
-
-        .mode-btn#btn-in span {
-            font-size: 18px;
-        }
-
-        .mode-btn#btn-adjust {
-            flex: 1;
-            padding: 10px 8px;
-            font-size: 12px;
-            opacity: 0.7;
-        }
-        .mode-btn#btn-adjust span {
-            font-size: 18px;
-        }
-        .mode-btn.active-adjust {
+        .sub-mode-btn.active-adjust {
             border-color: #f59e0b;
             background: #fffbeb;
             color: #f59e0b;
             opacity: 1;
+        }
+        .sub-mode-btn.active-addmed {
+            border-color: #8b5cf6;
+            background: #f5f3ff;
+            color: #8b5cf6;
+            opacity: 1;
+        }
+        .sub-mode-btn.active-out {
+            border-color: var(--danger);
+            background: #fef2f2;
+            color: var(--danger);
+            opacity: 1;
+        }
+
+        /* 薬品追加フォーム */
+        .add-medicine-form {
+            display: none;
+        }
+        .add-medicine-form.visible {
+            display: block;
+        }
+        .add-medicine-form .form-group {
+            margin-bottom: 10px;
+        }
+        .add-medicine-form label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+        .add-medicine-form input, .add-medicine-form select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 15px;
+        }
+        .add-medicine-form input:focus, .add-medicine-form select:focus {
+            outline: none;
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 2px rgba(139,92,246,0.15);
+        }
+        .add-medicine-btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            background: #8b5cf6;
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        .add-medicine-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
         .history-icon.adjust { background: #fff7ed; color: #f59e0b; }
 
@@ -975,20 +1024,62 @@
     <!-- スキャンタブ -->
     <div id="tab-scan" class="tab-content active">
         <div class="container">
-            <!-- モード切替 -->
-            <div class="mode-toggle">
-                <button class="mode-btn" id="btn-in" onclick="setMode('in')">
-                    <span>📥</span>
-                    入庫（仕入）
+            <!-- 大分類 -->
+            <div class="major-mode-toggle">
+                <button class="major-mode-btn" id="btn-major-manage" onclick="setMajorMode('manage')">🔧 管理機能</button>
+                <button class="major-mode-btn active-dispense" id="btn-major-dispense" onclick="setMajorMode('dispense')">💊 出荷（処方）</button>
+            </div>
+            <!-- 中分類（管理） -->
+            <div class="sub-mode-toggle" id="sub-mode-manage" style="display:none;">
+                <button class="sub-mode-btn" id="btn-in" onclick="setMode('in')">
+                    <span>📥</span>入庫
                 </button>
-                <button class="mode-btn active-out" id="btn-out" onclick="setMode('out')">
-                    <span>📤</span>
-                    出庫（処方）
+                <button class="sub-mode-btn" id="btn-adjust" onclick="setMode('adjust')">
+                    <span>📝</span>棚卸
                 </button>
-                <button class="mode-btn" id="btn-adjust" onclick="setMode('adjust')">
-                    <span>📝</span>
-                    修正（棚卸）
+                <button class="sub-mode-btn" id="btn-addmed" onclick="setMode('addmed')">
+                    <span>➕</span>薬品追加
                 </button>
+            </div>
+
+            <!-- 薬品追加フォーム -->
+            <div class="add-medicine-form card" id="add-medicine-form">
+                <div class="card-title">➕ 新規薬品登録</div>
+                <div class="form-group">
+                    <label>薬品名 <span style="color:var(--danger)">*</span></label>
+                    <input type="text" id="newmed-name" placeholder="例: アムロジピンOD錠5mg">
+                </div>
+                <div class="form-group">
+                    <label>フリガナ</label>
+                    <input type="text" id="newmed-furigana" placeholder="例: アムロジピン">
+                </div>
+                <div class="form-group">
+                    <label>単位 <span style="color:var(--danger)">*</span></label>
+                    <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                        <button type="button" class="cat-btn active" onclick="selectUnit(this,'錠')">錠</button>
+                        <button type="button" class="cat-btn" onclick="selectUnit(this,'包')">包</button>
+                        <button type="button" class="cat-btn" onclick="selectUnit(this,'個')">個</button>
+                        <button type="button" class="cat-btn" onclick="selectUnit(this,'本')">本</button>
+                        <button type="button" class="cat-btn" onclick="selectUnit(this,'枚')">枚</button>
+                        <button type="button" class="cat-btn" onclick="selectUnit(this,'キット')">キット</button>
+                        <button type="button" class="cat-btn" onclick="selectUnit(this,'mL')">mL</button>
+                        <input type="text" id="newmed-unit-custom" placeholder="その他..." style="width:80px; padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
+                    </div>
+                    <input type="hidden" id="newmed-unit" value="錠">
+                </div>
+                <div class="form-group">
+                    <label>初期在庫数</label>
+                    <input type="number" id="newmed-stock" value="0" min="0">
+                </div>
+                <div class="form-group">
+                    <label>発注点（この数以下でアラート）</label>
+                    <input type="number" id="newmed-threshold" value="10" min="0">
+                </div>
+                <div class="form-group">
+                    <label>薬価（円）</label>
+                    <input type="number" id="newmed-price" step="0.1" min="0" placeholder="例: 15.5">
+                </div>
+                <button class="add-medicine-btn" onclick="submitNewMedicine()">➕ 薬品マスタに登録</button>
             </div>
 
             <!-- QRスキャナー -->
@@ -1485,6 +1576,33 @@
         let scanCooldown = false;
 
         // ===== モード切替 =====
+        let currentMajorMode = 'dispense'; // 'manage' or 'dispense'
+
+        function setMajorMode(major) {
+            currentMajorMode = major;
+            const btnManage = document.getElementById('btn-major-manage');
+            const btnDispense = document.getElementById('btn-major-dispense');
+            const subManage = document.getElementById('sub-mode-manage');
+            const addForm = document.getElementById('add-medicine-form');
+
+            btnManage.className = 'major-mode-btn';
+            btnDispense.className = 'major-mode-btn';
+
+            if (major === 'manage') {
+                btnManage.className = 'major-mode-btn active-manage';
+                subManage.style.display = 'flex';
+                // Default to first sub-mode if not already in manage sub-mode
+                if (currentMode !== 'in' && currentMode !== 'adjust' && currentMode !== 'addmed') {
+                    setMode('in');
+                }
+            } else {
+                btnDispense.className = 'major-mode-btn active-dispense';
+                subManage.style.display = 'none';
+                addForm.classList.remove('visible');
+                setMode('out');
+            }
+        }
+
         function setMode(mode) {
             if (mode === 'in' && currentMode !== 'in') {
                 if (!confirm('こちらは入庫メニューです。間違いありませんか？')) {
@@ -1502,25 +1620,122 @@
             }
             currentMode = mode;
             const btnIn = document.getElementById('btn-in');
-            const btnOut = document.getElementById('btn-out');
             const btnAdjust = document.getElementById('btn-adjust');
+            const btnAddmed = document.getElementById('btn-addmed');
             const patientCard = document.getElementById('patient-card');
+            const addForm = document.getElementById('add-medicine-form');
 
-            btnIn.className = 'mode-btn';
-            btnOut.className = 'mode-btn';
-            btnAdjust.className = 'mode-btn';
+            // Reset sub-mode buttons
+            if (btnIn) btnIn.className = 'sub-mode-btn';
+            if (btnAdjust) btnAdjust.className = 'sub-mode-btn';
+            if (btnAddmed) btnAddmed.className = 'sub-mode-btn';
+
+            // Hide add medicine form by default
+            addForm.classList.remove('visible');
 
             if (mode === 'in') {
-                btnIn.className = 'mode-btn active-in';
+                if (btnIn) btnIn.className = 'sub-mode-btn active-in';
                 patientCard.style.display = 'none';
             } else if (mode === 'adjust') {
-                btnAdjust.className = 'mode-btn active-adjust';
+                if (btnAdjust) btnAdjust.className = 'sub-mode-btn active-adjust';
                 patientCard.style.display = 'none';
+            } else if (mode === 'addmed') {
+                if (btnAddmed) btnAddmed.className = 'sub-mode-btn active-addmed';
+                patientCard.style.display = 'none';
+                addForm.classList.add('visible');
             } else {
-                btnOut.className = 'mode-btn active-out';
+                // out (dispense)
                 patientCard.style.display = 'block';
             }
             updateActionButtons();
+        }
+
+        function selectUnit(btn, unit) {
+            document.querySelectorAll('.add-medicine-form .cat-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('newmed-unit').value = unit;
+            document.getElementById('newmed-unit-custom').value = '';
+        }
+
+        async function submitNewMedicine() {
+            const name = document.getElementById('newmed-name').value.trim();
+            const furigana = document.getElementById('newmed-furigana').value.trim();
+            const customUnit = document.getElementById('newmed-unit-custom').value.trim();
+            const unit = customUnit || document.getElementById('newmed-unit').value;
+            const initialStock = parseInt(document.getElementById('newmed-stock').value) || 0;
+            const threshold = parseInt(document.getElementById('newmed-threshold').value) || 10;
+            const price = parseFloat(document.getElementById('newmed-price').value) || 0;
+
+            if (!name) {
+                showToast('薬品名を入力してください', 'error');
+                document.getElementById('newmed-name').focus();
+                return;
+            }
+            if (!unit) {
+                showToast('単位を選択してください', 'error');
+                return;
+            }
+
+            if (!confirm(`「${name}」を薬品マスタに登録します。よろしいですか？`)) return;
+
+            const btn = document.querySelector('.add-medicine-btn');
+            btn.disabled = true;
+            btn.textContent = '⏳ 登録中...';
+
+            try {
+                if (USE_GAS) {
+                    const result = await gasPost('addMedicine', {
+                        name, furigana, unit, initialStock, threshold, price,
+                        receiptCode: '', code: ''
+                    });
+                    if (result && result.success) {
+                        showToast(`「${name}」を登録しました`, 'success');
+                        // Add to local stockData
+                        if (result.medicine) {
+                            stockData.push({
+                                code: result.medicine.code,
+                                name: result.medicine.name,
+                                stock: result.medicine.stock || initialStock,
+                                unit: unit,
+                                threshold: threshold,
+                                category: '',
+                                usage: '',
+                                price: String(price),
+                                maker: '',
+                                target: ''
+                            });
+                        }
+                        // Clear form
+                        document.getElementById('newmed-name').value = '';
+                        document.getElementById('newmed-furigana').value = '';
+                        document.getElementById('newmed-stock').value = '0';
+                        document.getElementById('newmed-threshold').value = '10';
+                        document.getElementById('newmed-price').value = '';
+                        document.getElementById('newmed-unit-custom').value = '';
+                    } else {
+                        showToast('登録に失敗しました: ' + (result?.error || '不明なエラー'), 'error');
+                    }
+                } else {
+                    // Demo mode
+                    const newCode = 'M' + String(stockData.length + 1).padStart(3, '0');
+                    stockData.push({
+                        code: newCode, name, stock: initialStock, unit, threshold,
+                        category: '', usage: '', price: String(price), maker: '', target: ''
+                    });
+                    showToast(`「${name}」を登録しました（デモ）`, 'success');
+                    document.getElementById('newmed-name').value = '';
+                    document.getElementById('newmed-furigana').value = '';
+                    document.getElementById('newmed-stock').value = '0';
+                    document.getElementById('newmed-threshold').value = '10';
+                    document.getElementById('newmed-price').value = '';
+                    document.getElementById('newmed-unit-custom').value = '';
+                }
+            } catch(e) {
+                showToast('エラーが発生しました', 'error');
+            }
+
+            btn.disabled = false;
+            btn.textContent = '➕ 薬品マスタに登録';
         }
 
         // ===== QRスキャナー =====
@@ -1618,9 +1833,9 @@
             if (totalItems > 0) {
                 submitBtn.style.display = 'flex';
                 submitBtn.disabled = false;
-                const modeLabel = currentMode === 'in' ? '入庫' : currentMode === 'adjust' ? '修正（棚卸）' : '出庫';
-                const modeIcon = currentMode === 'in' ? '📥' : currentMode === 'adjust' ? '📝' : '📤';
-                const modeClass = currentMode === 'in' ? 'in-mode' : currentMode === 'adjust' ? 'in-mode' : 'out-mode';
+                const modeLabel = currentMode === 'in' ? '入庫' : currentMode === 'adjust' ? '修正（棚卸）' : currentMode === 'addmed' ? '' : '出庫';
+                const modeIcon = currentMode === 'in' ? '📥' : currentMode === 'adjust' ? '📝' : currentMode === 'addmed' ? '' : '📤';
+                const modeClass = currentMode === 'in' ? 'in-mode' : currentMode === 'adjust' ? 'in-mode' : currentMode === 'addmed' ? 'in-mode' : 'out-mode';
                 submitBtn.className = `submit-btn ${modeClass}`;
                 submitBtn.innerHTML = `${modeIcon} まとめて${modeLabel}（${totalItems}件）`;
             } else {

@@ -84,6 +84,9 @@ function doPost(e) {
     case 'stockAdjust':
       result = recordStockAdjust(data);
       break;
+    case 'addMedicine':
+      result = addNewMedicine(data);
+      break;
     default:
       result = { error: 'Unknown action' };
   }
@@ -125,6 +128,66 @@ function getMedicineList() {
   }
 
   return { success: true, medicines };
+}
+
+/**
+ * 新規薬品を薬品マスタと在庫サマリーに追加
+ */
+function addNewMedicine(data) {
+  const { name, furigana, unit, receiptCode, price, threshold, initialStock } = data;
+  let { code } = data;
+
+  const ss = getSpreadsheet();
+  const masterSheet = ss.getSheetByName(SHEET_NAMES.MEDICINE_MASTER);
+  const stockSheet = ss.getSheetByName(SHEET_NAMES.CURRENT_STOCK);
+
+  if (!masterSheet) {
+    return { error: '薬品マスタシートが見つかりません' };
+  }
+  if (!stockSheet) {
+    return { error: '在庫サマリーシートが見つかりません' };
+  }
+
+  // コードが空の場合は自動採番
+  if (!code) {
+    const masterData = masterSheet.getDataRange().getValues();
+    let maxNumeric = 59000000;
+    for (let i = 1; i < masterData.length; i++) {
+      const existingCode = masterData[i][0];
+      if (existingCode) {
+        const num = parseInt(String(existingCode), 10);
+        if (!isNaN(num) && num > maxNumeric) {
+          maxNumeric = num;
+        }
+      }
+    }
+    const nextNum = maxNumeric + 1;
+    code = String(nextNum).padStart(9, '0');
+  }
+
+  // 重複チェック
+  const masterData = masterSheet.getDataRange().getValues();
+  const normalizedNew = normalizeCode(code);
+  for (let i = 1; i < masterData.length; i++) {
+    if (normalizeCode(masterData[i][0]) === normalizedNew) {
+      return { error: 'コードが重複しています: ' + code };
+    }
+  }
+
+  const stock = initialStock || 0;
+  const thresh = threshold || 10;
+
+  // 薬品マスタに追加
+  masterSheet.appendRow([code, name, furigana || '', unit || '', receiptCode || '', price || 0, thresh]);
+
+  // 在庫サマリーに追加
+  stockSheet.appendRow([code, name, stock, unit || '', thresh, '']);
+
+  return {
+    success: true,
+    message: '薬品を登録しました: ' + name,
+    medicine: { code, name, furigana: furigana || '', unit: unit || '', receiptCode: receiptCode || '', price: price || 0, threshold: thresh, stock }
+  };
 }
 
 /**
