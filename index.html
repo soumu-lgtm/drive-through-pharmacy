@@ -1080,7 +1080,7 @@
                     <input type="date" id="history-date-from" onchange="filterHistory()">
                     <span style="line-height:36px;">〜</span>
                     <input type="date" id="history-date-to" onchange="filterHistory()">
-                    <input type="text" id="history-search" placeholder="薬品名で検索..." oninput="filterHistory()">
+                    <input type="text" id="history-search" placeholder="薬品名・患者名・担当者で検索..." oninput="filterHistory()">
                 </div>
                 <div style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;">
                     <button onclick="setHistoryDatePreset('today')" style="padding:4px 10px; border:1px solid var(--border); border-radius:6px; background:white; font-size:12px; cursor:pointer;">今日</button>
@@ -1966,7 +1966,9 @@
             const dateTo = document.getElementById('history-date-to')?.value || '';
 
             filteredHistoryData = allHistoryData.filter(h => {
-                if (search && !h.medicine.toLowerCase().includes(search)) return false;
+                if (search && !h.medicine.toLowerCase().includes(search)
+                    && !(h.patient && h.patient.toLowerCase().includes(search))
+                    && !(h.operator && h.operator.toLowerCase().includes(search))) return false;
                 if (dateFrom && h.date < dateFrom) return false;
                 if (dateTo && h.date > dateTo) return false;
                 return true;

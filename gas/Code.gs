@@ -387,9 +387,12 @@ function getHistory(dateStr, dateFrom, dateTo, search) {
     return dateOnly >= targetDateStart && dateOnly <= targetDateEnd;
   }
 
-  function matchesSearch(name) {
+  function matchesSearch() {
     if (!searchLower) return true;
-    return String(name).toLowerCase().indexOf(searchLower) >= 0;
+    for (let i = 0; i < arguments.length; i++) {
+      if (arguments[i] && String(arguments[i]).toLowerCase().indexOf(searchLower) >= 0) return true;
+    }
+    return false;
   }
 
   const history = [];
@@ -400,7 +403,7 @@ function getHistory(dateStr, dateFrom, dateTo, search) {
     for (let i = 1; i < inData.length; i++) {
       const row = inData[i];
       const ts = formatTimestamp(row[0]);
-      if (row[0] && matchesDateRange(ts) && matchesSearch(row[2])) {
+      if (row[0] && matchesDateRange(ts) && matchesSearch(row[2], row[5])) {
         history.push({
           timestamp: ts, type: 'in', code: row[1], name: row[2],
           quantity: row[3], unit: row[4], operator: row[5], note: row[6]
@@ -415,7 +418,7 @@ function getHistory(dateStr, dateFrom, dateTo, search) {
     for (let i = 1; i < outData.length; i++) {
       const row = outData[i];
       const ts = formatTimestamp(row[0]);
-      if (row[0] && matchesDateRange(ts) && matchesSearch(row[2])) {
+      if (row[0] && matchesDateRange(ts) && matchesSearch(row[2], row[6], row[7])) {
         history.push({
           timestamp: ts, type: 'out', code: row[1], name: row[2],
           quantity: row[3], unit: row[4], patientId: row[5],
@@ -431,7 +434,7 @@ function getHistory(dateStr, dateFrom, dateTo, search) {
     for (let i = 1; i < adjData.length; i++) {
       const row = adjData[i];
       const ts = formatTimestamp(row[0]);
-      if (row[0] && matchesDateRange(ts) && matchesSearch(row[2])) {
+      if (row[0] && matchesDateRange(ts) && matchesSearch(row[2], row[7])) {
         history.push({
           timestamp: ts, type: 'adjust', code: row[1], name: row[2],
           previousStock: row[3], newStock: row[4], diff: row[5],
