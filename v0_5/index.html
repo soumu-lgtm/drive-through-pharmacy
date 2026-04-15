@@ -1944,46 +1944,35 @@
             let successCount = 0;
             let errorCount = 0;
 
-            for (const item of batchItems) {
-                if (USE_GAS) {
-                    let result;
+            if (USE_GAS) {
+                // バッチ送信（1リクエストで全品処理）
+                const batchPayload = batchItems.map(item => {
                     if (item.mode === 'in') {
-                        result = await gasPost('stockIn', {
-                            code: item.medicine.code,
-                            quantity: item.quantity,
-                            operator: item.operator || '担当者',
-                            note: ''
-                        });
+                        return { action: 'stockIn', code: item.medicine.code, quantity: item.quantity, operator: item.operator || '担当者', note: '' };
                     } else if (item.mode === 'adjust') {
-                        result = await gasPost('stockAdjust', {
-                            code: item.medicine.code,
-                            newQuantity: item.quantity,
-                            reason: '棚卸',
-                            operator: item.operator || '担当者',
-                            note: ''
-                        });
+                        return { action: 'stockAdjust', code: item.medicine.code, newQuantity: item.quantity, reason: '棚卸', operator: item.operator || '担当者', note: '' };
                     } else {
-                        const patientId = item.patient?.id || '';
-                        const patientName = item.patient?.name || '';
-                        result = await gasPost('stockOut', {
-                            code: item.medicine.code,
-                            quantity: item.quantity,
-                            patientId: patientId,
-                            patientName: patientName,
-                            operator: item.operator || '担当者',
-                            note: ''
-                        });
+                        return { action: 'stockOut', code: item.medicine.code, quantity: item.quantity, patientId: item.patient?.id || '', patientName: item.patient?.name || '', operator: item.operator || '担当者', note: '' };
                     }
+                });
 
-                    if (result && (result.success || result.message)) {
-                        successCount++;
-                    } else {
-                        errorCount++;
+                const batchResult = await gasPost('batch', { items: batchPayload });
+                if (batchResult && batchResult.results) {
+                    for (const r of batchResult.results) {
+                        if (r.result && r.result.success) successCount++;
+                        else errorCount++;
                     }
+                } else if (batchResult && batchResult.success) {
+                    successCount = batchItems.length;
                 } else {
-                    successCount++;
+                    errorCount = batchItems.length;
                 }
+            } else {
+                successCount = batchItems.length;
+            }
 
+            // ローカル在庫データ・履歴を更新
+            for (const item of batchItems) {
                 const normalizedCode = normalizeCode(item.medicine.code);
                 const idx = stockData.findIndex(m => normalizeCode(m.code) === normalizedCode);
                 if (idx >= 0) {
