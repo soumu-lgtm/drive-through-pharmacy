@@ -1756,7 +1756,9 @@
 
         // コードの正規化（先頭ゼロの有無を吸収）
         function normalizeCode(code) {
-            return String(parseInt(String(code), 10));
+            const s = String(code).replace(/^[A-Za-z]+/, '');
+            const n = parseInt(s, 10);
+            return isNaN(n) ? String(code).trim() : String(n);
         }
 
         function onScanSuccess(decodedText) {
