@@ -1241,8 +1241,10 @@
             try {
                 const url = new URL(GAS_URL);
                 url.searchParams.append('action', action);
-                Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, v));
-                const res = await fetch(url.toString());
+                Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, String(v)));
+                // キャッシュ防止（ブラウザが同一URLのGETをキャッシュして2件目を送信しない問題の対策）
+                url.searchParams.append('_t', Date.now() + '_' + Math.random().toString(36).slice(2));
+                const res = await fetch(url.toString(), { cache: 'no-store' });
                 return await res.json();
             } catch (e) {
                 console.error('GAS GET error:', e);
