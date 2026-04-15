@@ -81,16 +81,15 @@
             gap: 8px;
         }
 
-        /* モード切替 */
-        .mode-toggle {
+        /* 大分類 */
+        .major-mode-toggle {
             display: flex;
             gap: 8px;
-            margin-bottom: 16px;
-            align-items: stretch;
+            margin-bottom: 8px;
         }
-
-        .mode-btn {
-            padding: 14px;
+        .major-mode-btn {
+            flex: 1;
+            padding: 12px;
             border: 2px solid var(--border);
             border-radius: 10px;
             background: white;
@@ -98,44 +97,126 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
+            text-align: center;
+        }
+        .major-mode-btn.active-manage {
+            border-color: var(--primary);
+            background: #eff6ff;
+            color: var(--primary);
+        }
+        .major-mode-btn.active-dispense {
+            border-color: var(--danger);
+            background: #fef2f2;
+            color: var(--danger);
+        }
+        /* 中分類 */
+        .sub-mode-toggle {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+        .sub-mode-btn {
+            flex: 1;
+            padding: 10px 8px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            background: white;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 4px;
-        }
-
-        .mode-btn#btn-out {
-            flex: 3;
-            padding: 18px 14px;
-            font-size: 17px;
-        }
-
-        .mode-btn#btn-in {
-            flex: 1;
-            padding: 10px 8px;
-            font-size: 12px;
+            gap: 2px;
             opacity: 0.7;
         }
-
-        .mode-btn.active-in {
+        .sub-mode-btn span { font-size: 18px; }
+        .sub-mode-btn.active-in {
             border-color: var(--success);
             background: #f0fdf4;
             color: var(--success);
             opacity: 1;
         }
-
-        .mode-btn.active-out {
+        .sub-mode-btn.active-adjust {
+            border-color: #f59e0b;
+            background: #fffbeb;
+            color: #f59e0b;
+            opacity: 1;
+        }
+        .sub-mode-btn.active-addmed {
+            border-color: #8b5cf6;
+            background: #f5f3ff;
+            color: #8b5cf6;
+            opacity: 1;
+        }
+        .sub-mode-btn.active-out {
             border-color: var(--danger);
             background: #fef2f2;
             color: var(--danger);
+            opacity: 1;
         }
 
-        .mode-btn#btn-out span {
-            font-size: 28px;
+        /* 薬品追加フォーム */
+        .add-medicine-form {
+            display: none;
         }
+        .add-medicine-form.visible {
+            display: block;
+        }
+        .add-medicine-form .form-group {
+            margin-bottom: 10px;
+        }
+        .add-medicine-form label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+        .add-medicine-form input, .add-medicine-form select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 15px;
+        }
+        .add-medicine-form input:focus, .add-medicine-form select:focus {
+            outline: none;
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 2px rgba(139,92,246,0.15);
+        }
+        .add-medicine-btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            background: #8b5cf6;
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        .add-medicine-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .history-icon.adjust { background: #fff7ed; color: #f59e0b; }
 
-        .mode-btn#btn-in span {
-            font-size: 18px;
+        .history-filter {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .history-filter input, .history-filter select {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            flex: 1;
+            min-width: 120px;
         }
 
         /* QRリーダー */
@@ -421,6 +502,10 @@
             color: var(--danger);
         }
 
+        .history-qty.adjust {
+            color: #f59e0b;
+        }
+
         /* トースト通知 */
         .toast {
             position: fixed;
@@ -592,6 +677,27 @@
 
         .batch-item-qty.out {
             color: var(--danger);
+        }
+
+        .batch-item-qty.adjust {
+            color: #f59e0b;
+        }
+
+        .adjust-input {
+            width: 60px;
+            padding: 4px 6px;
+            border: 2px solid #f59e0b;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 700;
+            text-align: center;
+            color: #f59e0b;
+            background: #fffbeb;
+        }
+        .adjust-input:focus {
+            outline: none;
+            border-color: #d97706;
+            box-shadow: 0 0 0 2px rgba(217,119,6,0.2);
         }
 
         .batch-item-controls {
@@ -918,16 +1024,62 @@
     <!-- スキャンタブ -->
     <div id="tab-scan" class="tab-content active">
         <div class="container">
-            <!-- モード切替 -->
-            <div class="mode-toggle">
-                <button class="mode-btn" id="btn-in" onclick="setMode('in')">
-                    <span>📥</span>
-                    入庫（仕入）
+            <!-- 大分類 -->
+            <div class="major-mode-toggle">
+                <button class="major-mode-btn" id="btn-major-manage" onclick="setMajorMode('manage')">🔧 管理機能</button>
+                <button class="major-mode-btn active-dispense" id="btn-major-dispense" onclick="setMajorMode('dispense')">💊 出荷（処方）</button>
+            </div>
+            <!-- 中分類（管理） -->
+            <div class="sub-mode-toggle" id="sub-mode-manage" style="display:none;">
+                <button class="sub-mode-btn" id="btn-in" onclick="setMode('in')">
+                    <span>📥</span>入庫
                 </button>
-                <button class="mode-btn active-out" id="btn-out" onclick="setMode('out')">
-                    <span>📤</span>
-                    出庫（処方）
+                <button class="sub-mode-btn" id="btn-adjust" onclick="setMode('adjust')">
+                    <span>📝</span>棚卸
                 </button>
+                <button class="sub-mode-btn" id="btn-addmed" onclick="setMode('addmed')">
+                    <span>➕</span>薬品追加
+                </button>
+            </div>
+
+            <!-- 薬品追加フォーム -->
+            <div class="add-medicine-form card" id="add-medicine-form">
+                <div class="card-title">➕ 新規薬品登録</div>
+                <div class="form-group">
+                    <label>薬品名 <span style="color:var(--danger)">*</span></label>
+                    <input type="text" id="newmed-name" placeholder="例: アムロジピンOD錠5mg">
+                </div>
+                <div class="form-group">
+                    <label>フリガナ</label>
+                    <input type="text" id="newmed-furigana" placeholder="例: アムロジピン">
+                </div>
+                <div class="form-group">
+                    <label>単位 <span style="color:var(--danger)">*</span></label>
+                    <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                        <button type="button" class="cat-btn active" onclick="selectUnit(this,'錠')">錠</button>
+                        <button type="button" class="cat-btn" onclick="selectUnit(this,'包')">包</button>
+                        <button type="button" class="cat-btn" onclick="selectUnit(this,'個')">個</button>
+                        <button type="button" class="cat-btn" onclick="selectUnit(this,'本')">本</button>
+                        <button type="button" class="cat-btn" onclick="selectUnit(this,'枚')">枚</button>
+                        <button type="button" class="cat-btn" onclick="selectUnit(this,'キット')">キット</button>
+                        <button type="button" class="cat-btn" onclick="selectUnit(this,'mL')">mL</button>
+                        <input type="text" id="newmed-unit-custom" placeholder="その他..." style="width:80px; padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
+                    </div>
+                    <input type="hidden" id="newmed-unit" value="錠">
+                </div>
+                <div class="form-group">
+                    <label>初期在庫数</label>
+                    <input type="number" id="newmed-stock" value="0" min="0">
+                </div>
+                <div class="form-group">
+                    <label>発注点（この数以下でアラート）</label>
+                    <input type="number" id="newmed-threshold" value="10" min="0">
+                </div>
+                <div class="form-group">
+                    <label>薬価（円）</label>
+                    <input type="number" id="newmed-price" step="0.1" min="0" placeholder="例: 15.5">
+                </div>
+                <button class="add-medicine-btn" onclick="submitNewMedicine()">➕ 薬品マスタに登録</button>
             </div>
 
             <!-- QRスキャナー -->
@@ -1014,7 +1166,19 @@
     <div id="tab-history" class="tab-content">
         <div class="container">
             <div class="card">
-                <div class="card-title">📋 本日の履歴</div>
+                <div class="card-title">📋 履歴</div>
+                <div class="history-filter">
+                    <input type="date" id="history-date-from" onchange="filterHistory()">
+                    <span style="line-height:36px;">〜</span>
+                    <input type="date" id="history-date-to" onchange="filterHistory()">
+                    <input type="text" id="history-search" placeholder="薬品名・患者名・担当者で検索..." oninput="filterHistory()">
+                </div>
+                <div style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;">
+                    <button onclick="setHistoryDatePreset('today')" style="padding:4px 10px; border:1px solid var(--border); border-radius:6px; background:white; font-size:12px; cursor:pointer;">今日</button>
+                    <button onclick="setHistoryDatePreset('week')" style="padding:4px 10px; border:1px solid var(--border); border-radius:6px; background:white; font-size:12px; cursor:pointer;">過去7日</button>
+                    <button onclick="setHistoryDatePreset('month')" style="padding:4px 10px; border:1px solid var(--border); border-radius:6px; background:white; font-size:12px; cursor:pointer;">過去30日</button>
+                    <button onclick="setHistoryDatePreset('all')" style="padding:4px 10px; border:1px solid var(--border); border-radius:6px; background:white; font-size:12px; cursor:pointer;">全期間</button>
+                </div>
                 <div id="history-list">
                     <!-- 履歴がここに表示される -->
                 </div>
@@ -1057,13 +1221,12 @@
     <div class="toast" id="toast"></div>
 
     <!-- スキャン通知ポップアップ -->
-    <div class="scan-popup-overlay" id="scan-popup-overlay">
+    <div class="scan-popup-overlay" id="scan-popup-overlay" onclick="closeScanPopup()">
         <div class="scan-popup" onclick="event.stopPropagation()">
             <div class="scan-popup-icon" id="scan-popup-icon">💊</div>
             <div class="scan-popup-name" id="scan-popup-name">-</div>
             <div class="scan-popup-detail" id="scan-popup-detail">-</div>
             <div class="scan-popup-badge stacked" id="scan-popup-badge">リストに追加しました</div>
-            <button id="scan-popup-ok-btn" onclick="closeScanPopup()" style="margin-top:16px;padding:10px 48px;font-size:16px;font-weight:700;background:#2196F3;color:#fff;border:none;border-radius:8px;cursor:pointer;">OK</button>
         </div>
     </div>
 
@@ -1168,19 +1331,38 @@
         }
 
         // GASから履歴を取得
-        async function loadHistoryFromGAS() {
-            const result = await gasGet('getHistory');
+        let allHistoryData = []; // full dataset from GAS
+        let historyDisplayCount = 50; // how many to show initially
+        const HISTORY_PAGE_SIZE = 50;
+
+        async function loadHistoryFromGAS(dateFrom, dateTo, search) {
+            let params = {};
+            if (dateFrom && dateTo) {
+                params.dateFrom = dateFrom;
+                params.dateTo = dateTo;
+            }
+            if (search) {
+                params.search = search;
+            }
+            const result = await gasGet('getHistory', params);
             if (result && result.success) {
-                historyData = result.history.map(h => ({
-                    time: new Date(h.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
+                allHistoryData = result.history.map(h => ({
+                    date: h.timestamp ? h.timestamp.substring(0, 10) : '',
+                    time: (() => { try { return new Date(h.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }); } catch(e) { return ''; } })(),
+                    timestamp: h.timestamp,
                     type: h.type,
                     medicine: h.name,
                     code: h.code,
-                    quantity: h.quantity,
-                    unit: h.unit,
-                    patient: h.patientName || null
+                    quantity: h.type === 'adjust' ? h.newStock : h.quantity,
+                    unit: h.unit || '',
+                    patient: h.patientName || null,
+                    previousStock: h.previousStock,
+                    diff: h.diff,
+                    reason: h.reason,
+                    operator: h.operator || ''
                 }));
-                renderHistory();
+                historyDisplayCount = HISTORY_PAGE_SIZE;
+                applyHistoryFilter();
             }
         }
 
@@ -1394,9 +1576,41 @@
         let scanCooldown = false;
 
         // ===== モード切替 =====
+        let currentMajorMode = 'dispense'; // 'manage' or 'dispense'
+
+        function setMajorMode(major) {
+            currentMajorMode = major;
+            const btnManage = document.getElementById('btn-major-manage');
+            const btnDispense = document.getElementById('btn-major-dispense');
+            const subManage = document.getElementById('sub-mode-manage');
+            const addForm = document.getElementById('add-medicine-form');
+
+            btnManage.className = 'major-mode-btn';
+            btnDispense.className = 'major-mode-btn';
+
+            if (major === 'manage') {
+                btnManage.className = 'major-mode-btn active-manage';
+                subManage.style.display = 'flex';
+                // Default to first sub-mode if not already in manage sub-mode
+                if (currentMode !== 'in' && currentMode !== 'adjust' && currentMode !== 'addmed') {
+                    setMode('in');
+                }
+            } else {
+                btnDispense.className = 'major-mode-btn active-dispense';
+                subManage.style.display = 'none';
+                addForm.classList.remove('visible');
+                setMode('out');
+            }
+        }
+
         function setMode(mode) {
             if (mode === 'in' && currentMode !== 'in') {
                 if (!confirm('こちらは入庫メニューです。間違いありませんか？')) {
+                    return;
+                }
+            }
+            if (mode === 'adjust' && currentMode !== 'adjust') {
+                if (!confirm('こちらは棚卸修正メニューです。間違いありませんか？')) {
                     return;
                 }
             }
@@ -1406,19 +1620,122 @@
             }
             currentMode = mode;
             const btnIn = document.getElementById('btn-in');
-            const btnOut = document.getElementById('btn-out');
+            const btnAdjust = document.getElementById('btn-adjust');
+            const btnAddmed = document.getElementById('btn-addmed');
             const patientCard = document.getElementById('patient-card');
+            const addForm = document.getElementById('add-medicine-form');
+
+            // Reset sub-mode buttons
+            if (btnIn) btnIn.className = 'sub-mode-btn';
+            if (btnAdjust) btnAdjust.className = 'sub-mode-btn';
+            if (btnAddmed) btnAddmed.className = 'sub-mode-btn';
+
+            // Hide add medicine form by default
+            addForm.classList.remove('visible');
 
             if (mode === 'in') {
-                btnIn.className = 'mode-btn active-in';
-                btnOut.className = 'mode-btn';
+                if (btnIn) btnIn.className = 'sub-mode-btn active-in';
                 patientCard.style.display = 'none';
+            } else if (mode === 'adjust') {
+                if (btnAdjust) btnAdjust.className = 'sub-mode-btn active-adjust';
+                patientCard.style.display = 'none';
+            } else if (mode === 'addmed') {
+                if (btnAddmed) btnAddmed.className = 'sub-mode-btn active-addmed';
+                patientCard.style.display = 'none';
+                addForm.classList.add('visible');
             } else {
-                btnIn.className = 'mode-btn';
-                btnOut.className = 'mode-btn active-out';
+                // out (dispense)
                 patientCard.style.display = 'block';
             }
             updateActionButtons();
+        }
+
+        function selectUnit(btn, unit) {
+            document.querySelectorAll('.add-medicine-form .cat-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('newmed-unit').value = unit;
+            document.getElementById('newmed-unit-custom').value = '';
+        }
+
+        async function submitNewMedicine() {
+            const name = document.getElementById('newmed-name').value.trim();
+            const furigana = document.getElementById('newmed-furigana').value.trim();
+            const customUnit = document.getElementById('newmed-unit-custom').value.trim();
+            const unit = customUnit || document.getElementById('newmed-unit').value;
+            const initialStock = parseInt(document.getElementById('newmed-stock').value) || 0;
+            const threshold = parseInt(document.getElementById('newmed-threshold').value) || 10;
+            const price = parseFloat(document.getElementById('newmed-price').value) || 0;
+
+            if (!name) {
+                showToast('薬品名を入力してください', 'error');
+                document.getElementById('newmed-name').focus();
+                return;
+            }
+            if (!unit) {
+                showToast('単位を選択してください', 'error');
+                return;
+            }
+
+            if (!confirm(`「${name}」を薬品マスタに登録します。よろしいですか？`)) return;
+
+            const btn = document.querySelector('.add-medicine-btn');
+            btn.disabled = true;
+            btn.textContent = '⏳ 登録中...';
+
+            try {
+                if (USE_GAS) {
+                    const result = await gasPost('addMedicine', {
+                        name, furigana, unit, initialStock, threshold, price,
+                        receiptCode: '', code: ''
+                    });
+                    if (result && result.success) {
+                        showToast(`「${name}」を登録しました`, 'success');
+                        // Add to local stockData
+                        if (result.medicine) {
+                            stockData.push({
+                                code: result.medicine.code,
+                                name: result.medicine.name,
+                                stock: result.medicine.stock || initialStock,
+                                unit: unit,
+                                threshold: threshold,
+                                category: '',
+                                usage: '',
+                                price: String(price),
+                                maker: '',
+                                target: ''
+                            });
+                        }
+                        // Clear form
+                        document.getElementById('newmed-name').value = '';
+                        document.getElementById('newmed-furigana').value = '';
+                        document.getElementById('newmed-stock').value = '0';
+                        document.getElementById('newmed-threshold').value = '10';
+                        document.getElementById('newmed-price').value = '';
+                        document.getElementById('newmed-unit-custom').value = '';
+                    } else {
+                        showToast('登録に失敗しました: ' + (result?.error || '不明なエラー'), 'error');
+                    }
+                } else {
+                    // Demo mode
+                    const newCode = 'M' + String(stockData.length + 1).padStart(3, '0');
+                    stockData.push({
+                        code: newCode, name, stock: initialStock, unit, threshold,
+                        category: '', usage: '', price: String(price), maker: '', target: ''
+                    });
+                    showToast(`「${name}」を登録しました（デモ）`, 'success');
+                    document.getElementById('newmed-name').value = '';
+                    document.getElementById('newmed-furigana').value = '';
+                    document.getElementById('newmed-stock').value = '0';
+                    document.getElementById('newmed-threshold').value = '10';
+                    document.getElementById('newmed-price').value = '';
+                    document.getElementById('newmed-unit-custom').value = '';
+                }
+            } catch(e) {
+                showToast('エラーが発生しました', 'error');
+            }
+
+            btn.disabled = false;
+            btn.textContent = '➕ 薬品マスタに登録';
         }
 
         // ===== QRスキャナー =====
@@ -1439,15 +1756,11 @@
 
         // コードの正規化（先頭ゼロの有無を吸収）
         function normalizeCode(code) {
-            var s = String(code).trim().toUpperCase(); if (/^M\d+$/i.test(s)) return s; if (/^\d+$/.test(s)) return String(parseInt(s, 10)); return s;
+            return String(parseInt(String(code), 10));
         }
 
-        let scannerPaused = false;
-
         function onScanSuccess(decodedText) {
-            // OKボタン押すまでスキャン停止
-            if (scannerPaused) return;
-
+            // 重複防止（同じコードを1.5秒間無視）
             const normalizedScanned = normalizeCode(decodedText);
             if (scanCooldown && lastScannedCode === normalizedScanned) return;
 
@@ -1456,7 +1769,7 @@
             if (medicine) {
                 lastScannedCode = normalizedScanned;
                 scanCooldown = true;
-                scannerPaused = true;
+                setTimeout(() => { scanCooldown = false; }, 1500);
 
                 if (navigator.vibrate) navigator.vibrate(100);
 
@@ -1520,9 +1833,11 @@
             if (totalItems > 0) {
                 submitBtn.style.display = 'flex';
                 submitBtn.disabled = false;
-                const modeLabel = currentMode === 'in' ? '入庫' : '出庫';
-                submitBtn.className = `submit-btn ${currentMode === 'in' ? 'in-mode' : 'out-mode'}`;
-                submitBtn.innerHTML = `${currentMode === 'in' ? '📥' : '📤'} まとめて${modeLabel}（${totalItems}件）`;
+                const modeLabel = currentMode === 'in' ? '入庫' : currentMode === 'adjust' ? '修正（棚卸）' : currentMode === 'addmed' ? '' : '出庫';
+                const modeIcon = currentMode === 'in' ? '📥' : currentMode === 'adjust' ? '📝' : currentMode === 'addmed' ? '' : '📤';
+                const modeClass = currentMode === 'in' ? 'in-mode' : currentMode === 'adjust' ? 'in-mode' : currentMode === 'addmed' ? 'in-mode' : 'out-mode';
+                submitBtn.className = `submit-btn ${modeClass}`;
+                submitBtn.innerHTML = `${modeIcon} まとめて${modeLabel}（${totalItems}件）`;
             } else {
                 submitBtn.style.display = 'none';
             }
@@ -1540,6 +1855,13 @@
             const item = batchItems[index];
             item.quantity = Math.max(1, item.quantity + delta);
             renderBatchList();
+            if (navigator.vibrate) navigator.vibrate(30);
+        }
+
+        function setAdjustQty(index, value) {
+            const qty = parseInt(value, 10);
+            if (isNaN(qty) || qty < 0) return;
+            batchItems[index].quantity = qty;
             if (navigator.vibrate) navigator.vibrate(30);
         }
 
@@ -1563,9 +1885,16 @@
                         <div class="batch-item-detail">${item.patient ? item.patient.name : ''}</div>
                     </div>
                     <div class="batch-item-controls">
+                        ${item.mode === 'adjust' ? `
+                        <span style="color:#f59e0b;font-weight:700;font-size:13px;">→</span>
+                        <input type="number" class="adjust-input" min="0" value="${item.quantity}"
+                            onchange="setAdjustQty(${i}, this.value)" onfocus="this.select()">
+                        <span style="color:var(--text-muted);font-size:12px;">${item.medicine.unit || ''}</span>
+                        ` : `
                         <button class="batch-qty-btn" onclick="changeBatchQty(${i}, -1)">−</button>
                         <span class="batch-item-qty ${item.mode}">${item.mode === 'in' ? '+' : '-'}${item.quantity}</span>
                         <button class="batch-qty-btn" onclick="changeBatchQty(${i}, 1)">＋</button>
+                        `}
                     </div>
                     <button class="batch-remove-btn" onclick="removeBatchItem(${i})">✕</button>
                 </div>
@@ -1625,6 +1954,14 @@
                             operator: item.operator || '担当者',
                             note: ''
                         });
+                    } else if (item.mode === 'adjust') {
+                        result = await gasPost('stockAdjust', {
+                            code: item.medicine.code,
+                            newQuantity: item.quantity,
+                            reason: '棚卸',
+                            operator: item.operator || '担当者',
+                            note: ''
+                        });
                     } else {
                         const patientId = item.patient?.id || '';
                         const patientName = item.patient?.name || '';
@@ -1650,7 +1987,9 @@
                 const normalizedCode = normalizeCode(item.medicine.code);
                 const idx = stockData.findIndex(m => normalizeCode(m.code) === normalizedCode);
                 if (idx >= 0) {
-                    if (item.mode === 'in') {
+                    if (item.mode === 'adjust') {
+                        stockData[idx].stock = item.quantity;
+                    } else if (item.mode === 'in') {
                         stockData[idx].stock += item.quantity;
                     } else {
                         stockData[idx].stock -= item.quantity;
@@ -1668,7 +2007,7 @@
                 });
             }
 
-            const modeLabel = currentMode === 'in' ? '入庫' : '出庫';
+            const modeLabel = currentMode === 'in' ? '入庫' : currentMode === 'adjust' ? '棚卸修正' : '出庫';
             if (errorCount === 0) {
                 showToast(`${successCount}件の${modeLabel}を記録しました`, 'success');
             } else {
@@ -1705,13 +2044,15 @@
             overlay.classList.add('show');
 
             if (scanPopupTimer) clearTimeout(scanPopupTimer);
+            const duration = 1200;
+            scanPopupTimer = setTimeout(() => {
+                overlay.classList.remove('show');
+            }, duration);
         }
 
         function closeScanPopup() {
             document.getElementById('scan-popup-overlay').classList.remove('show');
             if (scanPopupTimer) clearTimeout(scanPopupTimer);
-            scannerPaused = false;
-            scanCooldown = false;
         }
 
         // ===== 即バッチ追加 =====
@@ -1719,7 +2060,7 @@
             const item = {
                 mode: currentMode,
                 medicine: { ...medicine },
-                quantity: 1,
+                quantity: currentMode === 'adjust' ? medicine.stock : 1,
             };
 
             batchItems.push(item);
@@ -1814,21 +2155,117 @@
 
         // ===== 履歴 =====
         function renderHistory() {
+            applyHistoryFilter();
+        }
+
+        // 履歴フィルタ（ローカルフィルタリング）
+        let filteredHistoryData = [];
+
+        function filterHistory() {
+            const dateFrom = document.getElementById('history-date-from').value;
+            const dateTo = document.getElementById('history-date-to').value;
+            const search = document.getElementById('history-search').value;
+
+            // If date range changed, re-fetch from GAS
+            if (USE_GAS && (dateFrom || dateTo)) {
+                loadHistoryFromGAS(dateFrom, dateTo, search);
+            } else {
+                historyDisplayCount = HISTORY_PAGE_SIZE;
+                applyHistoryFilter();
+            }
+        }
+
+        function applyHistoryFilter() {
+            const search = (document.getElementById('history-search')?.value || '').toLowerCase();
+            const dateFrom = document.getElementById('history-date-from')?.value || '';
+            const dateTo = document.getElementById('history-date-to')?.value || '';
+
+            filteredHistoryData = allHistoryData.filter(h => {
+                if (search && !h.medicine.toLowerCase().includes(search)
+                    && !(h.patient && h.patient.toLowerCase().includes(search))
+                    && !(h.operator && h.operator.toLowerCase().includes(search))) return false;
+                if (dateFrom && h.date < dateFrom) return false;
+                if (dateTo && h.date > dateTo) return false;
+                return true;
+            });
+
+            renderHistoryPaged();
+        }
+
+        function renderHistoryPaged() {
             const container = document.getElementById('history-list');
-            if (historyData.length === 0) {
-                container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">履歴がありません</div>';
+            const total = filteredHistoryData.length;
+            const showing = Math.min(historyDisplayCount, total);
+            const slice = filteredHistoryData.slice(0, showing);
+
+            if (total === 0) {
+                container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">該当する履歴がありません</div>';
                 return;
             }
-            container.innerHTML = historyData.map(h => `
-                <div class="history-item">
-                    <div class="history-icon ${h.type}">${h.type === 'in' ? '📥' : '📤'}</div>
-                    <div class="history-content">
-                        <div class="history-medicine">${h.medicine}</div>
-                        <div class="history-detail">${h.time}${h.patient ? ' • ' + h.patient : ''}</div>
+
+            let html = slice.map(h => {
+                let icon, qtyClass, qtyText;
+                if (h.type === 'adjust') {
+                    icon = '📝'; qtyClass = 'adjust'; qtyText = `→${h.quantity}${h.unit}`;
+                } else if (h.type === 'in') {
+                    icon = '📥'; qtyClass = 'in'; qtyText = `+${h.quantity}${h.unit}`;
+                } else {
+                    icon = '📤'; qtyClass = 'out'; qtyText = `-${h.quantity}${h.unit}`;
+                }
+                return `
+                    <div class="history-item">
+                        <div class="history-icon ${h.type}">${icon}</div>
+                        <div class="history-content">
+                            <div class="history-medicine">${h.medicine}</div>
+                            <div class="history-detail">${h.date} ${h.time}${h.operator ? ' • ' + h.operator : ''}${h.patient ? ' • ' + h.patient : ''}${h.type === 'adjust' ? ' • 棚卸修正' : ''}</div>
+                        </div>
+                        <div class="history-qty ${qtyClass}">${qtyText}</div>
                     </div>
-                    <div class="history-qty ${h.type}">${h.type === 'in' ? '+' : '-'}${h.quantity}${h.unit}</div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
+
+            // Show count + load more button
+            html += `<div style="text-align:center; padding:12px; color:var(--text-muted); font-size:13px;">
+                ${showing} / ${total} 件表示`;
+            if (showing < total) {
+                html += ` <button onclick="loadMoreHistory()" style="margin-left:8px; padding:6px 16px; border:1px solid var(--primary); border-radius:6px; background:white; color:var(--primary); font-size:13px; cursor:pointer;">さらに${Math.min(HISTORY_PAGE_SIZE, total - showing)}件読み込む</button>`;
+            }
+            html += `</div>`;
+
+            container.innerHTML = html;
+        }
+
+        function loadMoreHistory() {
+            historyDisplayCount += HISTORY_PAGE_SIZE;
+            renderHistoryPaged();
+        }
+
+        function setHistoryDatePreset(preset) {
+            const today = new Date();
+            const toStr = today.toISOString().split('T')[0];
+            let fromStr;
+
+            if (preset === 'today') {
+                fromStr = toStr;
+            } else if (preset === 'week') {
+                const d = new Date(today);
+                d.setDate(d.getDate() - 7);
+                fromStr = d.toISOString().split('T')[0];
+            } else if (preset === 'month') {
+                const d = new Date(today);
+                d.setDate(d.getDate() - 30);
+                fromStr = d.toISOString().split('T')[0];
+            } else {
+                // all - clear dates
+                document.getElementById('history-date-from').value = '';
+                document.getElementById('history-date-to').value = '';
+                filterHistory();
+                return;
+            }
+
+            document.getElementById('history-date-from').value = fromStr;
+            document.getElementById('history-date-to').value = toStr;
+            filterHistory();
         }
 
         // ===== 手動選択モーダル（カテゴリドリルダウン） =====
