@@ -87,6 +87,9 @@ function doGet(e) {
         note: e.parameter.note || ''
       });
       break;
+    case 'batch':
+      result = processBatch(JSON.parse(e.parameter.items || '[]'));
+      break;
     default:
       result = { error: 'Unknown action' };
   }

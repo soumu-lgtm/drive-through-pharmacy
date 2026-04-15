@@ -1924,48 +1924,35 @@
             let successCount = 0;
             let errorCount = 0;
 
-            // 1件ずつ順番にGETで送信（POSTは302リダイレクト問題でブラウザから複数件送れない）
-            for (let idx = 0; idx < batchItems.length; idx++) {
-                const item = batchItems[idx];
-                if (USE_GAS) {
-                    let params = {};
+            if (USE_GAS) {
+                // 全件を1リクエストのバッチで送信（複数リクエスト問題を根本回避）
+                const batchData = batchItems.map(item => {
                     if (item.mode === 'in') {
-                        params = {
-                            action: 'stockIn',
-                            code: item.medicine.code, quantity: item.quantity,
-                            operator: item.operator || '担当者', note: ''
-                        };
+                        return { action: 'stockIn', code: item.medicine.code, quantity: item.quantity, operator: item.operator || '担当者', note: '' };
                     } else if (item.mode === 'adjust') {
-                        params = {
-                            action: 'stockAdjust',
-                            code: item.medicine.code, newQuantity: item.quantity,
-                            reason: '棚卸', operator: item.operator || '担当者', note: ''
-                        };
+                        return { action: 'stockAdjust', code: item.medicine.code, newQuantity: item.quantity, reason: '棚卸', operator: item.operator || '担当者', note: '' };
                     } else {
-                        params = {
-                            action: 'stockOut',
-                            code: item.medicine.code, quantity: item.quantity,
-                            patientId: item.patient?.id || '', patientName: item.patient?.name || '',
-                            operator: item.operator || '担当者', note: ''
-                        };
+                        return { action: 'stockOut', code: item.medicine.code, quantity: item.quantity, patientId: item.patient?.id || '', patientName: item.patient?.name || '', operator: item.operator || '担当者', note: '' };
                     }
-
-                    try {
-                        const { action: act, ...rest } = params;
-                        const result = await gasGet(act, rest);
-                        if (result && result.success) {
-                            successCount++;
-                        } else {
-                            errorCount++;
-                            console.error('GAS error for', item.medicine.code, result);
-                        }
-                    } catch (e) {
-                        errorCount++;
-                        console.error('GAS request failed for', item.medicine.code, e);
+                });
+                try {
+                    const result = await gasGet('batch', { items: JSON.stringify(batchData) });
+                    if (result && result.success) {
+                        successCount = batchItems.length;
+                    } else if (result && result.results) {
+                        // 部分成功
+                        successCount = result.results.filter(r => r.result && r.result.success).length;
+                        errorCount = batchItems.length - successCount;
+                    } else {
+                        errorCount = batchItems.length;
+                        console.error('GAS batch error:', result);
                     }
-                } else {
-                    successCount++;
+                } catch (e) {
+                    errorCount = batchItems.length;
+                    console.error('GAS batch request failed:', e);
                 }
+            } else {
+                successCount = batchItems.length;
             }
 
             // ローカル在庫データ・履歴を更新
