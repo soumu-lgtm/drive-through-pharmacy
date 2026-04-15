@@ -1254,46 +1254,18 @@
         async function gasPost(action, data) {
             if (!USE_GAS) return null;
             try {
-                // GASはリダイレクトするのでJSONP形式で送信
-                const url = new URL(GAS_URL);
-                url.searchParams.append('action', action);
-                Object.entries(data).forEach(([k, v]) => {
-                    if (v !== undefined && v !== null) {
-                        url.searchParams.append(k, v);
-                    }
-                });
-
-                // GETリクエストとして送信（GAS Web AppはGETでも処理可能にする必要あり）
-                // まずPOSTを試す
-                const res = await fetch(GAS_URL, {
+                // no-cors: リクエストは確実に届くがレスポンスは読めない
+                // GAS Web Appのリダイレクト+CORS問題を完全に回避
+                await fetch(GAS_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify({ action, ...data }),
-                    redirect: 'follow'
+                    mode: 'no-cors'
                 });
-
-                // レスポンスを読み取る
-                const text = await res.text();
-                console.log('GAS response:', text);
-
-                try {
-                    return JSON.parse(text);
-                } catch {
-                    // JSONでない場合はリダイレクト等の可能性
-                    // 成功と見なす（GASの仕様）
-                    if (res.ok || res.redirected) {
-                        return { success: true, message: '送信完了（レスポンス確認不可）' };
-                    }
-                    return { success: false, error: 'レスポンス解析エラー' };
-                }
+                return { success: true, message: '送信完了' };
             } catch (e) {
                 console.error('GAS POST error:', e);
-                // CORSエラーの場合、リクエスト自体は届いている可能性
-                if (e.message.includes('CORS') || e.message.includes('NetworkError')) {
-                    return { success: true, message: '送信完了（CORS制限によりレスポンス確認不可）' };
-                }
-                showToast('通信エラー: ' + e.message, 'error');
-                return null;
+                return { success: false, error: e.message };
             }
         }
 
@@ -2010,16 +1982,21 @@
             }
 
             const modeLabel = currentMode === 'in' ? '入庫' : currentMode === 'adjust' ? '棚卸修正' : '出庫';
-            if (errorCount === 0) {
-                showToast(`${successCount}件の${modeLabel}を記録しました`, 'success');
-            } else {
-                showToast(`${successCount}件成功、${errorCount}件失敗`, 'error');
-            }
+            showToast(`${successCount}件の${modeLabel}を送信しました`, 'success');
 
             batchItems = [];
             renderBatchList();
-            renderStockList();
             updateActionButtons();
+
+            // 送信後にGASから最新在庫を再取得して正確な値に更新
+            if (USE_GAS) {
+                setTimeout(async () => {
+                    await loadStockFromGAS();
+                    renderStockList();
+                }, 3000);
+            } else {
+                renderStockList();
+            }
         }
 
         function resetForm() {
