@@ -32,7 +32,9 @@ function getSpreadsheet() {
  */
 function normalizeCode(code) {
   if (!code) return '';
-  return String(parseInt(String(code), 10));
+  const s = String(code).replace(/^[A-Za-z]+/, '');
+  const n = parseInt(s, 10);
+  return isNaN(n) ? String(code).trim() : String(n);
 }
 
 // ===== Web App エンドポイント =====
@@ -347,7 +349,8 @@ function updateCurrentStock(code, delta) {
 
   for (let i = 1; i < data.length; i++) {
     if (normalizeCode(data[i][0]) === normalizedInput) {
-      const currentStock = data[i][2] || 0;
+      const raw = data[i][2];
+      const currentStock = (typeof raw === 'number' && !isNaN(raw)) ? raw : (parseInt(String(raw), 10) || 0);
       const newStock = currentStock + delta;
       const now = new Date();
 
@@ -549,7 +552,11 @@ function getStockByCode(code) {
   const normalizedInput = normalizeCode(code);
   if (result.stock) {
     const item = result.stock.find(s => normalizeCode(s.code) === normalizedInput);
-    return item ? item.currentStock : 0;
+    if (item) {
+      const v = item.currentStock;
+      return (typeof v === 'number' && !isNaN(v)) ? v : (parseInt(String(v), 10) || 0);
+    }
+    return 0;
   }
   return 0;
 }
