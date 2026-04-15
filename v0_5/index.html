@@ -1922,37 +1922,44 @@
             let successCount = 0;
             let errorCount = 0;
 
-            // 1件ずつ順番に送信（GAS Web Appの連続リクエスト制限対策で間隔を空ける）
+            // 1件ずつ順番にGETで送信（POSTは302リダイレクト問題でブラウザから複数件送れない）
             for (let idx = 0; idx < batchItems.length; idx++) {
                 const item = batchItems[idx];
                 if (USE_GAS) {
-                    // 2件目以降は2秒待機（GAS処理完了を待つ）
-                    if (idx > 0) await new Promise(r => setTimeout(r, 2000));
-
-                    let result;
+                    let params = {};
                     if (item.mode === 'in') {
-                        result = await gasPost('stockIn', {
+                        params = {
+                            action: 'stockIn',
                             code: item.medicine.code, quantity: item.quantity,
                             operator: item.operator || '担当者', note: ''
-                        });
+                        };
                     } else if (item.mode === 'adjust') {
-                        result = await gasPost('stockAdjust', {
+                        params = {
+                            action: 'stockAdjust',
                             code: item.medicine.code, newQuantity: item.quantity,
                             reason: '棚卸', operator: item.operator || '担当者', note: ''
-                        });
+                        };
                     } else {
-                        result = await gasPost('stockOut', {
+                        params = {
+                            action: 'stockOut',
                             code: item.medicine.code, quantity: item.quantity,
                             patientId: item.patient?.id || '', patientName: item.patient?.name || '',
                             operator: item.operator || '担当者', note: ''
-                        });
+                        };
                     }
 
-                    if (result && (result.success || result.message)) {
-                        successCount++;
-                    } else {
+                    try {
+                        const { action: act, ...rest } = params;
+                        const result = await gasGet(act, rest);
+                        if (result && result.success) {
+                            successCount++;
+                        } else {
+                            errorCount++;
+                            console.error('GAS error for', item.medicine.code, result);
+                        }
+                    } catch (e) {
                         errorCount++;
-                        console.error('GAS error for', item.medicine.code, result);
+                        console.error('GAS request failed for', item.medicine.code, e);
                     }
                 } else {
                     successCount++;

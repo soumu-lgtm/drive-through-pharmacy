@@ -59,6 +59,34 @@ function doGet(e) {
     case 'getPatients':
       result = getPatientList();
       break;
+    // === 書き込み操作（GETで実行 — ブラウザからのPOSTは302リダイレクト問題あり） ===
+    case 'stockIn':
+      result = recordStockIn({
+        code: e.parameter.code,
+        quantity: Number(e.parameter.quantity) || 0,
+        operator: e.parameter.operator || '',
+        note: e.parameter.note || ''
+      });
+      break;
+    case 'stockOut':
+      result = recordStockOut({
+        code: e.parameter.code,
+        quantity: Number(e.parameter.quantity) || 0,
+        patientId: e.parameter.patientId || '',
+        patientName: e.parameter.patientName || '',
+        operator: e.parameter.operator || '',
+        note: e.parameter.note || ''
+      });
+      break;
+    case 'stockAdjust':
+      result = recordStockAdjust({
+        code: e.parameter.code,
+        newQuantity: Number(e.parameter.newQuantity) || 0,
+        reason: e.parameter.reason || '棚卸',
+        operator: e.parameter.operator || '',
+        note: e.parameter.note || ''
+      });
+      break;
     default:
       result = { error: 'Unknown action' };
   }
