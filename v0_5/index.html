@@ -1254,16 +1254,19 @@
         async function gasPost(action, data) {
             if (!USE_GAS) return null;
             try {
-                // no-cors: リクエストは確実に届くがレスポンスは読めない
-                // GAS Web Appのリダイレクト+CORS問題を完全に回避
-                await fetch(GAS_URL, {
+                // redirect:manual → GASは処理するが302リダイレクトを追わない
+                // これによりリダイレクト先のCORS問題を完全に回避
+                const res = await fetch(GAS_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify({ action, ...data }),
-                    mode: 'no-cors'
+                    redirect: 'manual'
                 });
+                // res.type === 'opaqueredirect', status === 0 が正常
+                // GASは302を返す前にdoPost()を実行済み
                 return { success: true, message: '送信完了' };
             } catch (e) {
+                // ネットワーク完全断のみここに来る
                 console.error('GAS POST error:', e);
                 return { success: false, error: e.message };
             }
