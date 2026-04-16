@@ -160,9 +160,18 @@
         /* 薬品追加フォーム */
         .add-medicine-form {
             display: none;
+            /* iPhoneでキーボード表示時、最下部の入力欄が隠れないよう余白を確保 */
+            padding-bottom: 50vh;
+            scroll-margin-top: 80px;
         }
         .add-medicine-form.visible {
             display: block;
+        }
+        /* フォーム入力欄フォーカス時の自動スクロール余地 */
+        .add-medicine-form input:focus,
+        .add-medicine-form select:focus {
+            scroll-margin-top: 100px;
+            scroll-margin-bottom: 50vh;
         }
         .add-medicine-form .form-group {
             margin-bottom: 10px;
@@ -698,6 +707,22 @@
             outline: none;
             border-color: #d97706;
             box-shadow: 0 0 0 2px rgba(217,119,6,0.2);
+        }
+        .out-input {
+            width: 60px;
+            padding: 4px 6px;
+            border: 2px solid var(--danger);
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 700;
+            text-align: center;
+            color: var(--danger);
+            background: #fef2f2;
+        }
+        .out-input:focus {
+            outline: none;
+            border-color: #b91c1c;
+            box-shadow: 0 0 0 2px rgba(220,38,38,0.2);
         }
 
         .batch-item-controls {
@@ -1485,14 +1510,6 @@
             { code: 'M138', name: 'タケキャブ錠１０ｍｇ 10㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/消化性潰瘍用剤', usage: '1日1回', price: '91.6', maker: '', target: '成人' },
             { code: 'M139', name: 'ネキシウムカプセル１０ｍｇ 10㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/消化性潰瘍用剤', usage: '1日1回', price: '59.3', maker: '「アストラゼネカ」', target: '成人' },
             { code: 'M140', name: '麻黄湯エキス顆粒 7.5g', stock: 0, unit: '包', threshold: 8, category: '成人/漢方薬', usage: '1日3回', price: '11.4', maker: '', target: '成人' },
-            { code: 'M141', name: 'カルボシステイン錠２５０ｍｇ「ツルハラ」 250㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/睡眠導入剤', usage: '1日3回', price: '10.4', maker: '「ツルハラ」', target: '成人' },
-            { code: 'M142', name: 'カルボシステイン錠２５０ｍｇ「トーワ」 250㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/睡眠導入剤', usage: '1日3回', price: '10.4', maker: '「トーワ」', target: '成人' },
-            { code: 'M143', name: 'カルボシステイン錠２５０ｍｇ「ＮＩＧ」 250㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/睡眠導入剤', usage: '1日3回', price: '10.4', maker: '「ＮＩＧ」', target: '成人' },
-            { code: 'M144', name: 'カロナール錠 200㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/睡眠導入剤', usage: '適時', price: '6.1', maker: '「あゆみ」', target: '成人' },
-            { code: 'M145', name: 'カロナール錠 300㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/睡眠導入剤', usage: '適時', price: '6.4', maker: '「あゆみ」', target: '成人' },
-            { code: 'M146', name: 'カロナール錠 500㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/睡眠導入剤', usage: '適時', price: '', maker: '「あゆみ」', target: '成人' },
-            { code: 'M147', name: 'ハルシオン 0.125㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/睡眠導入剤', usage: '就寝前', price: '6.1', maker: '「ファイザー」', target: '成人' },
-            { code: 'M148', name: 'ベルソムラ 20㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/睡眠導入剤', usage: '就寝前', price: '69.3', maker: '「MSD」', target: '成人' },
             { code: 'M149', name: '後）アセトアミノフェン錠 200㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/解熱鎮痛剤', usage: '適時', price: '6.3', maker: '', target: '成人' },
             { code: 'M150', name: '後）アセトアミノフェン錠 500㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/解熱鎮痛剤', usage: '適時', price: '11.2', maker: '', target: '成人' },
             { code: 'M151', name: '後）ロキソプロフェン錠６０ｍｇ 60㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/解熱鎮痛剤', usage: '1日3回', price: '10.5', maker: '', target: '成人' },
@@ -1826,6 +1843,10 @@
 
 
         function removeBatchItem(index) {
+            const item = batchItems[index];
+            if (!item) return;
+            const name = item.medicine ? item.medicine.name : '';
+            if (!confirm(`「${name}」をリストから削除しますか？`)) return;
             batchItems.splice(index, 1);
             renderBatchList();
             updateActionButtons();
@@ -1841,6 +1862,13 @@
         function setAdjustQty(index, value) {
             const qty = parseInt(value, 10);
             if (isNaN(qty) || qty < 0) return;
+            batchItems[index].quantity = qty;
+            if (navigator.vibrate) navigator.vibrate(30);
+        }
+
+        function setOutQty(index, value) {
+            const qty = parseInt(value, 10);
+            if (isNaN(qty) || qty < 1) return;
             batchItems[index].quantity = qty;
             if (navigator.vibrate) navigator.vibrate(30);
         }
@@ -1869,6 +1897,11 @@
                         <span style="color:#f59e0b;font-weight:700;font-size:13px;">→</span>
                         <input type="number" class="adjust-input" min="0" value="${item.quantity}"
                             onchange="setAdjustQty(${i}, this.value)" onfocus="this.select()">
+                        <span style="color:var(--text-muted);font-size:12px;">${item.medicine.unit || ''}</span>
+                        ` : item.mode === 'out' ? `
+                        <span style="color:var(--danger);font-weight:700;font-size:13px;">−</span>
+                        <input type="number" class="out-input" min="1" value="${item.quantity}"
+                            onchange="setOutQty(${i}, this.value)" onfocus="this.select()">
                         <span style="color:var(--text-muted);font-size:12px;">${item.medicine.unit || ''}</span>
                         ` : `
                         <button class="batch-qty-btn" onclick="changeBatchQty(${i}, -1)">−</button>
@@ -2463,6 +2496,15 @@
 
         setMode(currentMode);
         renderStockList();
+
+        // iPhoneでキーボード表示時、入力中の文字が隠れないよう自動スクロール
+        document.querySelectorAll('#add-medicine-form input, #add-medicine-form select').forEach(el => {
+            el.addEventListener('focus', function() {
+                setTimeout(() => {
+                    this.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300); // キーボード出現を待つ
+            });
+        });
 
         if (USE_GAS) {
             showToast('データを読み込み中...', '');
