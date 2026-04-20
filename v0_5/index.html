@@ -856,11 +856,19 @@
             margin-bottom: 8px;
             cursor: pointer;
             transition: all 0.2s;
+            position: relative;
+        }
+        .medicine-item.checked {
+            background: #e8f0fe;
+            border-color: var(--primary);
         }
 
         .medicine-item:hover {
             background: var(--bg);
             border-color: var(--primary);
+        }
+        .medicine-item.checked:hover {
+            background: #d4e4fd;
         }
 
         .medicine-item-name {
@@ -871,6 +879,106 @@
             font-size: 13px;
             color: var(--text-muted);
         }
+
+        .modal-checkbox {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--primary);
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        /* モーダルフィルタバー */
+        .modal-filter-bar {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+        .modal-add-bar {
+            position: sticky;
+            bottom: 0;
+            background: white;
+            padding: 10px 0 0;
+            display: none;
+            gap: 8px;
+            align-items: center;
+            border-top: 1px solid var(--border);
+        }
+        .modal-add-bar.show { display: flex; }
+        .modal-add-bar button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .modal-add-btn { background: var(--primary); color: white; flex: 1; }
+        .modal-clear-btn { background: var(--bg); color: var(--text-muted); }
+
+        /* 確認ポップアップ */
+        .confirm-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 500;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .confirm-overlay.show { display: flex; }
+        .confirm-box {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 400px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+        .confirm-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        .confirm-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+        .confirm-item:last-child { border-bottom: none; }
+        .confirm-item-name { flex: 1; }
+        .confirm-item-qty { font-weight: 700; color: var(--primary); min-width: 60px; text-align: right; }
+        .confirm-meta {
+            margin: 12px 0;
+            padding: 10px;
+            background: var(--bg);
+            border-radius: 8px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        .confirm-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+        }
+        .confirm-buttons button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .confirm-cancel { background: var(--bg); color: var(--text); }
+        .confirm-ok { background: var(--primary); color: white; }
 
         /* カテゴリ選択カード */
         .modal-category-card {
@@ -1330,6 +1438,12 @@
                 </select>
             </div>
 
+            <!-- 入力日 -->
+            <div class="card">
+                <div class="card-title">📅 入力日</div>
+                <input type="date" class="form-input" id="entry-date" style="font-size:16px;">
+            </div>
+
             <!-- 薬品追加ボタン -->
             <button class="manual-add-btn" onclick="openManualSelect()">
                 ＋ 薬品を追加（手動選択）
@@ -1439,9 +1553,42 @@
                 <button class="modal-close" onclick="closeManualSelect()">×</button>
             </div>
             <input type="text" class="form-input" id="modal-search" placeholder="薬品名・カテゴリで検索..." oninput="filterModalList()">
+            <div class="modal-filter-bar" id="modal-cat-filter">
+                <button class="cat-btn active" onclick="setModalCatFilter('', event)">全て</button>
+                <button class="cat-btn" onclick="setModalCatFilter('成人', event)">成人</button>
+                <button class="cat-btn" onclick="setModalCatFilter('小児', event)">小児</button>
+                <button class="cat-btn" onclick="setModalCatFilter('外用', event)">外用</button>
+            </div>
+            <div class="modal-filter-bar" id="modal-weight-filter">
+                <span class="weight-filter-label">体重別:</span>
+                <button class="weight-btn" onclick="setModalWeightFilter('', event)">解除</button>
+                <button class="weight-btn" onclick="setModalWeightFilter('6m', event)">6ヶ月</button>
+                <button class="weight-btn" onclick="setModalWeightFilter('1y', event)">1歳</button>
+                <button class="weight-btn" onclick="setModalWeightFilter('3y', event)">3歳</button>
+                <button class="weight-btn" onclick="setModalWeightFilter('5y', event)">5歳</button>
+                <button class="weight-btn" onclick="setModalWeightFilter('7y', event)">7歳</button>
+            </div>
             <div id="modal-breadcrumb" class="modal-breadcrumb" style="display:none;"></div>
             <div class="medicine-list" id="modal-list">
                 <!-- 薬品リストがここに表示される -->
+            </div>
+            <div class="modal-add-bar" id="modal-add-bar">
+                <span id="modal-select-count" style="font-size:14px;font-weight:600;">0件選択中</span>
+                <button class="modal-add-btn" onclick="addModalSelected()">一括追加</button>
+                <button class="modal-clear-btn" onclick="clearModalSelected()">解除</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 送信確認ポップアップ -->
+    <div class="confirm-overlay" id="confirm-overlay" onclick="closeConfirm()">
+        <div class="confirm-box" onclick="event.stopPropagation()">
+            <div class="confirm-title" id="confirm-title">送信内容の確認</div>
+            <div id="confirm-items"></div>
+            <div class="confirm-meta" id="confirm-meta"></div>
+            <div class="confirm-buttons">
+                <button class="confirm-cancel" onclick="closeConfirm()">キャンセル</button>
+                <button class="confirm-ok" onclick="confirmAndSubmit()">送信する</button>
             </div>
         </div>
     </div>
@@ -2155,6 +2302,14 @@
                 }
             }
 
+            // 確認ポップアップを表示
+            showConfirmPopup();
+        }
+
+        async function doSubmitAll() {
+            const operator = document.getElementById('operator-select').value;
+            const entryDate = document.getElementById('entry-date').value;
+
             const submitBtn = document.getElementById('submit-btn');
             submitBtn.disabled = true;
             submitBtn.innerHTML = '⏳ 送信中...';
@@ -2162,6 +2317,7 @@
             // 送信時点の情報を全アイテムに付与
             for (const item of batchItems) {
                 item.operator = operator;
+                item.entryDate = entryDate;
             }
             if (currentMode === 'out') {
                 const patientInputVal = document.getElementById('patient-input').value;
@@ -2179,12 +2335,13 @@
             if (USE_GAS) {
                 // 全件を1リクエストのバッチで送信（複数リクエスト問題を根本回避）
                 const batchData = batchItems.map(item => {
+                    const note = item.entryDate ? '入力日:' + item.entryDate : '';
                     if (item.mode === 'in') {
-                        return { action: 'stockIn', code: item.medicine.code, quantity: item.quantity, operator: item.operator || '担当者', note: '' };
+                        return { action: 'stockIn', code: item.medicine.code, quantity: item.quantity, operator: item.operator || '担当者', note: note };
                     } else if (item.mode === 'adjust') {
-                        return { action: 'stockAdjust', code: item.medicine.code, newQuantity: item.quantity, reason: '棚卸', operator: item.operator || '担当者', note: '' };
+                        return { action: 'stockAdjust', code: item.medicine.code, newQuantity: item.quantity, reason: '棚卸', operator: item.operator || '担当者', note: note };
                     } else {
-                        return { action: 'stockOut', code: item.medicine.code, quantity: item.quantity, patientId: item.patient?.id || '', patientName: item.patient?.name || '', operator: item.operator || '担当者', note: '' };
+                        return { action: 'stockOut', code: item.medicine.code, quantity: item.quantity, patientId: item.patient?.id || '', patientName: item.patient?.name || '', operator: item.operator || '担当者', note: note };
                     }
                 });
                 try {
@@ -2192,7 +2349,6 @@
                     if (result && result.success) {
                         successCount = batchItems.length;
                     } else if (result && result.results) {
-                        // 部分成功
                         successCount = result.results.filter(r => r.result && r.result.success).length;
                         errorCount = batchItems.length - successCount;
                     } else {
@@ -2222,6 +2378,7 @@
                 }
 
                 historyData.unshift({
+                    date: item.entryDate || new Date().toISOString().split('T')[0],
                     time: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
                     type: item.mode,
                     medicine: item.medicine.name,
@@ -2242,6 +2399,8 @@
             // 送信後にフォームをクリア（患者名・担当者・薬品選択）
             document.getElementById('patient-input').value = '';
             document.getElementById('operator-select').value = '';
+            // 入力日は当日にリセット
+            document.getElementById('entry-date').value = new Date().toISOString().split('T')[0];
             selectedPatient = null;
             selectedMedicine = null;
             document.querySelectorAll('.patient-chip').forEach(c => c.classList.remove('selected'));
@@ -2747,178 +2906,172 @@
             '保湿剤': '🧴',
         };
 
+        // ===== モーダル薬品選択（在庫タブと同じフィルタ方式） =====
+        let modalCatFilter = '';
+        let modalWeightFilter = '';
+        let modalSelectedCodes = new Set();
+
         function openManualSelect() {
-            modalDrillPath = [];
+            modalCatFilter = '';
+            modalWeightFilter = '';
+            modalSelectedCodes.clear();
             document.getElementById('modal-search').value = '';
+            // フィルタボタンリセット
+            document.querySelectorAll('#modal-cat-filter .cat-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('#modal-cat-filter .cat-btn').classList.add('active');
+            document.querySelectorAll('#modal-weight-filter .weight-btn').forEach(b => b.classList.remove('active'));
+            updateModalAddBar();
             document.getElementById('manual-modal').classList.add('show');
-            renderModalView();
+            renderModalList();
         }
 
         function closeManualSelect() {
             document.getElementById('manual-modal').classList.remove('show');
         }
 
-        function renderModalView() {
-            const search = document.getElementById('modal-search').value.trim();
-            if (search) {
-                renderModalSearchResults(search);
-                return;
+        function setModalCatFilter(cat, ev) {
+            modalCatFilter = cat;
+            if (cat !== '小児') modalWeightFilter = '';
+            document.querySelectorAll('#modal-cat-filter .cat-btn').forEach(b => b.classList.remove('active'));
+            ev.target.classList.add('active');
+            if (cat !== '小児') {
+                document.querySelectorAll('#modal-weight-filter .weight-btn').forEach(b => b.classList.remove('active'));
             }
-            renderModalCategories();
+            renderModalList();
         }
 
-        function renderModalSearchResults(query) {
-            const container = document.getElementById('modal-list');
-            const bc = document.getElementById('modal-breadcrumb');
-            bc.style.display = 'none';
-            document.getElementById('modal-title-text').textContent = '検索結果';
-
-            const lf = query.toLowerCase();
-            const filtered = stockData.filter(m =>
-                m.name.toLowerCase().includes(lf) ||
-                m.code.includes(query) ||
-                (m.category || '').toLowerCase().includes(lf)
-            );
-            if (filtered.length === 0) {
-                container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px;">該当なし</div>';
-                return;
-            }
-            container.innerHTML = filtered.map(m => {
-                const subCat = (m.category || '').split('/').slice(1).join('/');
-                const isExt = (m.category || '').replace('[旧]','').startsWith('外用');
-                const stockText = isExt ? '外部薬局' : '在庫: ' + m.stock + m.unit;
-                return `
-                <div class="medicine-item" onclick="selectFromModal('${m.code}')">
-                    <div>
-                        <div class="medicine-item-name">${m.name}</div>
-                        <div class="medicine-item-stock">${stockText}${subCat ? ' ｜ ' + subCat : ''}</div>
-                    </div>
-                </div>`;
-            }).join('');
-        }
-
-        function renderModalCategories() {
-            const container = document.getElementById('modal-list');
-            const bc = document.getElementById('modal-breadcrumb');
-            const depth = modalDrillPath.length;
-            const prefix = modalDrillPath.join('/');
-
-            // Build breadcrumb
-            if (depth === 0) {
-                bc.style.display = 'none';
-                document.getElementById('modal-title-text').textContent = '用途から選ぶ';
-            } else {
-                bc.style.display = 'flex';
-                let html = '<span class="modal-bc-link" onclick="modalDrillTo(-1)">全て</span>';
-                modalDrillPath.forEach((p, i) => {
-                    html += '<span class="modal-bc-sep">›</span>';
-                    if (i < depth - 1) {
-                        html += `<span class="modal-bc-link" onclick="modalDrillTo(${i})">${p}</span>`;
-                    } else {
-                        html += `<span class="modal-bc-current">${p}</span>`;
-                    }
+        function setModalWeightFilter(w, ev) {
+            modalWeightFilter = w;
+            document.querySelectorAll('#modal-weight-filter .weight-btn').forEach(b => b.classList.remove('active'));
+            if (w) {
+                ev.target.classList.add('active');
+                modalCatFilter = '小児';
+                document.querySelectorAll('#modal-cat-filter .cat-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('#modal-cat-filter .cat-btn').forEach(b => {
+                    if (b.textContent === '小児') b.classList.add('active');
                 });
-                bc.innerHTML = html;
-                document.getElementById('modal-title-text').textContent = modalDrillPath[depth - 1];
             }
+            renderModalList();
+        }
 
-            // Get items matching current path prefix
-            const matchingItems = stockData.filter(m => {
-                const cat = m.category || '';
-                if (!prefix) return true;
-                return cat === prefix || cat.startsWith(prefix + '/');
-            });
-
-            // Collect unique sub-category names at current depth
-            const subCats = new Map(); // key => { count, items }
-            matchingItems.forEach(m => {
-                const cat = m.category || '';
-                const parts = cat.split('/');
-                if (parts.length > depth) {
-                    const sub = parts[depth];
-                    if (!subCats.has(sub)) {
-                        subCats.set(sub, { count: 0, items: [] });
-                    }
-                    subCats.get(sub).count++;
-                    subCats.get(sub).items.push(m);
-                }
-            });
-
-            // Decide: show sub-category cards or medicine items
-            if (subCats.size >= 2) {
-                // Multiple sub-categories: show cards
-                let html = '';
-                subCats.forEach((info, key) => {
-                    const icon = catIcons[key] || '💊';
-                    html += `
-                    <div class="modal-category-card" onclick="modalDrillDown('${key}')">
-                        <div class="modal-cat-icon">${icon}</div>
-                        <div>
-                            <div class="modal-cat-label">${key}</div>
-                            <div class="modal-cat-count">${info.count}品目</div>
-                        </div>
-                        <div class="modal-cat-arrow">›</div>
-                    </div>`;
-                });
-                container.innerHTML = html;
+        function toggleModalCheck(code, ev) {
+            ev.stopPropagation();
+            if (modalSelectedCodes.has(code)) {
+                modalSelectedCodes.delete(code);
             } else {
-                // 0 or 1 sub-category: show medicine items directly
-                if (matchingItems.length === 0) {
-                    container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px;">該当なし</div>';
-                    return;
-                }
-                container.innerHTML = matchingItems.map(m => {
-                    const targetInfo = m.target && m.target !== '成人' ? m.target : '';
-                    const usageInfo = m.usage || '';
-                    const isExt = (m.category || '').replace('[旧]','').startsWith('外用');
-                    const extra = [isExt ? '外部薬局' : '', usageInfo, targetInfo].filter(Boolean).join(' ｜ ');
-                    const stockText = isExt ? '--' : '在庫: ' + m.stock + m.unit;
-                    return `
-                    <div class="medicine-item" onclick="selectFromModal('${m.code}')">
-                        <div>
-                            <div class="medicine-item-name">${m.name}</div>
-                            <div class="medicine-item-stock">${stockText}${extra ? ' ｜ ' + extra : ''}</div>
-                        </div>
-                    </div>`;
-                }).join('');
+                modalSelectedCodes.add(code);
             }
+            const el = ev.target.closest('.medicine-item');
+            if (el) el.classList.toggle('checked', modalSelectedCodes.has(code));
+            const cb = el?.querySelector('.modal-checkbox');
+            if (cb) cb.checked = modalSelectedCodes.has(code);
+            updateModalAddBar();
         }
 
-        function modalDrillDown(subCat) {
-            modalDrillPath.push(subCat);
-            renderModalView();
-            document.getElementById('modal-list').scrollTop = 0;
+        function updateModalAddBar() {
+            const bar = document.getElementById('modal-add-bar');
+            const count = modalSelectedCodes.size;
+            document.getElementById('modal-select-count').textContent = `${count}件選択中`;
+            bar.classList.toggle('show', count > 0);
         }
 
-        function modalDrillTo(index) {
-            if (index < 0) {
-                modalDrillPath = [];
-            } else {
-                modalDrillPath = modalDrillPath.slice(0, index + 1);
+        function addModalSelected() {
+            if (modalSelectedCodes.size === 0) return;
+            for (const code of modalSelectedCodes) {
+                const medicine = stockData.find(m => m.code === code);
+                if (medicine) addToBatchDirect(medicine);
             }
-            renderModalView();
-        }
-
-        function filterModalList() {
-            renderModalView();
-        }
-
-        function selectFromModal(code) {
-            const normalizedCode = normalizeCode(code);
-            const medicine = stockData.find(m => normalizeCode(m.code) === normalizedCode);
-            if (!medicine) return;
-
-            // 即バッチ追加 → モーダルを閉じる → リストにスクロール
-            addToBatchDirect(medicine);
-            showScanPopup(medicine, true);
-            if (navigator.vibrate) navigator.vibrate(50);
+            showToast(`${modalSelectedCodes.size}件をリストに追加しました`, 'success');
+            modalSelectedCodes.clear();
+            updateModalAddBar();
             closeManualSelect();
-
-            // バッチリストが見える位置にスクロール
             setTimeout(() => {
                 const batchCard = document.getElementById('batch-card');
                 if (batchCard) batchCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }, 100);
+        }
+
+        function clearModalSelected() {
+            modalSelectedCodes.clear();
+            updateModalAddBar();
+            document.querySelectorAll('#modal-list .medicine-item.checked').forEach(el => el.classList.remove('checked'));
+            document.querySelectorAll('#modal-list .modal-checkbox').forEach(cb => cb.checked = false);
+        }
+
+        function renderModalList() {
+            const container = document.getElementById('modal-list');
+            const search = (document.getElementById('modal-search').value || '').trim().toLowerCase();
+            const wMap = modalWeightFilter ? weightDoseMap[modalWeightFilter] : null;
+
+            let filtered = stockData.filter(m => {
+                if (search && !m.name.toLowerCase().includes(search) && !m.code.includes(search) && !(m.category || '').toLowerCase().includes(search)) return false;
+                if (modalCatFilter && !(m.category || '').startsWith(modalCatFilter)) return false;
+                if (wMap && !wMap.codes.includes(m.code)) return false;
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px;">該当なし</div>';
+                return;
+            }
+
+            let html = '';
+            if (wMap) {
+                html += `<div style="background:#fff3e0; padding:8px 12px; border-radius:8px; font-size:13px; color:#e65100; font-weight:600; margin-bottom:8px;">
+                    📏 ${wMap.label} の処方用量で表示中</div>`;
+            }
+            html += filtered.map(m => {
+                const subCat = (m.category || '').split('/').slice(1).join('/');
+                const isExt = (m.category || '').replace('[旧]','').startsWith('外用');
+                const stockText = isExt ? '外部薬局' : '在庫: ' + m.stock + m.unit;
+                const isChecked = modalSelectedCodes.has(m.code);
+                const doseNote = wMap && wMap.notes && wMap.notes[m.code] ? wMap.notes[m.code] : '';
+                return `
+                <div class="medicine-item${isChecked ? ' checked' : ''}" onclick="toggleModalCheck('${m.code}', event)">
+                    <input type="checkbox" class="modal-checkbox" ${isChecked ? 'checked' : ''} onclick="toggleModalCheck('${m.code}', event)">
+                    <div>
+                        <div class="medicine-item-name">${m.name}${doseNote ? ` <span class="weight-dose-badge">${doseNote}</span>` : ''}</div>
+                        <div class="medicine-item-stock">${stockText}${subCat ? ' ｜ ' + subCat : ''}</div>
+                    </div>
+                </div>`;
+            }).join('');
+            container.innerHTML = html;
+        }
+
+        function filterModalList() {
+            renderModalList();
+        }
+
+        // ===== 送信確認ポップアップ =====
+        function showConfirmPopup() {
+            const modeLabel = currentMode === 'in' ? '入庫' : currentMode === 'adjust' ? '棚卸修正' : '出庫';
+            document.getElementById('confirm-title').textContent = `${modeLabel}内容の確認（${batchItems.length}件）`;
+
+            let html = batchItems.map(item => `
+                <div class="confirm-item">
+                    <div class="confirm-item-name">${item.medicine.name}</div>
+                    <div class="confirm-item-qty">${currentMode === 'adjust' ? '→' : currentMode === 'in' ? '+' : '-'}${item.quantity}${item.medicine.unit}</div>
+                </div>
+            `).join('');
+            document.getElementById('confirm-items').innerHTML = html;
+
+            const operator = document.getElementById('operator-select').value;
+            const entryDate = document.getElementById('entry-date').value;
+            const patient = currentMode === 'out' ? document.getElementById('patient-input').value : '';
+            let meta = `担当者: ${operator} ｜ 入力日: ${entryDate}`;
+            if (patient) meta += ` ｜ 患者: ${patient}`;
+            document.getElementById('confirm-meta').textContent = meta;
+
+            document.getElementById('confirm-overlay').classList.add('show');
+        }
+
+        function closeConfirm() {
+            document.getElementById('confirm-overlay').classList.remove('show');
+        }
+
+        function confirmAndSubmit() {
+            closeConfirm();
+            doSubmitAll();
         }
 
         // ===== 初期化 =====
@@ -2939,6 +3092,9 @@
                 showPatientAutocomplete(this.value);
             }
         });
+
+        // 入力日を当日に初期化
+        document.getElementById('entry-date').value = new Date().toISOString().split('T')[0];
 
         setMode(currentMode);
         renderStockList();
