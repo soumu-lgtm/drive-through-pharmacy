@@ -821,6 +821,30 @@
             color: var(--text-muted);
         }
 
+        /* CSV外 折りたたみ */
+        .other-drugs-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            margin: 16px 0 8px;
+            background: #f1f5f9;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+            border: 1px dashed var(--border);
+            user-select: none;
+        }
+        .other-drugs-toggle:hover { background: #e2e8f0; }
+        .other-drugs-toggle .toggle-arrow { transition: transform 0.2s; }
+        .other-drugs-toggle.open .toggle-arrow { transform: rotate(180deg); }
+        .other-drugs-list { display: none; }
+        .other-drugs-list.open { display: block; }
+        .other-drugs-list .stock-item { opacity: 0.6; }
+        .other-drugs-list .stock-item:hover { opacity: 1; }
+
         /* 薬品検索リスト */
         .medicine-item {
             display: flex;
@@ -1172,7 +1196,7 @@
     <div id="tab-stock" class="tab-content">
         <div class="container">
             <div class="card">
-                <div class="card-title">🔍 薬品検索（123品目）</div>
+                <div class="card-title">🔍 薬品検索（CSV 73品目 ＋ その他 112品目）</div>
                 <input type="text" class="form-input" id="stock-search" placeholder="薬品名・コード・カテゴリで検索..." oninput="filterStock()">
                 <div class="category-filter" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
                     <button class="cat-btn active" onclick="setCategoryFilter('')">全て</button>
@@ -1368,185 +1392,199 @@
             }
         }
 
-        // ===== データ（プロトタイプ用サンプル / GAS未接続時のフォールバック） =====
+        // ===== データ（CSV準拠マスタ 2026-04-20 + CSV外品目） =====
         let stockData = [
-            { code: 'M001', name: 'カルボシステインDS50％ 0.45g', stock: 90, unit: '包', threshold: 5, category: '小児/去痰剤', usage: '分3', price: '12.5', maker: '', target: '' },
-            { code: 'M002', name: 'カルボシステインDS50％ 0.6g', stock: 270, unit: '包', threshold: 9, category: '小児/去痰剤', usage: '分3', price: '12.5', maker: '', target: '' },
-            { code: 'M003', name: 'カルボシステインDS50％ 0.9g', stock: 360, unit: '包', threshold: 12, category: '小児/去痰剤', usage: '分3', price: '12.5', maker: '', target: '' },
-            { code: 'M004', name: 'カルボシステインDS50％ 1.2g', stock: 360, unit: '包', threshold: 12, category: '小児/去痰剤', usage: '分3', price: '12.5', maker: '', target: '' },
-            { code: 'M005', name: 'カルボシステインDS50％ 1.5g', stock: 360, unit: '包', threshold: 12, category: '小児/去痰剤', usage: '分3', price: '12.5', maker: '', target: '' },
-            { code: 'M006', name: 'ドンペリドン坐剤１００ｍｇ', stock: 20, unit: '個', threshold: 5, category: '小児/吐気止め', usage: '分1', price: '33.4', maker: '', target: '' },
-            { code: 'M007', name: 'ドンペリドン坐剤３００ｍｇ', stock: 20, unit: '個', threshold: 5, category: '小児/吐気止め', usage: '分1', price: '52.8', maker: '', target: '' },
-            { code: 'M008', name: 'アスベリン散10％ 0.2g', stock: 90, unit: '包', threshold: 5, category: '小児/咳止め', usage: '分3', price: '16.6', maker: '', target: '' },
-            { code: 'M009', name: 'アスベリン散10％ 0.3g', stock: 270, unit: '包', threshold: 9, category: '小児/咳止め', usage: '分3', price: '16.6', maker: '', target: '' },
-            { code: 'M010', name: 'アスベリン散10％ 0.45g', stock: 360, unit: '包', threshold: 12, category: '小児/咳止め', usage: '分3', price: '16.6', maker: '', target: '' },
-            { code: 'M011', name: 'アスベリン散10％ 0.6g', stock: 360, unit: '包', threshold: 12, category: '小児/咳止め', usage: '分3', price: '16.6', maker: '', target: '' },
-            { code: 'M012', name: 'アスベリン散10％ 0.75g', stock: 360, unit: '包', threshold: 12, category: '小児/咳止め', usage: '分3', price: '16.6', maker: '', target: '' },
-            { code: 'M013', name: '後）フェキソフェナジンDS 0.5g', stock: 60, unit: '包', threshold: 5, category: '小児/抗アレルギー剤', usage: '分2', price: '28.2', maker: '', target: '' },
-            { code: 'M014', name: '後）フェキソフェナジンDS 1g', stock: 90, unit: '包', threshold: 5, category: '小児/抗アレルギー剤', usage: '分2', price: '28.2', maker: '', target: '' },
-            { code: 'M015', name: '後）オセルタミビルDS3％ 1.3g', stock: 60, unit: '包', threshold: 5, category: '小児/抗インフルエンザ薬', usage: '分2', price: '75.9', maker: '', target: '' },
-            { code: 'M016', name: '後）オセルタミビルDS3％ 1.9g', stock: 60, unit: '包', threshold: 6, category: '小児/抗インフルエンザ薬', usage: '分2', price: '75.9', maker: '', target: '' },
-            { code: 'M017', name: '後）オセルタミビルDS3％ 1g', stock: 30, unit: '包', threshold: 5, category: '小児/抗インフルエンザ薬', usage: '分2', price: '75.9', maker: '', target: '' },
-            { code: 'M018', name: '後）オセルタミビルDS3％ 2.6g', stock: 60, unit: '包', threshold: 6, category: '小児/抗インフルエンザ薬', usage: '分2', price: '75.9', maker: '', target: '' },
-            { code: 'M019', name: '後）オセルタミビルDS3％ 3.2g', stock: 60, unit: '包', threshold: 7, category: '小児/抗インフルエンザ薬', usage: '分2', price: '75.9', maker: '', target: '' },
-            { code: 'M020', name: 'セファクロル細粒20% 1.5g', stock: 45, unit: '包', threshold: 5, category: '小児/抗生剤/セフェム系', usage: '分3', price: '44.3', maker: '', target: '' },
-            { code: 'M021', name: 'セファクロル細粒20% 3g', stock: 45, unit: '包', threshold: 5, category: '小児/抗生剤/セフェム系', usage: '分3', price: '44.3', maker: '', target: '' },
-            { code: 'M022', name: 'セファクロル細粒20% 4.5g', stock: 45, unit: '包', threshold: 5, category: '小児/抗生剤/セフェム系', usage: '分3', price: '44.3', maker: '', target: '' },
-            { code: 'M023', name: 'セファクロル細粒20% 6g', stock: 45, unit: '包', threshold: 5, category: '小児/抗生剤/セフェム系', usage: '分3', price: '44.3', maker: '', target: '' },
-            { code: 'M024', name: 'セファクロル細粒20% 7.5g', stock: 45, unit: '包', threshold: 5, category: '小児/抗生剤/セフェム系', usage: '分3', price: '44.3', maker: '', target: '' },
-            { code: 'M025', name: 'ワイドシリン細粒20％ 1.5g', stock: 45, unit: '包', threshold: 5, category: '小児/抗生剤/ペニシリン系', usage: '分3', price: '11.8', maker: '', target: '' },
-            { code: 'M026', name: 'ワイドシリン細粒20％ 1g', stock: 45, unit: '包', threshold: 5, category: '小児/抗生剤/ペニシリン系', usage: '分3', price: '11.8', maker: '', target: '' },
-            { code: 'M027', name: 'ワイドシリン細粒20％ 2.3g', stock: 45, unit: '包', threshold: 5, category: '小児/抗生剤/ペニシリン系', usage: '分3', price: '11.8', maker: '', target: '' },
-            { code: 'M028', name: 'ワイドシリン細粒20％ 3.8g', stock: 45, unit: '包', threshold: 5, category: '小児/抗生剤/ペニシリン系', usage: '分3', price: '11.8', maker: '', target: '' },
-            { code: 'M029', name: 'ワイドシリン細粒20％ 3g', stock: 45, unit: '包', threshold: 5, category: '小児/抗生剤/ペニシリン系', usage: '分3', price: '11.8', maker: '', target: '' },
-            { code: 'M030', name: 'クラリスロマイシンDS小児用10% 0.5g', stock: 30, unit: '包', threshold: 5, category: '小児/抗生剤/マクロライド系', usage: '分2', price: '38', maker: '', target: '' },
-            { code: 'M031', name: 'ビオフェルミン配合散 0.7g', stock: 45, unit: '包', threshold: 5, category: '小児/整腸剤', usage: '分3', price: '6.7', maker: '', target: '' },
-            { code: 'M032', name: 'ビオフェルミン配合散 1.5g', stock: 45, unit: '包', threshold: 6, category: '小児/整腸剤', usage: '分3', price: '6.7', maker: '', target: '' },
-            { code: 'M033', name: 'ビオフェルミン配合散 1g', stock: 45, unit: '包', threshold: 6, category: '小児/整腸剤', usage: '分3', price: '6.7', maker: '', target: '' },
-            { code: 'M034', name: 'ビオフェルミン配合散 2.5g', stock: 45, unit: '包', threshold: 6, category: '小児/整腸剤', usage: '分3', price: '6.7', maker: '', target: '' },
-            { code: 'M035', name: 'ビオフェルミン配合散 2g', stock: 45, unit: '包', threshold: 6, category: '小児/整腸剤', usage: '分3', price: '6.7', maker: '', target: '' },
-            { code: 'M036', name: 'ダイアップ6ｍｇ', stock: 5, unit: '個', threshold: 5, category: '小児/熱性けいれん緩和剤', usage: '分1', price: '50.3', maker: '', target: '' },
-            { code: 'M037', name: 'アンヒバ坐剤１００ｍｇ', stock: 100, unit: '個', threshold: 5, category: '小児/解熱薬', usage: '分1', price: '21.6', maker: '', target: '' },
-            { code: 'M038', name: 'アンヒバ坐剤２００ｍｇ', stock: 50, unit: '個', threshold: 5, category: '小児/解熱薬', usage: '分1', price: '21.6', maker: '', target: '' },
-            { code: 'M039', name: 'カロナール細粒50％ 0.2g', stock: 45, unit: '包', threshold: 5, category: '小児/解熱薬', usage: '分1', price: '7.2', maker: '', target: '' },
-            { code: 'M040', name: 'カロナール細粒50％ 0.3g', stock: 180, unit: '包', threshold: 10, category: '小児/解熱薬', usage: '分1', price: '7.2', maker: '', target: '' },
-            { code: 'M041', name: 'カロナール細粒50％ 0.4g', stock: 180, unit: '包', threshold: 10, category: '小児/解熱薬', usage: '分1', price: '7.2', maker: '', target: '' },
-            { code: 'M042', name: 'カロナール細粒50％ 0.5g', stock: 180, unit: '包', threshold: 10, category: '小児/解熱薬', usage: '分1', price: '7.2', maker: '', target: '' },
-            { code: 'M043', name: 'カルボシステイン錠２５０ｍｇ', stock: 1000, unit: '錠', threshold: 33, category: '成人/去痰剤', usage: '', price: '10.8', maker: '', target: '' },
-            { code: 'M044', name: 'ドンペリドン錠１０ｍｇ', stock: 100, unit: '錠', threshold: 5, category: '成人/吐気止め', usage: '', price: '6.3', maker: '', target: '' },
-            { code: 'M045', name: 'プリンペラン錠５　５ｍｇ', stock: 100, unit: '錠', threshold: 5, category: '成人/吐気止め', usage: '', price: '10.8', maker: '', target: '' },
-            { code: 'M046', name: 'メジコン錠１５ｍｇ', stock: 1000, unit: '錠', threshold: 33, category: '成人/咳止め', usage: '', price: '8.5', maker: '', target: '' },
-            { code: 'M047', name: 'レスプレン錠３０ｍｇ', stock: 1000, unit: '錠', threshold: 33, category: '成人/咳止め', usage: '', price: '11.8', maker: '', target: '' },
-            { code: 'M048', name: 'フェキソフェナジン塩酸塩60㎎', stock: 300, unit: '包', threshold: 15, category: '成人/抗アレルギー剤', usage: '', price: '10.8', maker: '', target: '' },
-            { code: 'M049', name: 'オセルタミビルカプセル', stock: 200, unit: '錠', threshold: 10, category: '成人/抗インフルエンザ薬', usage: '', price: '108', maker: '', target: '' },
-            { code: 'M050', name: 'クラリスロマイシン錠200㎎', stock: 100, unit: '錠', threshold: 5, category: '成人/抗生剤', usage: '', price: '19.2', maker: '', target: '' },
-            { code: 'M051', name: 'ケフレックスカプセル２５０ｍｇ', stock: 100, unit: '錠', threshold: 6, category: '成人/抗生剤', usage: '', price: '31.5', maker: '', target: '' },
-            { code: 'M052', name: 'サワシリンカプセル２５０　２５０ｍｇ', stock: 300, unit: '錠', threshold: 10, category: '成人/抗生剤', usage: '', price: '15.3', maker: '', target: '' },
-            { code: 'M053', name: 'レボフロキサシン錠２５０ｍｇ', stock: 100, unit: '錠', threshold: 5, category: '成人/抗生剤', usage: '', price: '24.7', maker: '', target: '' },
-            { code: 'M054', name: 'ビオフェルミン錠剤', stock: 126, unit: '錠', threshold: 5, category: '成人/整腸剤', usage: '', price: '6.1', maker: '', target: '' },
-            { code: 'M055', name: 'ミヤBM錠', stock: 100, unit: '錠', threshold: 5, category: '成人/整腸剤', usage: '', price: '6.1', maker: '', target: '' },
-            { code: 'M056', name: 'トラネキサム酸錠２５０ｍｇ', stock: 1000, unit: '錠', threshold: 33, category: '成人/止血剤', usage: '', price: '10.8', maker: '', target: '' },
-            { code: 'M057', name: 'タケキャブ錠１０ｍｇ', stock: 100, unit: '錠', threshold: 5, category: '成人/消化性潰瘍用剤', usage: '', price: '91.6', maker: '', target: '' },
-            { code: 'M058', name: '麻黄湯エキス顆粒', stock: 210, unit: '包', threshold: 7, category: '成人/漢方薬', usage: '', price: '11.4', maker: '', target: '' },
-            { code: 'M059', name: 'ロキソプロフェン錠６０ｍｇ', stock: 200, unit: '錠', threshold: 10, category: '成人/解熱鎮痛剤', usage: '', price: '10.5', maker: '', target: '' },
-            { code: 'M060', name: '後）アセトアミノフェン錠２００ｍｇ', stock: 100, unit: '錠', threshold: 5, category: '成人/解熱鎮痛剤', usage: '', price: '6.3', maker: '', target: '' },
-            { code: 'M061', name: '後）アセトアミノフェン錠５００ｍｇ', stock: 1000, unit: '錠', threshold: 50, category: '成人/解熱鎮痛剤', usage: '', price: '11.2', maker: '', target: '' },
-            { code: 'M062', name: 'メリスロン錠６ｍｇ', stock: 100, unit: '錠', threshold: 5, category: '成人/鎮暈剤', usage: '', price: '10.8', maker: '', target: '' },
-            { code: 'M063', name: 'アドテスト COVID19+Flu', stock: 300, unit: 'キット', threshold: 150, category: '検査/COVID+インフルエンザ', usage: '', price: '1860.4', maker: '', target: '' },
-            { code: 'M064', name: 'クイックナビ StrepA', stock: 10, unit: 'キット', threshold: 5, category: '検査/溶連菌', usage: '', price: '776.4', maker: '', target: '' },
-            { code: 'M065', name: '後）ドンペリドン坐剤 10mg', stock: 0, unit: '個', threshold: 5, category: '小児/吐気止め', usage: '', price: '33.4', maker: '', target: '' },
-            { code: 'M066', name: '後）ドンペリドン坐剤 30mg', stock: 0, unit: '個', threshold: 5, category: '小児/吐気止め', usage: '', price: '52.8', maker: '', target: '' },
-            { code: 'M067', name: 'アスベリンDS2％ 0.125g', stock: 0, unit: '包', threshold: 10, category: '小児/咳止め', usage: '1日3回', price: '16.6', maker: '', target: '5kg' },
-            { code: 'M068', name: 'アスベリンDS2％ 0.25g', stock: 0, unit: '包', threshold: 10, category: '小児/咳止め', usage: '1日3回', price: '16.6', maker: '', target: '10kg' },
-            { code: 'M069', name: 'アスベリンDS2％ 0.375g', stock: 0, unit: '包', threshold: 10, category: '小児/咳止め', usage: '1日3回', price: '16.6', maker: '', target: '15kg' },
-            { code: 'M070', name: 'アスベリンDS2％ 0.5g', stock: 0, unit: '包', threshold: 10, category: '小児/咳止め', usage: '1日3回', price: '16.6', maker: '', target: '20kg' },
-            { code: 'M071', name: '後）フェキソフェナジンDS 1.0g', stock: 0, unit: '包', threshold: 10, category: '小児/抗アレルギー剤', usage: '1日2回', price: '28.2', maker: '', target: '7歳以上' },
-            { code: 'M072', name: '後）オセルタミビル75㎎', stock: 0, unit: '錠', threshold: 10, category: '小児/抗インフルエンザ薬', usage: '1日2回', price: '108', maker: '「サワイ」', target: '35kg以上' },
-            { code: 'M073', name: '後）オセルタミビルDS3％ 1.0g', stock: 0, unit: '包', threshold: 10, category: '小児/抗インフルエンザ薬', usage: '1日2回', price: '75.9', maker: '「サワイ」', target: '5kg' },
-            { code: 'M074', name: 'ケフラール小児用顆粒100㎎ 1.5g', stock: 0, unit: '包', threshold: 10, category: '小児/抗生剤/セフェム系', usage: '1日3回', price: '44.3', maker: '「塩野義」', target: '5kg' },
-            { code: 'M075', name: 'ケフラール小児用顆粒100㎎ 3.0g', stock: 0, unit: '包', threshold: 10, category: '小児/抗生剤/セフェム系', usage: '1日3回', price: '44.3', maker: '「塩野義」', target: '10kg' },
-            { code: 'M076', name: 'ケフラール小児用顆粒100㎎ 4.5g', stock: 0, unit: '包', threshold: 10, category: '小児/抗生剤/セフェム系', usage: '1日3回', price: '44.3', maker: '「塩野義」', target: '15kg' },
-            { code: 'M077', name: 'ケフラール小児用顆粒100㎎ 6.0g', stock: 0, unit: '包', threshold: 10, category: '小児/抗生剤/セフェム系', usage: '1日3回', price: '44.3', maker: '「塩野義」', target: '20kg' },
-            { code: 'M078', name: 'ケフラール小児用顆粒100㎎ 7.5g', stock: 0, unit: '包', threshold: 10, category: '小児/抗生剤/セフェム系', usage: '1日3回', price: '44.3', maker: '「塩野義」', target: '25kg' },
-            { code: 'M079', name: 'ワイドシリン細粒２０％　２００ｍｇ 1.0g', stock: 0, unit: '包', threshold: 10, category: '小児/抗生剤/ペニシリン系', usage: '1日3回', price: '11.8', maker: '', target: '5kg' },
-            { code: 'M080', name: 'ワイドシリン細粒２０％　２００ｍｇ 1.5g', stock: 0, unit: '包', threshold: 10, category: '小児/抗生剤/ペニシリン系', usage: '1日3回', price: '11.8', maker: '', target: '10kg' },
-            { code: 'M081', name: 'ワイドシリン細粒２０％　２００ｍｇ 2.3g', stock: 0, unit: '包', threshold: 10, category: '小児/抗生剤/ペニシリン系', usage: '1日3回', price: '11.8', maker: '', target: '15kg' },
-            { code: 'M082', name: 'ワイドシリン細粒２０％　２００ｍｇ 3.0g', stock: 0, unit: '包', threshold: 10, category: '小児/抗生剤/ペニシリン系', usage: '1日3回', price: '11.8', maker: '', target: '20kg' },
-            { code: 'M083', name: 'ワイドシリン細粒２０％　２００ｍｇ 3.8g', stock: 0, unit: '包', threshold: 10, category: '小児/抗生剤/ペニシリン系', usage: '1日3回', price: '11.8', maker: '', target: '25kg' },
-            { code: 'M084', name: 'クラリスロマイシンＤＳ小児用10％ 0.5g', stock: 0, unit: '包', threshold: 10, category: '小児/抗生剤/マクロライド系', usage: '1日2回', price: '38', maker: '', target: '0～20kg' },
-            { code: 'M085', name: 'クラリスロマイシンＤＳ小児用10％ 1.0g', stock: 0, unit: '包', threshold: 10, category: '小児/抗生剤/マクロライド系', usage: '1日2回', price: '38', maker: '', target: '20～30kg' },
-            { code: 'M086', name: '後）クラリスロマイシン錠小児用 0.5g', stock: 0, unit: '錠', threshold: 10, category: '小児/抗生剤/マクロライド系', usage: '1日2回', price: '11.2', maker: '', target: '' },
-            { code: 'M087', name: 'ビオフェルミン配合散 0.2g', stock: 0, unit: '包', threshold: 10, category: '小児/整腸剤', usage: '1日3回', price: '6.7', maker: '「ミヤリサン製薬」', target: '5kg' },
-            { code: 'M088', name: 'ビオフェルミン配合散 0.4g', stock: 0, unit: '包', threshold: 10, category: '小児/整腸剤', usage: '1日3回', price: '6.7', maker: '「ミヤリサン製薬」', target: '10kg' },
-            { code: 'M089', name: 'ビオフェルミン配合散 0.6g', stock: 0, unit: '包', threshold: 10, category: '小児/整腸剤', usage: '1日3回', price: '6.7', maker: '「ミヤリサン製薬」', target: '15kg' },
-            { code: 'M090', name: 'ビオフェルミン配合散 0.8g', stock: 0, unit: '包', threshold: 10, category: '小児/整腸剤', usage: '1日3回', price: '6.7', maker: '「ミヤリサン製薬」', target: '20kg' },
-            { code: 'M091', name: 'ビオフェルミン配合散 1.0g', stock: 0, unit: '包', threshold: 10, category: '小児/整腸剤', usage: '1日3回', price: '6.7', maker: '「ミヤリサン製薬」', target: '25kg' },
-            { code: 'M092', name: 'ダイアップ6㎎ 6㎎', stock: 0, unit: '個', threshold: 10, category: '小児/熱性けいれん緩和剤', usage: '', price: '', maker: '', target: '' },
-            { code: 'M093', name: 'アンヒバ坐剤 100mg', stock: 0, unit: '個', threshold: 10, category: '小児/解熱薬', usage: '1日3回', price: '21.6', maker: '', target: '10㎎/kg' },
-            { code: 'M094', name: 'アンヒバ坐剤 200mg', stock: 0, unit: '個', threshold: 10, category: '小児/解熱薬', usage: '1日3回', price: '21.6', maker: '', target: '10㎎/kg' },
-            { code: 'M095', name: '後）アセトアミノフェンＤＳ小児用２０％ 0.5g', stock: 0, unit: '包', threshold: 10, category: '小児/解熱薬', usage: '1日3回', price: '7.2', maker: '', target: '10kg' },
-            { code: 'M096', name: '後）アセトアミノフェンＤＳ小児用２０％ 0.75g', stock: 0, unit: '包', threshold: 10, category: '小児/解熱薬', usage: '1日3回', price: '7.2', maker: '', target: '15kg' },
-            { code: 'M097', name: '後）アセトアミノフェンＤＳ小児用２０％ 1.25g', stock: 0, unit: '包', threshold: 10, category: '小児/解熱薬', usage: '1日3回', price: '7.2', maker: '', target: '25kg' },
-            { code: 'M098', name: '後）アセトアミノフェンＤＳ小児用２０％ 1g', stock: 0, unit: '包', threshold: 10, category: '小児/解熱薬', usage: '1日3回', price: '7.2', maker: '', target: '20kg' },
-            { code: 'M099', name: 'アメナリーフ 200㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/ホルモン剤', usage: '1日1回', price: '1148.7', maker: '「マルホ」', target: '成人' },
-            { code: 'M100', name: 'プレドニン 5㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/ホルモン剤', usage: '1日3回', price: '10.1', maker: '「シオノギ」', target: '成人' },
-            { code: 'M101', name: '向デパス 0.25㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/ホルモン剤', usage: '就寝前', price: '9.5', maker: '「田辺」', target: '成人' },
-            { code: 'M102', name: 'マグミット 330㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/下剤', usage: '1日数回', price: '5.9', maker: '', target: '成人' },
-            { code: 'M103', name: 'モビコールHD', stock: 0, unit: '錠', threshold: 10, category: '成人/下剤', usage: '1日数回', price: '', maker: '', target: '成人' },
-            { code: 'M104', name: '葛根湯', stock: 0, unit: '包', threshold: 8, category: '成人/下剤', usage: '1日3回', price: '13.4', maker: '', target: '成人' },
-            { code: 'M105', name: 'カルボシステイン錠２５０ｍｇ 250㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/去痰剤', usage: '1日3回', price: '10.8', maker: '', target: '成人' },
-            { code: 'M106', name: 'カルボシステイン錠５００ｍｇ 500㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/去痰剤', usage: '1日3回', price: '10.8', maker: '', target: '成人' },
-            { code: 'M107', name: 'ムコダイン錠２５０ｍｇ 250㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/去痰剤', usage: '1日3回', price: '10.8', maker: '「杏林製薬」', target: '成人' },
-            { code: 'M108', name: 'ムコダイン錠５００ｍｇ 500㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/去痰剤', usage: '1日3回', price: '10.8', maker: '「杏林製薬」', target: '成人' },
-            { code: 'M109', name: 'プルゼニド錠１２ｍｇ 12㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/口腔用剤', usage: '1日1回', price: '5.9', maker: '「サンファーマ」', target: '成人' },
-            { code: 'M110', name: '小青竜湯', stock: 0, unit: '包', threshold: 8, category: '成人/口腔用剤', usage: '1日3回', price: '12.8', maker: '', target: '成人' },
-            { code: 'M111', name: '麻黄附子細辛湯', stock: 0, unit: '包', threshold: 8, category: '成人/口腔用剤', usage: '1日3回', price: '18.4', maker: '', target: '成人' },
-            { code: 'M112', name: 'ＳＰトローチ０．２５ｍｇ「明治」 0.25㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/口腔用剤', usage: '1日6回', price: '6.3', maker: '「明治」', target: '成人' },
-            { code: 'M113', name: 'プリンペラン錠５　５ｍｇ 5㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/吐気止め', usage: '1日数回', price: '10.8', maker: '「日医工」', target: '成人' },
-            { code: 'M114', name: '後）ドンペリドン錠１０ｍｇ 10㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/吐気止め', usage: '適時', price: '6.3', maker: '', target: '成人' },
-            { code: 'M115', name: 'アスベリン錠２０　２０ｍｇ 20㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/咳止め', usage: '1日3回', price: '13.8', maker: '', target: '成人' },
-            { code: 'M116', name: 'メジコン錠１５ｍｇ 15㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/咳止め', usage: '1日3回', price: '8.5', maker: '', target: '成人' },
-            { code: 'M117', name: 'レスプレン錠３０ｍｇ 30㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/咳止め', usage: '1日3回', price: '11.8', maker: '', target: '成人' },
-            { code: 'M118', name: 'アタラックスPカプセル 25㎎', stock: 0, unit: 'CP', threshold: 20, category: '成人/抗アレルギー剤', usage: '1日2回', price: '6.1', maker: '', target: '成人' },
-            { code: 'M119', name: 'アレグラ錠３０ｍｇ 30㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/抗アレルギー剤', usage: '1日2回', price: '20.4', maker: '「サノフィ」', target: '成人' },
-            { code: 'M120', name: 'アレグラ錠６０ｍｇ 60㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/抗アレルギー剤', usage: '1日2回', price: '20.9', maker: 'サノフィ', target: '成人' },
-            { code: 'M121', name: 'クラリスロマイシン錠２００ｍｇ「杏林」 200㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/抗アレルギー剤', usage: '1日2回', price: '19.2', maker: '「杏林」', target: '成人' },
-            { code: 'M122', name: 'クラリスロマイシン錠２００ｍｇ「ＴＣＫ」 200㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/抗アレルギー剤', usage: '1日2回', price: '22.8', maker: '「ＴＣＫ」', target: '成人' },
-            { code: 'M123', name: '後）フェキソフェナジン塩酸塩60㎎ 60㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/抗アレルギー剤', usage: '1日2回', price: '10.8', maker: '', target: '成人' },
-            { code: 'M124', name: 'クラリスロマイシン錠２００ｍｇ「ＮＩＧ」 200㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/抗インフルエンザ薬', usage: '1日2回', price: '25.3', maker: '「ＮＩＧ」', target: '成人' },
-            { code: 'M125', name: 'ジスロマック 250㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/抗インフルエンザ薬', usage: '1日1回', price: '145.4', maker: '', target: '成人' },
-            { code: 'M126', name: 'タミフルカプセル 75㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/抗インフルエンザ薬', usage: '1日2回', price: '189.4', maker: '「中外」', target: '成人' },
-            { code: 'M127', name: '後）オセルタミビルカプセル 75㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/抗インフルエンザ薬', usage: '1日2回', price: '108', maker: '「サワイ」', target: '成人' },
-            { code: 'M128', name: 'バルトレックス錠 500㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/抗ヘルペスウィルス薬', usage: '1日2回', price: '145.4', maker: '「グラクソ」', target: '成人' },
-            { code: 'M129', name: 'クラリスロマイシン錠200㎎ 200㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/抗生剤', usage: '1日2回', price: '19.2', maker: '「NPI」', target: '成人' },
-            { code: 'M130', name: 'ケフレックスカプセル２５０ｍｇ 250㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/抗生剤', usage: '1日3回', price: '31.5', maker: '', target: '成人' },
-            { code: 'M131', name: 'サワシリンカプセル２５０　２５０ｍｇ 250㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/抗生剤', usage: '1日3回', price: '15.3', maker: '', target: '成人' },
-            { code: 'M132', name: '後）レボフロキサシン錠２５０ｍｇ 250㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/抗生剤', usage: '1日1回', price: '24.7', maker: '', target: '成人' },
-            { code: 'M133', name: 'クラビット錠２５０ｍｇ　（レボフロキサシンとして） 250㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/抗菌剤', usage: '1日1回', price: '65', maker: '', target: '成人' },
-            { code: 'M134', name: 'ブスコパン錠 10㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/止痢剤', usage: '1日3回', price: '6.1', maker: '「サノフィ」', target: '成人' },
-            { code: 'M135', name: 'トランサミンカプセル２５０ｍｇ 250㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/止血剤', usage: '1日3回', price: '10.8', maker: '', target: '成人' },
-            { code: 'M136', name: '後）トラネキサム酸錠２５０ｍｇ 250㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/止血剤', usage: '1日3回', price: '10.8', maker: '', target: '成人' },
-            { code: 'M137', name: 'オーグメンチン配合錠２５０ＲＳ　（３７５ｍｇ） 250㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/消化性潰瘍用剤', usage: '1日3回', price: '45.7', maker: '', target: '成人' },
-            { code: 'M138', name: 'タケキャブ錠１０ｍｇ 10㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/消化性潰瘍用剤', usage: '1日1回', price: '91.6', maker: '', target: '成人' },
-            { code: 'M139', name: 'ネキシウムカプセル１０ｍｇ 10㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/消化性潰瘍用剤', usage: '1日1回', price: '59.3', maker: '「アストラゼネカ」', target: '成人' },
-            { code: 'M140', name: '麻黄湯エキス顆粒 7.5g', stock: 0, unit: '包', threshold: 8, category: '成人/漢方薬', usage: '1日3回', price: '11.4', maker: '', target: '成人' },
-            { code: 'M149', name: '後）アセトアミノフェン錠 200㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/解熱鎮痛剤', usage: '適時', price: '6.3', maker: '', target: '成人' },
-            { code: 'M150', name: '後）アセトアミノフェン錠 500㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/解熱鎮痛剤', usage: '適時', price: '11.2', maker: '', target: '成人' },
-            { code: 'M151', name: '後）ロキソプロフェン錠６０ｍｇ 60㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/解熱鎮痛剤', usage: '1日3回', price: '10.5', maker: '', target: '成人' },
-            { code: 'M152', name: 'メリスロン錠６ｍｇ 6㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/鎮暈剤', usage: '1日3回', price: '10.8', maker: '「エーザイ」', target: '成人' },
-            { code: 'M153', name: 'アムロジン錠 2.5㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/降圧剤', usage: '1日1回', price: '11.3', maker: '「住友ファーマ」', target: '成人' },
-            { code: 'M154', name: 'アドテスト', stock: 0, unit: '個', threshold: 10, category: '外用/Flu+Covid19', usage: '', price: '', maker: '', target: '' },
-            { code: 'M155', name: 'クイックチェイサー', stock: 0, unit: '個', threshold: 10, category: '外用/StrepA', usage: '', price: '', maker: '大塚製薬', target: '' },
-            { code: 'M156', name: 'アドレナリン注０．１％シリンジ「テルモ」　１ｍＬ', stock: 1, unit: '本', threshold: 5, category: '外用/アナフィラキシー', usage: '', price: '354', maker: '', target: '' },
-            { code: 'M157', name: 'リンデロンVG軟膏0.12％ 5g', stock: 10, unit: '本', threshold: 5, category: '外用/ステロイド', usage: '', price: '27.7', maker: '', target: '' },
-            { code: 'M158', name: 'レボフラビン点眼0.5％ 5ml', stock: 0, unit: '本', threshold: 5, category: '外用/ヒスタミンH1受容体拮抗薬', usage: '', price: '', maker: '', target: '' },
-            { code: 'M159', name: 'ロキソニンテープ１００ｍｇ　１０ｃｍ×１４ｃｍ 100㎎', stock: 0, unit: '枚', threshold: 5, category: '外用/ヒスタミンH1受容体拮抗薬', usage: '', price: '17.6', maker: '', target: '' },
-            { code: 'M160', name: 'ロコイド軟膏０．１％', stock: 0, unit: '本', threshold: 10, category: '外用/副腎皮質ホルモン剤', usage: '', price: '14.9', maker: '', target: '' },
-            { code: 'M161', name: 'ロコイド軟膏０．１％ 5g', stock: 10, unit: '本', threshold: 5, category: '外用/副腎皮質ホルモン剤', usage: '', price: '14.9', maker: '', target: '' },
-            { code: 'M162', name: 'アレジオン点眼0.05％ 5g', stock: 10, unit: '本', threshold: 5, category: '外用/抗アレルギー点眼薬', usage: '', price: '168.3', maker: '', target: '' },
-            { code: 'M163', name: 'イナビル吸入粉末剤２０ｍｇ', stock: 20, unit: 'キット', threshold: 5, category: '外用/抗インフルエンザ薬', usage: '', price: '1484.9', maker: '', target: '' },
-            { code: 'M164', name: 'イナビル吸入粉末剤２０ｍｇ 20㎎', stock: 0, unit: 'キット', threshold: 10, category: '外用/抗インフルエンザ薬', usage: '', price: '1484.9', maker: '「第一三共」', target: '' },
-            { code: 'M165', name: 'ゲンタシン軟膏 10g', stock: 10, unit: '本', threshold: 5, category: '外用/抗生物質製剤', usage: '', price: '11', maker: '', target: '' },
-            { code: 'M166', name: 'レボフロキサシン点眼 5g', stock: 10, unit: '本', threshold: 5, category: '外用/抗菌点眼薬', usage: '', price: '20.8', maker: '', target: '' },
-            { code: 'M167', name: 'ツロブテロールテープ０．５ｍｇ', stock: 70, unit: '枚', threshold: 7, category: '外用/気管支拡張剤', usage: '', price: '13.1', maker: '', target: '' },
-            { code: 'M168', name: 'ツロブテロールテープ１ｍｇ', stock: 70, unit: '枚', threshold: 7, category: '外用/気管支拡張剤', usage: '', price: '16.3', maker: '', target: '' },
-            { code: 'M169', name: 'ツロブテロールテープ２ｍｇ', stock: 70, unit: '枚', threshold: 7, category: '外用/気管支拡張剤', usage: '', price: '23.7', maker: '', target: '' },
-            { code: 'M170', name: '後）ツロブテロールテープ０．５ｍｇ 0.5㎎', stock: 0, unit: '枚', threshold: 10, category: '外用/気管支拡張剤', usage: '', price: '13.1', maker: '', target: '' },
-            { code: 'M171', name: '後）ツロブテロールテープ１ｍｇ 1.0㎎', stock: 0, unit: '枚', threshold: 10, category: '外用/気管支拡張剤', usage: '', price: '16.3', maker: '', target: '' },
-            { code: 'M172', name: '後）ツロブテロールテープ２ｍｇ 2.0㎎', stock: 0, unit: '枚', threshold: 10, category: '外用/気管支拡張剤', usage: '', price: '23.7', maker: '', target: '' },
-            { code: 'M173', name: 'アズノール軟膏0.033％ 20g', stock: 0, unit: '本', threshold: 5, category: '外用/気管支痙攣の緩解', usage: '', price: '8.03円/g', maker: '「日本新薬」', target: '' },
-            { code: 'M174', name: 'アドレナリン注０．１％シリンジ「テルモ」　１ｍＬ 1ml', stock: 0, unit: '本', threshold: 10, category: '外用/気管支痙攣の緩解', usage: '', price: '353', maker: '「テルモ」', target: '' },
-            { code: 'M175', name: 'メプチンエアー10μg 5ml', stock: 0, unit: '個', threshold: 5, category: '外用/気管支痙攣の緩解', usage: '', price: '1060.9円/個', maker: '', target: '' },
-            { code: 'M176', name: 'ヒルドイドクリーム０．３％ 25g', stock: 10, unit: '本', threshold: 5, category: '外用/血行促進・皮膚保湿剤', usage: '', price: '17.7', maker: '', target: '' },
-            { code: 'M177', name: 'グリセリン浣腸液５０％「ムネ」３０ｍＬ 30ml', stock: 0, unit: '本', threshold: 5, category: '外用/解熱鎮痛消炎剤', usage: '', price: '102.8', maker: '「ムネ」', target: '' },
-            { code: 'M178', name: 'グリセリン浣腸液５０％「ムネ」６０ｍＬ 60ml', stock: 0, unit: '本', threshold: 5, category: '外用/解熱鎮痛消炎剤', usage: '', price: '124.2', maker: '「ムネ」', target: '' },
-            { code: 'M179', name: 'ジクロフェナク坐剤 25㎎', stock: 0, unit: '個', threshold: 10, category: '外用/解熱鎮痛消炎剤', usage: '', price: '', maker: '「日新」', target: '' },
-            { code: 'M180', name: 'ヒアレイン点眼0.1％ 5ml', stock: 0, unit: '本', threshold: 5, category: '外用/解熱鎮痛消炎剤', usage: '', price: '', maker: '', target: '' },
-            { code: 'M181', name: 'レボフロキサシン点眼0.5％ 5ml', stock: 0, unit: '本', threshold: 5, category: '外用/解熱鎮痛消炎剤', usage: '', price: '', maker: '「日新」', target: '' },
-            { code: 'M182', name: 'ロキソニンテープ５０ｍｇ　７ｃｍ×１０ｃｍ 50㎎', stock: 0, unit: '枚', threshold: 5, category: '外用/解熱鎮痛消炎剤', usage: '', price: '12.7', maker: '', target: '' },
-            { code: 'M183', name: '白色ワセリン 50g', stock: 0, unit: '本', threshold: 5, category: '外用/軟膏基剤', usage: '', price: '2.43', maker: '', target: '' },
+            // ===== CSV Group: 小児内服薬 =====
+            { code: 'M001', name: 'カロナール細粒50％　0.2ｇ', stock: 45, unit: '包', threshold: 5, category: '小児/解熱薬', usage: '分1', price: '7.2', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M002', name: 'カロナール細粒50％　0.3ｇ', stock: 180, unit: '包', threshold: 10, category: '小児/解熱薬', usage: '分1', price: '7.2', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M003', name: 'カロナール細粒50％　0.4ｇ', stock: 180, unit: '包', threshold: 10, category: '小児/解熱薬', usage: '分1', price: '7.2', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M004', name: 'カロナール細粒50％　0.5ｇ', stock: 180, unit: '包', threshold: 10, category: '小児/解熱薬', usage: '分1', price: '7.2', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M005', name: 'アスベリン散10％　0.15ｇ', stock: 90, unit: '包', threshold: 5, category: '小児/咳止め', usage: '分3', price: '16.6', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M006', name: 'アスベリン散10％　0.2ｇ', stock: 270, unit: '包', threshold: 9, category: '小児/咳止め', usage: '分3', price: '16.6', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M007', name: 'アスベリン散10％　0.3ｇ', stock: 360, unit: '包', threshold: 12, category: '小児/咳止め', usage: '分3', price: '16.6', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M008', name: 'アスベリン散10％　0.4ｇ', stock: 360, unit: '包', threshold: 12, category: '小児/咳止め', usage: '分3', price: '16.6', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M009', name: 'アスベリン散10％　0.5ｇ', stock: 360, unit: '包', threshold: 12, category: '小児/咳止め', usage: '分3', price: '16.6', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M010', name: 'カルボシステインDS50％　0.45ｇ', stock: 90, unit: '包', threshold: 5, category: '小児/去痰剤', usage: '分3', price: '12.5', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M011', name: 'カルボシステインDS50％　0.6ｇ', stock: 270, unit: '包', threshold: 9, category: '小児/去痰剤', usage: '分3', price: '12.5', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M012', name: 'カルボシステインDS50％　0.9ｇ', stock: 360, unit: '包', threshold: 12, category: '小児/去痰剤', usage: '分3', price: '12.5', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M013', name: 'カルボシステインDS50％　1.2ｇ', stock: 360, unit: '包', threshold: 12, category: '小児/去痰剤', usage: '分3', price: '12.5', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M014', name: 'カルボシステインDS50％　1.5ｇ', stock: 360, unit: '包', threshold: 12, category: '小児/去痰剤', usage: '分3', price: '12.5', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M015', name: 'フェキソフェナジンDS5％　0.3ｇ', stock: 120, unit: '包', threshold: 5, category: '小児/抗アレルギー剤', usage: '分2', price: '28.2', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M016', name: 'ビオフェルミン配合散　0.7ｇ', stock: 45, unit: '包', threshold: 5, category: '小児/整腸剤', usage: '分3', price: '6.7', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M017', name: 'ビオフェルミン配合散　1ｇ', stock: 45, unit: '包', threshold: 5, category: '小児/整腸剤', usage: '分3', price: '6.7', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M018', name: 'ビオフェルミン配合散　1.5ｇ', stock: 45, unit: '包', threshold: 5, category: '小児/整腸剤', usage: '分3', price: '6.7', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M019', name: 'ビオフェルミン配合散　2ｇ', stock: 45, unit: '包', threshold: 5, category: '小児/整腸剤', usage: '分3', price: '6.7', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M020', name: 'ビオフェルミン配合散　2.5ｇ', stock: 45, unit: '包', threshold: 5, category: '小児/整腸剤', usage: '分3', price: '6.7', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M021', name: 'セファクロル細粒20%　1ｇ', stock: 45, unit: '包', threshold: 5, category: '小児/抗生剤/セフェム系', usage: '分3', price: '44.3', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M022', name: 'セファクロル細粒20%　1.5ｇ', stock: 45, unit: '包', threshold: 5, category: '小児/抗生剤/セフェム系', usage: '分3', price: '44.3', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M023', name: 'セファクロル細粒20%　2.3ｇ', stock: 45, unit: '包', threshold: 5, category: '小児/抗生剤/セフェム系', usage: '分3', price: '44.3', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M024', name: 'セファクロル細粒20%　3ｇ', stock: 45, unit: '包', threshold: 5, category: '小児/抗生剤/セフェム系', usage: '分3', price: '44.3', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M025', name: 'セファクロル細粒20%　3.8ｇ', stock: 45, unit: '包', threshold: 5, category: '小児/抗生剤/セフェム系', usage: '分3', price: '44.3', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M026', name: 'ワイドシリン細粒20％　1ｇ', stock: 45, unit: '包', threshold: 5, category: '小児/抗生剤/ペニシリン系', usage: '分3', price: '11.8', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M027', name: 'ワイドシリン細粒20％　1.5ｇ', stock: 45, unit: '包', threshold: 5, category: '小児/抗生剤/ペニシリン系', usage: '分3', price: '11.8', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M028', name: 'ワイドシリン細粒20％　2.3ｇ', stock: 45, unit: '包', threshold: 5, category: '小児/抗生剤/ペニシリン系', usage: '分3', price: '11.8', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M029', name: 'ワイドシリン細粒20％　3ｇ', stock: 45, unit: '包', threshold: 5, category: '小児/抗生剤/ペニシリン系', usage: '分3', price: '11.8', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M030', name: 'ワイドシリン細粒20％　3.8ｇ', stock: 45, unit: '包', threshold: 5, category: '小児/抗生剤/ペニシリン系', usage: '分3', price: '11.8', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M031', name: 'クラリスロマイシンDS小児用10%', stock: 120, unit: '包', threshold: 5, category: '小児/抗生剤/マクロライド系', usage: '分2', price: '38', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M032', name: 'オセルタミビルDS3％　0.9ｇ', stock: 30, unit: '包', threshold: 5, category: '小児/抗インフルエンザ薬', usage: '分2', price: '75.9', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M033', name: 'オセルタミビルDS3％　1.3ｇ', stock: 60, unit: '包', threshold: 5, category: '小児/抗インフルエンザ薬', usage: '分2', price: '75.9', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M034', name: 'オセルタミビルDS3％　2ｇ', stock: 60, unit: '包', threshold: 5, category: '小児/抗インフルエンザ薬', usage: '分2', price: '75.9', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M035', name: 'オセルタミビルDS3％　2.7ｇ', stock: 60, unit: '包', threshold: 5, category: '小児/抗インフルエンザ薬', usage: '分2', price: '75.9', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M036', name: 'オセルタミビルDS3％　3.3ｇ', stock: 60, unit: '包', threshold: 5, category: '小児/抗インフルエンザ薬', usage: '分2', price: '75.9', maker: '', target: '', csvGroup: 'csv' },
+            // ===== CSV Group: 内服薬 =====
+            { code: 'M037', name: 'アセトアミノフェン錠２００ｍｇ', stock: 100, unit: '錠', threshold: 5, category: '成人/解熱鎮痛剤', usage: '', price: '6.3', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M038', name: 'アセトアミノフェン錠５００ｍｇ', stock: 1000, unit: '錠', threshold: 33, category: '成人/解熱鎮痛剤', usage: '', price: '11.2', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M039', name: 'ロキソプロフェン錠６０ｍｇ', stock: 200, unit: '錠', threshold: 10, category: '成人/解熱鎮痛剤', usage: '', price: '10.5', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M040', name: 'メジコン錠１５ｍｇ', stock: 1000, unit: '錠', threshold: 33, category: '成人/咳止め', usage: '', price: '8.5', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M041', name: 'レスプレン錠３０ｍｇ', stock: 1000, unit: '錠', threshold: 33, category: '成人/咳止め', usage: '', price: '11.8', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M042', name: 'トラネキサム酸錠２５０ｍｇ', stock: 1000, unit: '錠', threshold: 33, category: '成人/止血剤', usage: '', price: '10.8', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M043', name: 'カルボシステイン錠２５０ｍｇ', stock: 1000, unit: '錠', threshold: 33, category: '成人/去痰剤', usage: '', price: '10.8', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M044', name: 'ミヤBM錠', stock: 100, unit: '錠', threshold: 5, category: '成人/整腸剤', usage: '', price: '6.1', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M045', name: 'フェキソフェナジン塩酸塩60㎎', stock: 300, unit: '錠', threshold: 15, category: '成人/抗アレルギー剤', usage: '', price: '10.8', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M046', name: 'ドンペリドン錠１０ｍｇ', stock: 100, unit: '錠', threshold: 5, category: '成人/吐気止め', usage: '', price: '6.3', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M047', name: 'プリンペラン錠５　５ｍｇ', stock: 100, unit: '錠', threshold: 5, category: '成人/吐気止め', usage: '', price: '10.8', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M048', name: 'メリスロン錠６ｍｇ', stock: 100, unit: '錠', threshold: 5, category: '成人/鎮暈剤', usage: '', price: '10.8', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M049', name: 'タケキャブ錠１０ｍｇ', stock: 100, unit: '錠', threshold: 5, category: '成人/消化性潰瘍用剤', usage: '', price: '91.6', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M050', name: 'レボフロキサシン錠２５０ｍｇ', stock: 100, unit: '錠', threshold: 5, category: '成人/抗生剤', usage: '', price: '24.7', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M051', name: 'サワシリンカプセル２５０　２５０ｍｇ', stock: 300, unit: '錠', threshold: 15, category: '成人/抗生剤', usage: '', price: '15.3', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M052', name: 'ケフレックスカプセル２５０ｍｇ', stock: 100, unit: '錠', threshold: 5, category: '成人/抗生剤', usage: '', price: '31.5', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M053', name: 'クラリスロマイシン錠２００ｍｇ', stock: 100, unit: '錠', threshold: 5, category: '成人/抗生剤', usage: '', price: '19.2', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M054', name: '麻黄湯エキス顆粒', stock: 210, unit: '包', threshold: 7, category: '成人/漢方薬', usage: '', price: '11.4', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M055', name: 'オセルタミビルカプセル75ｍｇ', stock: 100, unit: '錠', threshold: 5, category: '成人/抗インフルエンザ薬', usage: '', price: '108', maker: '', target: '', csvGroup: 'csv' },
+            // ===== CSV Group: 外用薬 =====
+            { code: 'M056', name: 'アンヒバ坐剤１００ｍｇ', stock: 100, unit: '個', threshold: 5, category: '小児/解熱薬', usage: '分1', price: '21.6', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M057', name: 'アンヒバ坐剤２００ｍｇ', stock: 100, unit: '個', threshold: 5, category: '小児/解熱薬', usage: '分1', price: '21.6', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M058', name: 'ドンペリドン坐剤１０ｍｇ', stock: 20, unit: '個', threshold: 5, category: '小児/吐気止め', usage: '分1', price: '33.4', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M059', name: 'ドンペリドン坐剤３０ｍｇ', stock: 20, unit: '個', threshold: 5, category: '小児/吐気止め', usage: '分1', price: '52.8', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M060', name: 'ダイアップ6ｍｇ', stock: 5, unit: '個', threshold: 5, category: '小児/熱性けいれん緩和剤', usage: '分1', price: '50.3', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M061', name: 'ゲンタシン軟膏', stock: 10, unit: '本', threshold: 5, category: '外用/抗生物質製剤', usage: '', price: '11', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M062', name: 'ロコイド軟膏０．１％', stock: 10, unit: '本', threshold: 5, category: '外用/副腎皮質ホルモン剤', usage: '', price: '14.9', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M063', name: 'リンデロンVG軟膏0.12％', stock: 10, unit: '本', threshold: 5, category: '外用/ステロイド', usage: '', price: '27.7', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M064', name: 'ヒルドイドクリーム０．３％', stock: 10, unit: '本', threshold: 5, category: '外用/血行促進・皮膚保湿剤', usage: '', price: '17.7', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M065', name: 'レボフロキサシン点眼', stock: 10, unit: '本', threshold: 5, category: '外用/抗菌点眼薬', usage: '', price: '20.8', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M066', name: 'アレジオン点眼0.05％', stock: 10, unit: '本', threshold: 5, category: '外用/抗アレルギー点眼薬', usage: '', price: '168.3', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M067', name: 'ツロブテロールテープ０．５ｍｇ', stock: 70, unit: '枚', threshold: 7, category: '外用/気管支拡張剤', usage: '', price: '13.1', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M068', name: 'ツロブテロールテープ１ｍｇ', stock: 70, unit: '枚', threshold: 7, category: '外用/気管支拡張剤', usage: '', price: '16.3', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M069', name: 'ツロブテロールテープ２ｍｇ', stock: 70, unit: '枚', threshold: 7, category: '外用/気管支拡張剤', usage: '', price: '23.7', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M070', name: 'イナビル吸入粉末剤２０ｍｇ', stock: 10, unit: 'キット', threshold: 5, category: '外用/抗インフルエンザ薬', usage: '', price: '1484.9', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M071', name: 'アドレナリン注０．１％シリンジ「テルモ」　１ｍＬ', stock: 1, unit: '本', threshold: 5, category: '外用/アナフィラキシー', usage: '', price: '354', maker: '', target: '', csvGroup: 'csv' },
+            // ===== CSV Group: 検査キット =====
+            { code: 'M072', name: 'アドテスト COVID19+Flu', stock: 300, unit: 'キット', threshold: 15, category: '検査/COVID+インフルエンザ', usage: '', price: '1860.4', maker: '', target: '', csvGroup: 'csv' },
+            { code: 'M073', name: 'クイックナビ StrepA2', stock: 10, unit: 'キット', threshold: 5, category: '検査/溶連菌', usage: '', price: '776.4', maker: '', target: '', csvGroup: 'csv' },
+            // ===== Non-CSV Group: 既存アイテム（CSVに該当なし） =====
+            { code: 'M074', name: 'ビオフェルミン錠剤', stock: 126, unit: '錠', threshold: 5, category: '成人/整腸剤', usage: '', price: '6.1', maker: '', target: '', csvGroup: 'other' },
+            { code: 'M075', name: 'アスベリンDS2％ 0.125g', stock: 0, unit: '包', threshold: 10, category: '小児/咳止め', usage: '1日3回', price: '16.6', maker: '', target: '5kg', csvGroup: 'other' },
+            { code: 'M076', name: 'アスベリンDS2％ 0.25g', stock: 0, unit: '包', threshold: 10, category: '小児/咳止め', usage: '1日3回', price: '16.6', maker: '', target: '10kg', csvGroup: 'other' },
+            { code: 'M077', name: 'アスベリンDS2％ 0.375g', stock: 0, unit: '包', threshold: 10, category: '小児/咳止め', usage: '1日3回', price: '16.6', maker: '', target: '15kg', csvGroup: 'other' },
+            { code: 'M078', name: 'アスベリンDS2％ 0.5g', stock: 0, unit: '包', threshold: 10, category: '小児/咳止め', usage: '1日3回', price: '16.6', maker: '', target: '20kg', csvGroup: 'other' },
+            { code: 'M079', name: '後）フェキソフェナジンDS 0.5g', stock: 60, unit: '包', threshold: 5, category: '小児/抗アレルギー剤', usage: '分2', price: '28.2', maker: '', target: '', csvGroup: 'other' },
+            { code: 'M080', name: '後）フェキソフェナジンDS 1g', stock: 90, unit: '包', threshold: 5, category: '小児/抗アレルギー剤', usage: '分2', price: '28.2', maker: '', target: '', csvGroup: 'other' },
+            { code: 'M081', name: '後）フェキソフェナジンDS 1.0g', stock: 0, unit: '包', threshold: 10, category: '小児/抗アレルギー剤', usage: '1日2回', price: '28.2', maker: '', target: '7歳以上', csvGroup: 'other' },
+            { code: 'M082', name: '後）オセルタミビルDS3％ 1.3g', stock: 60, unit: '包', threshold: 5, category: '小児/抗インフルエンザ薬', usage: '分2', price: '75.9', maker: '', target: '', csvGroup: 'other' },
+            { code: 'M083', name: '後）オセルタミビルDS3％ 1.9g', stock: 60, unit: '包', threshold: 6, category: '小児/抗インフルエンザ薬', usage: '分2', price: '75.9', maker: '', target: '', csvGroup: 'other' },
+            { code: 'M084', name: '後）オセルタミビルDS3％ 1g', stock: 30, unit: '包', threshold: 5, category: '小児/抗インフルエンザ薬', usage: '分2', price: '75.9', maker: '', target: '', csvGroup: 'other' },
+            { code: 'M085', name: '後）オセルタミビルDS3％ 2.6g', stock: 60, unit: '包', threshold: 6, category: '小児/抗インフルエンザ薬', usage: '分2', price: '75.9', maker: '', target: '', csvGroup: 'other' },
+            { code: 'M086', name: '後）オセルタミビルDS3％ 3.2g', stock: 60, unit: '包', threshold: 7, category: '小児/抗インフルエンザ薬', usage: '分2', price: '75.9', maker: '', target: '', csvGroup: 'other' },
+            { code: 'M087', name: '後）オセルタミビル75㎎', stock: 0, unit: '錠', threshold: 10, category: '小児/抗インフルエンザ薬', usage: '1日2回', price: '108', maker: '「サワイ」', target: '35kg以上', csvGroup: 'other' },
+            { code: 'M088', name: '後）オセルタミビルDS3％ 1.0g', stock: 0, unit: '包', threshold: 10, category: '小児/抗インフルエンザ薬', usage: '1日2回', price: '75.9', maker: '「サワイ」', target: '5kg', csvGroup: 'other' },
+            { code: 'M089', name: 'ケフラール小児用顆粒100㎎ 1.5g', stock: 0, unit: '包', threshold: 10, category: '小児/抗生剤/セフェム系', usage: '1日3回', price: '44.3', maker: '「塩野義」', target: '5kg', csvGroup: 'other' },
+            { code: 'M090', name: 'ケフラール小児用顆粒100㎎ 3.0g', stock: 0, unit: '包', threshold: 10, category: '小児/抗生剤/セフェム系', usage: '1日3回', price: '44.3', maker: '「塩野義」', target: '10kg', csvGroup: 'other' },
+            { code: 'M091', name: 'ケフラール小児用顆粒100㎎ 4.5g', stock: 0, unit: '包', threshold: 10, category: '小児/抗生剤/セフェム系', usage: '1日3回', price: '44.3', maker: '「塩野義」', target: '15kg', csvGroup: 'other' },
+            { code: 'M092', name: 'ケフラール小児用顆粒100㎎ 6.0g', stock: 0, unit: '包', threshold: 10, category: '小児/抗生剤/セフェム系', usage: '1日3回', price: '44.3', maker: '「塩野義」', target: '20kg', csvGroup: 'other' },
+            { code: 'M093', name: 'ケフラール小児用顆粒100㎎ 7.5g', stock: 0, unit: '包', threshold: 10, category: '小児/抗生剤/セフェム系', usage: '1日3回', price: '44.3', maker: '「塩野義」', target: '25kg', csvGroup: 'other' },
+            { code: 'M094', name: 'ワイドシリン細粒２０％　２００ｍｇ 1.0g', stock: 0, unit: '包', threshold: 10, category: '小児/抗生剤/ペニシリン系', usage: '1日3回', price: '11.8', maker: '', target: '5kg', csvGroup: 'other' },
+            { code: 'M095', name: 'ワイドシリン細粒２０％　２００ｍｇ 1.5g', stock: 0, unit: '包', threshold: 10, category: '小児/抗生剤/ペニシリン系', usage: '1日3回', price: '11.8', maker: '', target: '10kg', csvGroup: 'other' },
+            { code: 'M096', name: 'ワイドシリン細粒２０％　２００ｍｇ 2.3g', stock: 0, unit: '包', threshold: 10, category: '小児/抗生剤/ペニシリン系', usage: '1日3回', price: '11.8', maker: '', target: '15kg', csvGroup: 'other' },
+            { code: 'M097', name: 'ワイドシリン細粒２０％　２００ｍｇ 3.0g', stock: 0, unit: '包', threshold: 10, category: '小児/抗生剤/ペニシリン系', usage: '1日3回', price: '11.8', maker: '', target: '20kg', csvGroup: 'other' },
+            { code: 'M098', name: 'ワイドシリン細粒２０％　２００ｍｇ 3.8g', stock: 0, unit: '包', threshold: 10, category: '小児/抗生剤/ペニシリン系', usage: '1日3回', price: '11.8', maker: '', target: '25kg', csvGroup: 'other' },
+            { code: 'M099', name: 'クラリスロマイシンＤＳ小児用10％ 0.5g', stock: 0, unit: '包', threshold: 10, category: '小児/抗生剤/マクロライド系', usage: '1日2回', price: '38', maker: '', target: '0～20kg', csvGroup: 'other' },
+            { code: 'M100', name: 'クラリスロマイシンＤＳ小児用10％ 1.0g', stock: 0, unit: '包', threshold: 10, category: '小児/抗生剤/マクロライド系', usage: '1日2回', price: '38', maker: '', target: '20～30kg', csvGroup: 'other' },
+            { code: 'M101', name: '後）クラリスロマイシン錠小児用 0.5g', stock: 0, unit: '錠', threshold: 10, category: '小児/抗生剤/マクロライド系', usage: '1日2回', price: '11.2', maker: '', target: '', csvGroup: 'other' },
+            { code: 'M102', name: 'ビオフェルミン配合散 0.2g', stock: 0, unit: '包', threshold: 10, category: '小児/整腸剤', usage: '1日3回', price: '6.7', maker: '「ミヤリサン製薬」', target: '5kg', csvGroup: 'other' },
+            { code: 'M103', name: 'ビオフェルミン配合散 0.4g', stock: 0, unit: '包', threshold: 10, category: '小児/整腸剤', usage: '1日3回', price: '6.7', maker: '「ミヤリサン製薬」', target: '10kg', csvGroup: 'other' },
+            { code: 'M104', name: 'ビオフェルミン配合散 0.6g', stock: 0, unit: '包', threshold: 10, category: '小児/整腸剤', usage: '1日3回', price: '6.7', maker: '「ミヤリサン製薬」', target: '15kg', csvGroup: 'other' },
+            { code: 'M105', name: 'ビオフェルミン配合散 0.8g', stock: 0, unit: '包', threshold: 10, category: '小児/整腸剤', usage: '1日3回', price: '6.7', maker: '「ミヤリサン製薬」', target: '20kg', csvGroup: 'other' },
+            { code: 'M106', name: 'ビオフェルミン配合散 1.0g', stock: 0, unit: '包', threshold: 10, category: '小児/整腸剤', usage: '1日3回', price: '6.7', maker: '「ミヤリサン製薬」', target: '25kg', csvGroup: 'other' },
+            { code: 'M107', name: 'ダイアップ6㎎ 6㎎', stock: 0, unit: '個', threshold: 10, category: '小児/熱性けいれん緩和剤', usage: '', price: '', maker: '', target: '', csvGroup: 'other' },
+            { code: 'M108', name: 'アンヒバ坐剤 100mg', stock: 0, unit: '個', threshold: 10, category: '小児/解熱薬', usage: '1日3回', price: '21.6', maker: '', target: '10㎎/kg', csvGroup: 'other' },
+            { code: 'M109', name: 'アンヒバ坐剤 200mg', stock: 0, unit: '個', threshold: 10, category: '小児/解熱薬', usage: '1日3回', price: '21.6', maker: '', target: '10㎎/kg', csvGroup: 'other' },
+            { code: 'M110', name: '後）アセトアミノフェンＤＳ小児用２０％ 0.5g', stock: 0, unit: '包', threshold: 10, category: '小児/解熱薬', usage: '1日3回', price: '7.2', maker: '', target: '10kg', csvGroup: 'other' },
+            { code: 'M111', name: '後）アセトアミノフェンＤＳ小児用２０％ 0.75g', stock: 0, unit: '包', threshold: 10, category: '小児/解熱薬', usage: '1日3回', price: '7.2', maker: '', target: '15kg', csvGroup: 'other' },
+            { code: 'M112', name: '後）アセトアミノフェンＤＳ小児用２０％ 1.25g', stock: 0, unit: '包', threshold: 10, category: '小児/解熱薬', usage: '1日3回', price: '7.2', maker: '', target: '25kg', csvGroup: 'other' },
+            { code: 'M113', name: '後）アセトアミノフェンＤＳ小児用２０％ 1g', stock: 0, unit: '包', threshold: 10, category: '小児/解熱薬', usage: '1日3回', price: '7.2', maker: '', target: '20kg', csvGroup: 'other' },
+            { code: 'M114', name: 'アメナリーフ 200㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/ホルモン剤', usage: '1日1回', price: '1148.7', maker: '「マルホ」', target: '成人', csvGroup: 'other' },
+            { code: 'M115', name: 'プレドニン 5㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/ホルモン剤', usage: '1日3回', price: '10.1', maker: '「シオノギ」', target: '成人', csvGroup: 'other' },
+            { code: 'M116', name: '向デパス 0.25㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/ホルモン剤', usage: '就寝前', price: '9.5', maker: '「田辺」', target: '成人', csvGroup: 'other' },
+            { code: 'M117', name: 'マグミット 330㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/下剤', usage: '1日数回', price: '5.9', maker: '', target: '成人', csvGroup: 'other' },
+            { code: 'M118', name: 'モビコールHD', stock: 0, unit: '錠', threshold: 10, category: '成人/下剤', usage: '1日数回', price: '', maker: '', target: '成人', csvGroup: 'other' },
+            { code: 'M119', name: '葛根湯', stock: 0, unit: '包', threshold: 8, category: '成人/下剤', usage: '1日3回', price: '13.4', maker: '', target: '成人', csvGroup: 'other' },
+            { code: 'M120', name: 'カルボシステイン錠５００ｍｇ 500㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/去痰剤', usage: '1日3回', price: '10.8', maker: '', target: '成人', csvGroup: 'other' },
+            { code: 'M121', name: 'ムコダイン錠２５０ｍｇ 250㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/去痰剤', usage: '1日3回', price: '10.8', maker: '「杏林製薬」', target: '成人', csvGroup: 'other' },
+            { code: 'M122', name: 'ムコダイン錠５００ｍｇ 500㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/去痰剤', usage: '1日3回', price: '10.8', maker: '「杏林製薬」', target: '成人', csvGroup: 'other' },
+            { code: 'M123', name: 'プルゼニド錠１２ｍｇ 12㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/口腔用剤', usage: '1日1回', price: '5.9', maker: '「サンファーマ」', target: '成人', csvGroup: 'other' },
+            { code: 'M124', name: '小青竜湯', stock: 0, unit: '包', threshold: 8, category: '成人/口腔用剤', usage: '1日3回', price: '12.8', maker: '', target: '成人', csvGroup: 'other' },
+            { code: 'M125', name: '麻黄附子細辛湯', stock: 0, unit: '包', threshold: 8, category: '成人/口腔用剤', usage: '1日3回', price: '18.4', maker: '', target: '成人', csvGroup: 'other' },
+            { code: 'M126', name: 'ＳＰトローチ０．２５ｍｇ「明治」 0.25㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/口腔用剤', usage: '1日6回', price: '6.3', maker: '「明治」', target: '成人', csvGroup: 'other' },
+            { code: 'M127', name: 'アスベリン錠２０　２０ｍｇ 20㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/咳止め', usage: '1日3回', price: '13.8', maker: '', target: '成人', csvGroup: 'other' },
+            { code: 'M128', name: 'アタラックスPカプセル 25㎎', stock: 0, unit: 'CP', threshold: 20, category: '成人/抗アレルギー剤', usage: '1日2回', price: '6.1', maker: '', target: '成人', csvGroup: 'other' },
+            { code: 'M129', name: 'アレグラ錠３０ｍｇ 30㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/抗アレルギー剤', usage: '1日2回', price: '20.4', maker: '「サノフィ」', target: '成人', csvGroup: 'other' },
+            { code: 'M130', name: 'アレグラ錠６０ｍｇ 60㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/抗アレルギー剤', usage: '1日2回', price: '20.9', maker: 'サノフィ', target: '成人', csvGroup: 'other' },
+            { code: 'M131', name: 'クラリスロマイシン錠２００ｍｇ「杏林」 200㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/抗アレルギー剤', usage: '1日2回', price: '19.2', maker: '「杏林」', target: '成人', csvGroup: 'other' },
+            { code: 'M132', name: 'クラリスロマイシン錠２００ｍｇ「ＴＣＫ」 200㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/抗アレルギー剤', usage: '1日2回', price: '22.8', maker: '「ＴＣＫ」', target: '成人', csvGroup: 'other' },
+            { code: 'M133', name: '後）フェキソフェナジン塩酸塩60㎎ 60㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/抗アレルギー剤', usage: '1日2回', price: '10.8', maker: '', target: '成人', csvGroup: 'other' },
+            { code: 'M134', name: 'クラリスロマイシン錠２００ｍｇ「ＮＩＧ」 200㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/抗インフルエンザ薬', usage: '1日2回', price: '25.3', maker: '「ＮＩＧ」', target: '成人', csvGroup: 'other' },
+            { code: 'M135', name: 'ジスロマック 250㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/抗インフルエンザ薬', usage: '1日1回', price: '145.4', maker: '', target: '成人', csvGroup: 'other' },
+            { code: 'M136', name: 'タミフルカプセル 75㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/抗インフルエンザ薬', usage: '1日2回', price: '189.4', maker: '「中外」', target: '成人', csvGroup: 'other' },
+            { code: 'M137', name: '後）オセルタミビルカプセル 75㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/抗インフルエンザ薬', usage: '1日2回', price: '108', maker: '「サワイ」', target: '成人', csvGroup: 'other' },
+            { code: 'M138', name: 'バルトレックス錠 500㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/抗ヘルペスウィルス薬', usage: '1日2回', price: '145.4', maker: '「グラクソ」', target: '成人', csvGroup: 'other' },
+            { code: 'M139', name: 'クラリスロマイシン錠200㎎ 200㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/抗生剤', usage: '1日2回', price: '19.2', maker: '「NPI」', target: '成人', csvGroup: 'other' },
+            { code: 'M140', name: 'ケフレックスカプセル２５０ｍｇ 250㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/抗生剤', usage: '1日3回', price: '31.5', maker: '', target: '成人', csvGroup: 'other' },
+            { code: 'M141', name: 'サワシリンカプセル２５０　２５０ｍｇ 250㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/抗生剤', usage: '1日3回', price: '15.3', maker: '', target: '成人', csvGroup: 'other' },
+            { code: 'M142', name: '後）レボフロキサシン錠２５０ｍｇ 250㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/抗生剤', usage: '1日1回', price: '24.7', maker: '', target: '成人', csvGroup: 'other' },
+            { code: 'M143', name: 'クラビット錠２５０ｍｇ　（レボフロキサシンとして） 250㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/抗菌剤', usage: '1日1回', price: '65', maker: '', target: '成人', csvGroup: 'other' },
+            { code: 'M144', name: 'ブスコパン錠 10㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/止痢剤', usage: '1日3回', price: '6.1', maker: '「サノフィ」', target: '成人', csvGroup: 'other' },
+            { code: 'M145', name: 'トランサミンカプセル２５０ｍｇ 250㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/止血剤', usage: '1日3回', price: '10.8', maker: '', target: '成人', csvGroup: 'other' },
+            { code: 'M146', name: '後）トラネキサム酸錠２５０ｍｇ 250㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/止血剤', usage: '1日3回', price: '10.8', maker: '', target: '成人', csvGroup: 'other' },
+            { code: 'M147', name: 'オーグメンチン配合錠２５０ＲＳ　（３７５ｍｇ） 250㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/消化性潰瘍用剤', usage: '1日3回', price: '45.7', maker: '', target: '成人', csvGroup: 'other' },
+            { code: 'M148', name: 'タケキャブ錠１０ｍｇ 10㎎', stock: 0, unit: '錠', threshold: 10, category: '成人/消化性潰瘍用剤', usage: '1日1回', price: '91.6', maker: '', target: '成人', csvGroup: 'other' },
+            { code: 'M149', name: 'ネキシウムカプセル１０ｍｇ 10㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/消化性潰瘍用剤', usage: '1日1回', price: '59.3', maker: '「アストラゼネカ」', target: '成人', csvGroup: 'other' },
+            { code: 'M150', name: '麻黄湯エキス顆粒 7.5g', stock: 0, unit: '包', threshold: 8, category: '成人/漢方薬', usage: '1日3回', price: '11.4', maker: '', target: '成人', csvGroup: 'other' },
+            { code: 'M151', name: '後）アセトアミノフェン錠 200㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/解熱鎮痛剤', usage: '適時', price: '6.3', maker: '', target: '成人', csvGroup: 'other' },
+            { code: 'M152', name: '後）アセトアミノフェン錠 500㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/解熱鎮痛剤', usage: '適時', price: '11.2', maker: '', target: '成人', csvGroup: 'other' },
+            { code: 'M153', name: '後）ロキソプロフェン錠６０ｍｇ 60㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/解熱鎮痛剤', usage: '1日3回', price: '10.5', maker: '', target: '成人', csvGroup: 'other' },
+            { code: 'M154', name: 'メリスロン錠６ｍｇ 6㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/鎮暈剤', usage: '1日3回', price: '10.8', maker: '「エーザイ」', target: '成人', csvGroup: 'other' },
+            { code: 'M155', name: 'アムロジン錠 2.5㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/降圧剤', usage: '1日1回', price: '11.3', maker: '「住友ファーマ」', target: '成人', csvGroup: 'other' },
+            { code: 'M156', name: 'アドテスト', stock: 0, unit: '個', threshold: 10, category: '外用/Flu+Covid19', usage: '', price: '', maker: '', target: '', csvGroup: 'other' },
+            { code: 'M157', name: 'クイックチェイサー', stock: 0, unit: '個', threshold: 10, category: '外用/StrepA', usage: '', price: '', maker: '大塚製薬', target: '', csvGroup: 'other' },
+            { code: 'M158', name: '後）ドンペリドン坐剤 10mg', stock: 0, unit: '個', threshold: 5, category: '小児/吐気止め', usage: '', price: '33.4', maker: '', target: '', csvGroup: 'other' },
+            { code: 'M159', name: '後）ドンペリドン坐剤 30mg', stock: 0, unit: '個', threshold: 5, category: '小児/吐気止め', usage: '', price: '52.8', maker: '', target: '', csvGroup: 'other' },
+            { code: 'M160', name: 'プリンペラン錠５　５ｍｇ 5㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/吐気止め', usage: '1日数回', price: '10.8', maker: '「日医工」', target: '成人', csvGroup: 'other' },
+            { code: 'M161', name: '後）ドンペリドン錠１０ｍｇ 10㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/吐気止め', usage: '適時', price: '6.3', maker: '', target: '成人', csvGroup: 'other' },
+            { code: 'M162', name: 'メジコン錠１５ｍｇ 15㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/咳止め', usage: '1日3回', price: '8.5', maker: '', target: '成人', csvGroup: 'other' },
+            { code: 'M163', name: 'レスプレン錠３０ｍｇ 30㎎', stock: 0, unit: '錠', threshold: 20, category: '成人/咳止め', usage: '1日3回', price: '11.8', maker: '', target: '成人', csvGroup: 'other' },
+            { code: 'M164', name: 'リンデロンVG軟膏0.12％ 5g', stock: 10, unit: '本', threshold: 5, category: '外用/ステロイド', usage: '', price: '27.7', maker: '', target: '', csvGroup: 'other' },
+            { code: 'M165', name: 'レボフラビン点眼0.5％ 5ml', stock: 0, unit: '本', threshold: 5, category: '外用/ヒスタミンH1受容体拮抗薬', usage: '', price: '', maker: '', target: '', csvGroup: 'other' },
+            { code: 'M166', name: 'ロキソニンテープ１００ｍｇ　１０ｃｍ×１４ｃｍ 100㎎', stock: 0, unit: '枚', threshold: 5, category: '外用/ヒスタミンH1受容体拮抗薬', usage: '', price: '17.6', maker: '', target: '', csvGroup: 'other' },
+            { code: 'M167', name: 'ロコイド軟膏０．１％ 5g', stock: 10, unit: '本', threshold: 5, category: '外用/副腎皮質ホルモン剤', usage: '', price: '14.9', maker: '', target: '', csvGroup: 'other' },
+            { code: 'M168', name: 'アレジオン点眼0.05％ 5g', stock: 10, unit: '本', threshold: 5, category: '外用/抗アレルギー点眼薬', usage: '', price: '168.3', maker: '', target: '', csvGroup: 'other' },
+            { code: 'M169', name: 'イナビル吸入粉末剤２０ｍｇ 20㎎', stock: 0, unit: 'キット', threshold: 10, category: '外用/抗インフルエンザ薬', usage: '', price: '1484.9', maker: '「第一三共」', target: '', csvGroup: 'other' },
+            { code: 'M170', name: 'ゲンタシン軟膏 10g', stock: 10, unit: '本', threshold: 5, category: '外用/抗生物質製剤', usage: '', price: '11', maker: '', target: '', csvGroup: 'other' },
+            { code: 'M171', name: 'レボフロキサシン点眼 5g', stock: 10, unit: '本', threshold: 5, category: '外用/抗菌点眼薬', usage: '', price: '20.8', maker: '', target: '', csvGroup: 'other' },
+            { code: 'M172', name: '後）ツロブテロールテープ０．５ｍｇ 0.5㎎', stock: 0, unit: '枚', threshold: 10, category: '外用/気管支拡張剤', usage: '', price: '13.1', maker: '', target: '', csvGroup: 'other' },
+            { code: 'M173', name: '後）ツロブテロールテープ１ｍｇ 1.0㎎', stock: 0, unit: '枚', threshold: 10, category: '外用/気管支拡張剤', usage: '', price: '16.3', maker: '', target: '', csvGroup: 'other' },
+            { code: 'M174', name: '後）ツロブテロールテープ２ｍｇ 2.0㎎', stock: 0, unit: '枚', threshold: 10, category: '外用/気管支拡張剤', usage: '', price: '23.7', maker: '', target: '', csvGroup: 'other' },
+            { code: 'M175', name: 'アズノール軟膏0.033％ 20g', stock: 0, unit: '本', threshold: 5, category: '外用/気管支痙攣の緩解', usage: '', price: '8.03円/g', maker: '「日本新薬」', target: '', csvGroup: 'other' },
+            { code: 'M176', name: 'アドレナリン注０．１％シリンジ「テルモ」　１ｍＬ 1ml', stock: 0, unit: '本', threshold: 10, category: '外用/気管支痙攣の緩解', usage: '', price: '353', maker: '「テルモ」', target: '', csvGroup: 'other' },
+            { code: 'M177', name: 'メプチンエアー10μg 5ml', stock: 0, unit: '個', threshold: 5, category: '外用/気管支痙攣の緩解', usage: '', price: '1060.9円/個', maker: '', target: '', csvGroup: 'other' },
+            { code: 'M178', name: 'ヒルドイドクリーム０．３％ 25g', stock: 10, unit: '本', threshold: 5, category: '外用/血行促進・皮膚保湿剤', usage: '', price: '17.7', maker: '', target: '', csvGroup: 'other' },
+            { code: 'M179', name: 'グリセリン浣腸液５０％「ムネ」３０ｍＬ 30ml', stock: 0, unit: '本', threshold: 5, category: '外用/解熱鎮痛消炎剤', usage: '', price: '102.8', maker: '「ムネ」', target: '', csvGroup: 'other' },
+            { code: 'M180', name: 'グリセリン浣腸液５０％「ムネ」６０ｍＬ 60ml', stock: 0, unit: '本', threshold: 5, category: '外用/解熱鎮痛消炎剤', usage: '', price: '124.2', maker: '「ムネ」', target: '', csvGroup: 'other' },
+            { code: 'M181', name: 'ジクロフェナク坐剤 25㎎', stock: 0, unit: '個', threshold: 10, category: '外用/解熱鎮痛消炎剤', usage: '', price: '', maker: '「日新」', target: '', csvGroup: 'other' },
+            { code: 'M182', name: 'ヒアレイン点眼0.1％ 5ml', stock: 0, unit: '本', threshold: 5, category: '外用/解熱鎮痛消炎剤', usage: '', price: '', maker: '', target: '', csvGroup: 'other' },
+            { code: 'M183', name: 'レボフロキサシン点眼0.5％ 5ml', stock: 0, unit: '本', threshold: 5, category: '外用/解熱鎮痛消炎剤', usage: '', price: '', maker: '「日新」', target: '', csvGroup: 'other' },
+            { code: 'M184', name: 'ロキソニンテープ５０ｍｇ　７ｃｍ×１０ｃｍ 50㎎', stock: 0, unit: '枚', threshold: 5, category: '外用/解熱鎮痛消炎剤', usage: '', price: '12.7', maker: '', target: '', csvGroup: 'other' },
+            { code: 'M185', name: '白色ワセリン 50g', stock: 0, unit: '本', threshold: 5, category: '外用/軟膏基剤', usage: '', price: '2.43', maker: '', target: '', csvGroup: 'other' },
         ];
-
         let historyData = [];
 
         let patientData = [
@@ -2111,6 +2149,36 @@
             filterStock();
         }
 
+        function renderStockItem(m) {
+            const isExternal = (m.category || '').replace('[旧]','').startsWith('外用');
+            const catClass = (m.category || '').startsWith('小児') ? 'child' : isExternal ? 'external' : '';
+            const subCat = (m.category || '').split('/').slice(1).join('/');
+            const metaParts = [m.usage, m.price ? `¥${m.price}` : '', m.target && m.target !== '成人' ? m.target : ''].filter(Boolean);
+            if (isExternal) metaParts.unshift('外部薬局');
+            return `
+            <div class="stock-item" onclick="selectFromStock('${m.code}')" style="cursor:pointer;">
+                <div class="stock-info">
+                    <div class="stock-name">${m.name}</div>
+                    <div class="stock-code">${m.code}${subCat ? ` <span class="stock-category ${catClass}">${subCat}</span>` : ''}</div>
+                    ${metaParts.length ? `<div class="stock-meta">${metaParts.join(' ｜ ')}</div>` : ''}
+                </div>
+                <div style="text-align:right">
+                    <span class="stock-qty" style="${isExternal ? 'color:var(--text-muted)' : m.stock <= m.threshold ? 'color:var(--danger)' : ''}">${isExternal ? '--' : m.stock}</span>
+                    <span class="stock-unit">${isExternal ? '' : m.unit}</span>
+                </div>
+            </div>`;
+        }
+
+        let otherDrugsOpen = false;
+
+        function toggleOtherDrugs() {
+            otherDrugsOpen = !otherDrugsOpen;
+            const toggle = document.getElementById('other-drugs-toggle');
+            const list = document.getElementById('other-drugs-list');
+            if (toggle) toggle.className = 'other-drugs-toggle' + (otherDrugsOpen ? ' open' : '');
+            if (list) list.className = 'other-drugs-list' + (otherDrugsOpen ? ' open' : '');
+        }
+
         function renderStockList(filter = '') {
             const container = document.getElementById('stock-list');
             const lf = filter.toLowerCase();
@@ -2124,25 +2192,28 @@
                     (m.category || '').startsWith(currentCategoryFilter);
                 return matchText && matchCat;
             });
-            container.innerHTML = filtered.map(m => {
-                const isExternal = (m.category || '').replace('[旧]','').startsWith('外用');
-                const catClass = (m.category || '').startsWith('小児') ? 'child' : isExternal ? 'external' : '';
-                const subCat = (m.category || '').split('/').slice(1).join('/');
-                const metaParts = [m.usage, m.price ? `¥${m.price}` : '', m.target && m.target !== '成人' ? m.target : ''].filter(Boolean);
-                if (isExternal) metaParts.unshift('外部薬局');
-                return `
-                <div class="stock-item" onclick="selectFromStock('${m.code}')" style="cursor:pointer;">
-                    <div class="stock-info">
-                        <div class="stock-name">${m.name}</div>
-                        <div class="stock-code">${m.code}${subCat ? ` <span class="stock-category ${catClass}">${subCat}</span>` : ''}</div>
-                        ${metaParts.length ? `<div class="stock-meta">${metaParts.join(' ｜ ')}</div>` : ''}
-                    </div>
-                    <div style="text-align:right">
-                        <span class="stock-qty" style="${isExternal ? 'color:var(--text-muted)' : m.stock <= m.threshold ? 'color:var(--danger)' : ''}">${isExternal ? '--' : m.stock}</span>
-                        <span class="stock-unit">${isExternal ? '' : m.unit}</span>
-                    </div>
+            const csvItems = filtered.filter(m => m.csvGroup === 'csv');
+            const otherItems = filtered.filter(m => m.csvGroup !== 'csv');
+
+            let html = csvItems.map(m => renderStockItem(m)).join('');
+
+            if (otherItems.length > 0) {
+                html += `<div id="other-drugs-toggle" class="other-drugs-toggle${otherDrugsOpen ? ' open' : ''}" onclick="toggleOtherDrugs()">
+                    <span>▼ CSV外の薬剤（${otherItems.length}品目）</span>
+                    <span class="toggle-arrow">▾</span>
+                </div>
+                <div id="other-drugs-list" class="other-drugs-list${otherDrugsOpen ? ' open' : ''}">
+                    ${otherItems.map(m => renderStockItem(m)).join('')}
                 </div>`;
-            }).join('');
+            }
+
+            // Update header count
+            const csvCount = stockData.filter(m => m.csvGroup === 'csv').length;
+            const otherCount = stockData.filter(m => m.csvGroup !== 'csv').length;
+            const titleEl = container.parentElement.querySelector('.card-title');
+            if (titleEl) titleEl.innerHTML = `🔍 薬品検索（CSV ${csvCount}品目 ＋ その他 ${otherCount}品目）`;
+
+            container.innerHTML = html;
         }
 
         function filterStock() {
