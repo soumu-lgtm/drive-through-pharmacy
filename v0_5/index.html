@@ -1107,6 +1107,46 @@
             border-color: var(--primary);
         }
 
+        /* 体重別選択 */
+        .weight-filter {
+            display: flex;
+            gap: 4px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .weight-filter-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-right: 2px;
+            white-space: nowrap;
+        }
+        .weight-btn {
+            padding: 5px 10px;
+            border: 1px solid #e67e22;
+            border-radius: 16px;
+            background: white;
+            font-size: 11px;
+            cursor: pointer;
+            color: #e67e22;
+            font-weight: 600;
+            transition: all 0.15s;
+        }
+        .weight-btn.active {
+            background: #e67e22;
+            color: white;
+        }
+        .weight-dose-badge {
+            display: inline-block;
+            background: #e67e22;
+            color: white;
+            font-size: 10px;
+            padding: 1px 6px;
+            border-radius: 8px;
+            margin-top: 2px;
+            font-weight: 600;
+        }
+
         .stock-info {
             flex: 1;
         }
@@ -1319,6 +1359,15 @@
                     <button class="cat-btn" onclick="setCategoryFilter('成人')">成人</button>
                     <button class="cat-btn" onclick="setCategoryFilter('小児')">小児</button>
                     <button class="cat-btn" onclick="setCategoryFilter('外用')">外用</button>
+                </div>
+                <div class="weight-filter" id="weight-filter-bar">
+                    <span class="weight-filter-label">体重別:</span>
+                    <button class="weight-btn" onclick="setWeightFilter('')">解除</button>
+                    <button class="weight-btn" onclick="setWeightFilter('6m')">6ヶ月(7kg)</button>
+                    <button class="weight-btn" onclick="setWeightFilter('1y')">1歳(10kg)</button>
+                    <button class="weight-btn" onclick="setWeightFilter('3y')">3歳(15kg)</button>
+                    <button class="weight-btn" onclick="setWeightFilter('5y')">5歳(20kg)</button>
+                    <button class="weight-btn" onclick="setWeightFilter('7y')">7歳(25kg)</button>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
                     <label style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:4px;cursor:pointer;">
@@ -2282,6 +2331,52 @@
         let currentCategoryFilter = '';
         let multiSelectMode = true; // デフォルト: 複数選択モード
         let multiSelectedCodes = new Set();
+        let currentWeightFilter = '';
+
+        // 体重別用量マッピング（画像テーブル準拠）
+        const weightDoseMap = {
+            '6m': {
+                label: '6ヶ月(7kg)',
+                codes: ['M005','M010','M016','M015','M031','M021','M026','M032'],
+                notes: { 'M015': '0.3g×1包', 'M031': '1.0g処方' }
+            },
+            '1y': {
+                label: '1歳(10kg)',
+                codes: ['M001','M006','M011','M017','M015','M031','M022','M027','M033'],
+                notes: { 'M015': '0.3g×1包', 'M031': '1.5g処方' }
+            },
+            '3y': {
+                label: '3歳(15kg)',
+                codes: ['M002','M007','M012','M018','M015','M031','M023','M028','M034'],
+                notes: { 'M015': '0.6g×2包', 'M031': '2.0g処方' }
+            },
+            '5y': {
+                label: '5歳(20kg)',
+                codes: ['M003','M008','M013','M019','M015','M031','M024','M029','M035'],
+                notes: { 'M015': '0.6g×2包', 'M031': '3.0g処方' }
+            },
+            '7y': {
+                label: '7歳(25kg)',
+                codes: ['M004','M009','M014','M020','M015','M031','M025','M030','M036'],
+                notes: { 'M015': '0.6g×2包', 'M031': '3.5g処方' }
+            }
+        };
+
+        function setWeightFilter(weight) {
+            currentWeightFilter = weight;
+            // ボタンのactive状態を更新
+            document.querySelectorAll('.weight-btn').forEach(b => b.classList.remove('active'));
+            if (weight) {
+                event.target.classList.add('active');
+                // 体重選択時は自動で小児カテゴリに切替
+                currentCategoryFilter = '小児';
+                document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.cat-btn').forEach(b => {
+                    if (b.textContent === '小児') b.classList.add('active');
+                });
+            }
+            filterStock();
+        }
 
         function toggleMultiSelect() {
             multiSelectMode = document.getElementById('multi-select-toggle').checked;
@@ -2335,6 +2430,11 @@
 
         function setCategoryFilter(cat) {
             currentCategoryFilter = cat;
+            // カテゴリ変更時は体重フィルタを解除
+            if (cat !== '小児') {
+                currentWeightFilter = '';
+                document.querySelectorAll('.weight-btn').forEach(b => b.classList.remove('active'));
+            }
             document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
             event.target.classList.add('active');
             filterStock();
@@ -2367,12 +2467,15 @@
             const clickAction = multiSelectMode
                 ? `toggleStockCheck('${m.code}', event)`
                 : `selectFromStock('${m.code}')`;
+            // 体重別ノート（フェキソフェナジン・クラリスロマイシン等の特記事項）
+            const wMap = currentWeightFilter ? weightDoseMap[currentWeightFilter] : null;
+            const doseNote = wMap && wMap.notes && wMap.notes[m.code] ? wMap.notes[m.code] : '';
             return `
             <div class="stock-item${isChecked ? ' checked' : ''}" onclick="${clickAction}" style="cursor:pointer;">
                 ${multiSelectMode ? `<input type="checkbox" class="stock-checkbox" ${isChecked ? 'checked' : ''} onclick="toggleStockCheck('${m.code}', event)">` : ''}
                 <div class="stock-info">
                     <div class="stock-name">${m.name}</div>
-                    <div class="stock-code">${m.code}${subCat ? ` <span class="stock-category ${catClass}">${subCat}</span>` : ''}</div>
+                    <div class="stock-code">${m.code}${subCat ? ` <span class="stock-category ${catClass}">${subCat}</span>` : ''}${doseNote ? ` <span class="weight-dose-badge">${doseNote}</span>` : ''}</div>
                     ${metaParts.length ? `<div class="stock-meta">${metaParts.join(' ｜ ')}</div>` : ''}
                 </div>
                 <div style="text-align:right">
@@ -2395,6 +2498,7 @@
         function renderStockList(filter = '') {
             const container = document.getElementById('stock-list');
             const lf = filter.toLowerCase();
+            const wMap = currentWeightFilter ? weightDoseMap[currentWeightFilter] : null;
             const filtered = stockData.filter(m => {
                 const matchText = !lf ||
                     m.name.toLowerCase().includes(lf) ||
@@ -2403,14 +2507,21 @@
                     (m.maker || '').toLowerCase().includes(lf);
                 const matchCat = !currentCategoryFilter ||
                     (m.category || '').startsWith(currentCategoryFilter);
-                return matchText && matchCat;
+                // 体重フィルタ: 選択中は該当コードのみ表示
+                const matchWeight = !wMap || wMap.codes.includes(m.code);
+                return matchText && matchCat && matchWeight;
             });
             const csvItems = filtered.filter(m => m.csvGroup === 'csv');
             const otherItems = filtered.filter(m => m.csvGroup !== 'csv');
 
-            let html = csvItems.map(m => renderStockItem(m)).join('');
+            let html = '';
+            if (wMap) {
+                html += `<div style="grid-column:1/-1; background:#fff3e0; padding:8px 12px; border-radius:8px; font-size:13px; color:#e65100; font-weight:600; margin-bottom:4px;">
+                    📏 ${wMap.label} の処方用量で表示中</div>`;
+            }
+            html += csvItems.map(m => renderStockItem(m)).join('');
 
-            if (otherItems.length > 0) {
+            if (!wMap && otherItems.length > 0) {
                 html += `<div id="other-drugs-toggle" class="other-drugs-toggle${otherDrugsOpen ? ' open' : ''}" onclick="toggleOtherDrugs()">
                     <span>▼ CSV外の薬剤（${otherItems.length}品目）</span>
                     <span class="toggle-arrow">▾</span>
@@ -2420,10 +2531,14 @@
                 </div>`;
             }
 
-            const csvCount = stockData.filter(m => m.csvGroup === 'csv').length;
-            const otherCount = stockData.filter(m => m.csvGroup !== 'csv').length;
             const titleEl = container.parentElement.querySelector('.card-title');
-            if (titleEl) titleEl.innerHTML = `🔍 薬品検索（CSV ${csvCount}品目 ＋ その他 ${otherCount}品目）`;
+            if (wMap) {
+                titleEl.innerHTML = `📏 体重別選択: ${wMap.label}（${csvItems.length}品目）`;
+            } else {
+                const csvCount = stockData.filter(m => m.csvGroup === 'csv').length;
+                const otherCount = stockData.filter(m => m.csvGroup !== 'csv').length;
+                titleEl.innerHTML = `🔍 薬品検索（CSV ${csvCount}品目 ＋ その他 ${otherCount}品目）`;
+            }
 
             container.innerHTML = html;
         }
