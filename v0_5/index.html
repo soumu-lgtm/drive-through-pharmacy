@@ -2363,6 +2363,32 @@
                 successCount = batchItems.length;
             }
 
+            // 出庫の場合、処方履歴（夜間休日外来DB）にも記録
+            if (USE_GAS && currentMode === 'out' && successCount > 0) {
+                const patientInputVal = document.getElementById('patient-input').value;
+                const drugsForPrescription = batchItems
+                    .filter(item => item.mode === 'out')
+                    .map(item => ({ name: item.medicine.name, quantity: item.quantity }));
+                if (patientInputVal && drugsForPrescription.length > 0) {
+                    try {
+                        const prescResult = await gasGet('recordPrescription', {
+                            patientName: patientInputVal,
+                            operator: operator,
+                            entryDate: entryDate,
+                            drugs: JSON.stringify(drugsForPrescription)
+                        });
+                        if (prescResult && prescResult.success) {
+                            const matchMsg = prescResult.matched ? '患者一致' : '名前不一致→右セクション';
+                            console.log('処方履歴記録成功:', matchMsg);
+                        } else {
+                            console.warn('処方履歴記録失敗:', prescResult);
+                        }
+                    } catch (e) {
+                        console.error('処方履歴記録エラー:', e);
+                    }
+                }
+            }
+
             // ローカル在庫データ・履歴を更新
             for (const item of batchItems) {
                 const normalizedCode = normalizeCode(item.medicine.code);

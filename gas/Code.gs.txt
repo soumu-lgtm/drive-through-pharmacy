@@ -90,6 +90,14 @@ function doGet(e) {
     case 'batch':
       result = processBatch(JSON.parse(e.parameter.items || '[]'));
       break;
+    case 'recordPrescription':
+      result = recordPrescription({
+        patientName: e.parameter.patientName || '',
+        operator: e.parameter.operator || '',
+        entryDate: e.parameter.entryDate || '',
+        drugs: JSON.parse(e.parameter.drugs || '[]')
+      });
+      break;
     default:
       result = { error: 'Unknown action' };
   }
@@ -1090,6 +1098,142 @@ function setupDailyPatientIdTrigger() {
 function runFillMissingPatientIds() {
   const result = fillMissingPatientIds();
   SpreadsheetApp.getUi().alert(result.message || result.error);
+}
+
+// ===== 処方履歴連携（夜間休日外来DB） =====
+
+const PRESCRIPTION_SS_ID = '12ylHWZhQO2ABfT6xhMM3z8jfD31kH7lRbaGY-Br4Y-k';
+const PRESCRIPTION_SHEET_NAME = '処方履歴';
+
+/**
+ * 処方履歴を夜間休日外来DBに記録
+ * 患者名で処方履歴シートを検索し、一致すれば薬品を記入。不一致なら右セクションに追加。
+ */
+function recordPrescription(data) {
+  const { patientName, operator, entryDate, drugs } = data;
+  // drugs: [{name, quantity}, ...]
+
+  if (!patientName || !drugs || drugs.length === 0) {
+    return { success: false, error: 'patientNameとdrugsが必要です' };
+  }
+
+  try {
+    const ss = SpreadsheetApp.openById(PRESCRIPTION_SS_ID);
+    const sheet = ss.getSheetByName(PRESCRIPTION_SHEET_NAME);
+    if (!sheet) {
+      return { success: false, error: '処方履歴シートが見つかりません' };
+    }
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 1) {
+      return { success: false, error: 'シートにデータがありません' };
+    }
+
+    // 患者名正規化（空白の全角/半角の違いを吸収）
+    function normName(n) {
+      return (n || '').replace(/[\s\u3000]+/g, '').toLowerCase();
+    }
+
+    const targetNorm = normName(patientName);
+
+    // 左セクション（A列）で患者名を検索（薬品未記入の行を優先）
+    const colA = sheet.getRange(2, 1, lastRow - 1, 1).getValues(); // A2:A{lastRow}
+    const colK = sheet.getRange(2, 11, lastRow - 1, 1).getValues(); // K2（処方薬A）
+
+    let matchedRow = -1;
+    for (let i = 0; i < colA.length; i++) {
+      if (normName(colA[i][0]) === targetNorm) {
+        // 処方薬Aが空の行を優先
+        if (!colK[i][0]) {
+          matchedRow = i + 2; // シート上の行番号（1-indexed）
+          break;
+        }
+        // 既に薬品が入っている場合も候補として保持（最後に見つかったものを使う）
+        if (matchedRow === -1) matchedRow = i + 2;
+      }
+    }
+
+    // 薬品を最大6つに分割
+    const maxDrugs = 6;
+    const drugList = drugs.slice(0, maxDrugs);
+
+    if (matchedRow > 0) {
+      // === 患者名一致: 左セクションに記入 ===
+      // G列: 入力担当者、H列: 処方管理入力日
+      sheet.getRange(matchedRow, 7).setValue(operator || '');
+      sheet.getRange(matchedRow, 8).setValue(entryDate || '');
+
+      // K-V列: 処方薬A~F + 数量（K=11, L=12, M=13, N=14, ...）
+      for (let i = 0; i < drugList.length; i++) {
+        const col = 11 + i * 2; // K=11, M=13, O=15, Q=17, S=19, U=21
+        sheet.getRange(matchedRow, col).setValue(drugList[i].name);
+        sheet.getRange(matchedRow, col + 1).setValue(drugList[i].quantity);
+      }
+
+      // 7件以上ある場合は右セクションにも追加
+      if (drugs.length > maxDrugs) {
+        appendToUnmatchedSection(sheet, patientName, operator, entryDate, drugs.slice(maxDrugs));
+      }
+
+      return { success: true, message: '処方履歴に記録しました（患者一致）', matched: true, row: matchedRow };
+    } else {
+      // === 患者名不一致: 右セクション（X列以降、5行目から）に追加 ===
+      appendToUnmatchedSection(sheet, patientName, operator, entryDate, drugs);
+      return { success: true, message: '処方履歴に記録しました（名前不一致 → 右セクション）', matched: false };
+    }
+
+  } catch (e) {
+    return { success: false, error: '処方履歴記録エラー: ' + e.message };
+  }
+}
+
+/**
+ * 右セクション（X列以降）にデータを追加
+ */
+function appendToUnmatchedSection(sheet, patientName, operator, entryDate, drugs) {
+  // 右セクションは4行目がヘッダー、5行目からデータ
+  // X=24, Y=25, Z=26, AA=27, AB=28, ...
+  const startCol = 24; // X列
+  const headerRow = 4;
+  const dataStartRow = 5;
+
+  // 右セクションで次の空行を探す
+  const lastRow = sheet.getLastRow();
+  let nextRow = dataStartRow;
+  if (lastRow >= dataStartRow) {
+    const xCol = sheet.getRange(dataStartRow, startCol, lastRow - dataStartRow + 1, 1).getValues();
+    for (let i = 0; i < xCol.length; i++) {
+      if (xCol[i][0]) {
+        nextRow = dataStartRow + i + 1;
+      }
+    }
+    // xColの最後の値が入っている行の次
+    if (nextRow <= dataStartRow) nextRow = dataStartRow;
+    // もう一度確認: 最後に値がある行+1
+    for (let i = xCol.length - 1; i >= 0; i--) {
+      if (xCol[i][0]) {
+        nextRow = dataStartRow + i + 1;
+        break;
+      }
+    }
+    // 全部空なら5行目から
+    const hasAny = xCol.some(r => r[0]);
+    if (!hasAny) nextRow = dataStartRow;
+  }
+
+  // X: 患者名, Y: 入力担当者, Z: 処方管理入力日
+  sheet.getRange(nextRow, startCol).setValue(patientName);
+  sheet.getRange(nextRow, startCol + 1).setValue(operator || '');
+  sheet.getRange(nextRow, startCol + 2).setValue(entryDate || '');
+
+  // AA以降: 処方薬A, Aの数量, 処方薬B, Bの数量, ...
+  const maxDrugs = 6;
+  const drugList = drugs.slice(0, maxDrugs);
+  for (let i = 0; i < drugList.length; i++) {
+    const col = startCol + 3 + i * 2; // AA=27, AC=29, AE=31, AG=33, AI=35, AK=37
+    sheet.getRange(nextRow, col).setValue(drugList[i].name);
+    sheet.getRange(nextRow, col + 1).setValue(drugList[i].quantity);
+  }
 }
 
 /**
