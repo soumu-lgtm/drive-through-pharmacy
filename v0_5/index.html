@@ -693,7 +693,7 @@
         }
 
         .adjust-input {
-            width: 60px;
+            width: 72px;
             padding: 4px 6px;
             border: 2px solid #f59e0b;
             border-radius: 6px;
@@ -709,7 +709,7 @@
             box-shadow: 0 0 0 2px rgba(217,119,6,0.2);
         }
         .out-input {
-            width: 60px;
+            width: 72px;
             padding: 4px 6px;
             border: 2px solid var(--danger);
             border-radius: 6px;
@@ -987,20 +987,124 @@
             display: block;
         }
 
-        /* 在庫一覧 */
+        /* 在庫一覧 - 3列グリッド */
+        #tab-stock .container { max-width: 960px; }
+        #stock-list {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+        }
+        .other-drugs-toggle, .other-drugs-list {
+            grid-column: 1 / -1;
+        }
+        .other-drugs-list {
+            display: none;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+        }
+        .other-drugs-list.open { display: grid; }
+        @media (max-width: 700px) {
+            #stock-list, .other-drugs-list { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 450px) {
+            #stock-list, .other-drugs-list { grid-template-columns: 1fr; }
+            #tab-stock .container { max-width: 500px; }
+        }
+
         .stock-item {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 14px;
+            flex-direction: column;
+            padding: 10px;
             background: white;
             border-radius: 10px;
-            margin-bottom: 8px;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
             transition: background 0.15s;
+            min-height: 70px;
+            position: relative;
         }
         .stock-item:active {
             background: #f0f4ff;
+        }
+        .stock-item.checked {
+            background: #e8f0fe;
+            box-shadow: 0 0 0 2px var(--primary);
+        }
+
+        /* チェックボックス複数選択 */
+        .stock-checkbox {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 20px;
+            height: 20px;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+        .multi-select-bar {
+            position: fixed;
+            bottom: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--primary);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 600;
+            display: none;
+            align-items: center;
+            gap: 12px;
+            z-index: 200;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+        }
+        .multi-select-bar.show { display: flex; }
+        .multi-select-bar button {
+            padding: 6px 16px;
+            border: none;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .multi-select-bar .add-btn { background: white; color: var(--primary); }
+        .multi-select-bar .clear-btn { background: rgba(255,255,255,0.2); color: white; }
+
+        /* 患者別グループ表示 */
+        .history-group-header {
+            background: var(--primary);
+            color: white;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            margin: 12px 0 6px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .history-group-header:first-child { margin-top: 0; }
+        .history-group-header .group-count {
+            font-size: 12px;
+            opacity: 0.8;
+            font-weight: normal;
+        }
+        .history-view-toggle {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 10px;
+        }
+        .history-view-toggle button {
+            padding: 5px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: white;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .history-view-toggle button.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
         }
 
         .stock-info {
@@ -1009,16 +1113,17 @@
 
         .stock-name {
             font-weight: 600;
-            font-size: 15px;
+            font-size: 13px;
+            line-height: 1.3;
         }
 
         .stock-code {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--text-muted);
         }
 
         .stock-qty {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: 700;
         }
 
@@ -1027,7 +1132,7 @@
         }
 
         .stock-unit {
-            font-size: 13px;
+            font-size: 12px;
             color: var(--text-muted);
         }
 
@@ -1042,6 +1147,17 @@
         }
         .stock-category.child { background: #e67e22; }
         .stock-category.external { background: #27ae60; }
+        /* カテゴリ色分け */
+        .stock-category.cat-fever { background: #e74c3c; }      /* 解熱薬・解熱鎮痛剤 赤 */
+        .stock-category.cat-cough { background: #3498db; }      /* 咳止め 青 */
+        .stock-category.cat-phlegm { background: #2ecc71; }     /* 去痰剤 緑 */
+        .stock-category.cat-antibiotic { background: #9b59b6; } /* 抗生剤 紫 */
+        .stock-category.cat-allergy { background: #f39c12; }    /* 抗アレルギー 橙 */
+        .stock-category.cat-stomach { background: #1abc9c; }    /* 整腸・消化 ティール */
+        .stock-category.cat-nausea { background: #e91e63; }     /* 吐気止め ピンク */
+        .stock-category.cat-flu { background: #00bcd4; }        /* 抗インフルエンザ シアン */
+        .stock-category.cat-kampo { background: #795548; }      /* 漢方薬 茶 */
+        .stock-category.cat-test { background: #607d8b; }       /* 検査キット グレー */
 
         .stock-meta {
             font-size: 11px;
@@ -1204,9 +1320,20 @@
                     <button class="cat-btn" onclick="setCategoryFilter('小児')">小児</button>
                     <button class="cat-btn" onclick="setCategoryFilter('外用')">外用</button>
                 </div>
+                <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+                    <label style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:4px;cursor:pointer;">
+                        <input type="checkbox" id="multi-select-toggle" checked onchange="toggleMultiSelect()" style="accent-color:var(--primary);">
+                        複数選択モード
+                    </label>
+                </div>
             </div>
             <div id="stock-list">
                 <!-- 在庫一覧がここに表示される -->
+            </div>
+            <div id="multi-select-bar" class="multi-select-bar">
+                <span id="multi-select-count">0件選択中</span>
+                <button class="add-btn" onclick="addMultiSelected()">一括追加</button>
+                <button class="clear-btn" onclick="clearMultiSelect()">解除</button>
             </div>
         </div>
     </div>
@@ -1222,11 +1349,15 @@
                     <input type="date" id="history-date-to" onchange="filterHistory()">
                     <input type="text" id="history-search" placeholder="薬品名・患者名・担当者で検索..." oninput="filterHistory()">
                 </div>
-                <div style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;">
+                <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
                     <button onclick="setHistoryDatePreset('today')" style="padding:4px 10px; border:1px solid var(--border); border-radius:6px; background:white; font-size:12px; cursor:pointer;">今日</button>
                     <button onclick="setHistoryDatePreset('week')" style="padding:4px 10px; border:1px solid var(--border); border-radius:6px; background:white; font-size:12px; cursor:pointer;">過去7日</button>
                     <button onclick="setHistoryDatePreset('month')" style="padding:4px 10px; border:1px solid var(--border); border-radius:6px; background:white; font-size:12px; cursor:pointer;">過去30日</button>
                     <button onclick="setHistoryDatePreset('all')" style="padding:4px 10px; border:1px solid var(--border); border-radius:6px; background:white; font-size:12px; cursor:pointer;">全期間</button>
+                </div>
+                <div class="history-view-toggle">
+                    <button class="active" onclick="setHistoryView('timeline')">時系列</button>
+                    <button onclick="setHistoryView('patient')">患者別</button>
                 </div>
                 <div id="history-list">
                     <!-- 履歴がここに表示される -->
@@ -2059,6 +2190,13 @@
             renderBatchList();
             updateActionButtons();
 
+            // 送信後にフォームをクリア（患者名・担当者・薬品選択）
+            document.getElementById('patient-input').value = '';
+            document.getElementById('operator-select').value = '';
+            selectedPatient = null;
+            selectedMedicine = null;
+            document.querySelectorAll('.patient-chip').forEach(c => c.classList.remove('selected'));
+
             // 送信後にGASから最新在庫を再取得して正確な値に更新
             if (USE_GAS) {
                 setTimeout(async () => {
@@ -2142,6 +2280,58 @@
 
         // ===== 在庫一覧 =====
         let currentCategoryFilter = '';
+        let multiSelectMode = true; // デフォルト: 複数選択モード
+        let multiSelectedCodes = new Set();
+
+        function toggleMultiSelect() {
+            multiSelectMode = document.getElementById('multi-select-toggle').checked;
+            multiSelectedCodes.clear();
+            updateMultiSelectBar();
+            renderStockList(document.getElementById('stock-search')?.value || '');
+        }
+
+        function toggleStockCheck(code, ev) {
+            ev.stopPropagation();
+            if (multiSelectedCodes.has(code)) {
+                multiSelectedCodes.delete(code);
+            } else {
+                multiSelectedCodes.add(code);
+            }
+            // チェック状態のUI更新
+            const el = ev.target.closest('.stock-item');
+            if (el) el.classList.toggle('checked', multiSelectedCodes.has(code));
+            updateMultiSelectBar();
+        }
+
+        function updateMultiSelectBar() {
+            const bar = document.getElementById('multi-select-bar');
+            const count = multiSelectedCodes.size;
+            document.getElementById('multi-select-count').textContent = `${count}件選択中`;
+            bar.classList.toggle('show', count > 0);
+        }
+
+        function addMultiSelected() {
+            if (multiSelectedCodes.size === 0) return;
+            for (const code of multiSelectedCodes) {
+                const medicine = stockData.find(m => m.code === code);
+                if (medicine) addToBatchDirect(medicine);
+            }
+            showToast(`${multiSelectedCodes.size}件をリストに追加しました`, 'success');
+            multiSelectedCodes.clear();
+            updateMultiSelectBar();
+            renderStockList(document.getElementById('stock-search')?.value || '');
+            switchTab('scan');
+            setTimeout(() => {
+                const batchCard = document.getElementById('batch-card');
+                if (batchCard) batchCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+        }
+
+        function clearMultiSelect() {
+            multiSelectedCodes.clear();
+            updateMultiSelectBar();
+            document.querySelectorAll('.stock-item.checked').forEach(el => el.classList.remove('checked'));
+        }
 
         function setCategoryFilter(cat) {
             currentCategoryFilter = cat;
@@ -2150,14 +2340,36 @@
             filterStock();
         }
 
+        function getCatColorClass(category) {
+            const cat = (category || '').toLowerCase();
+            if (cat.includes('解熱') || cat.includes('鎮痛')) return 'cat-fever';
+            if (cat.includes('咳止め')) return 'cat-cough';
+            if (cat.includes('去痰')) return 'cat-phlegm';
+            if (cat.includes('抗生') || cat.includes('抗菌')) return 'cat-antibiotic';
+            if (cat.includes('アレルギー')) return 'cat-allergy';
+            if (cat.includes('整腸') || cat.includes('消化') || cat.includes('潰瘍')) return 'cat-stomach';
+            if (cat.includes('吐気')) return 'cat-nausea';
+            if (cat.includes('インフルエンザ')) return 'cat-flu';
+            if (cat.includes('漢方')) return 'cat-kampo';
+            if (cat.includes('検査')) return 'cat-test';
+            return '';
+        }
+
         function renderStockItem(m) {
             const isExternal = (m.category || '').replace('[旧]','').startsWith('外用');
-            const catClass = (m.category || '').startsWith('小児') ? 'child' : isExternal ? 'external' : '';
+            const baseClass = (m.category || '').startsWith('小児') ? 'child' : isExternal ? 'external' : '';
+            const colorClass = getCatColorClass(m.category);
+            const catClass = colorClass || baseClass;
             const subCat = (m.category || '').split('/').slice(1).join('/');
             const metaParts = [m.usage, m.price ? `¥${m.price}` : '', m.target && m.target !== '成人' ? m.target : ''].filter(Boolean);
             if (isExternal) metaParts.unshift('外部薬局');
+            const isChecked = multiSelectedCodes.has(m.code);
+            const clickAction = multiSelectMode
+                ? `toggleStockCheck('${m.code}', event)`
+                : `selectFromStock('${m.code}')`;
             return `
-            <div class="stock-item" onclick="selectFromStock('${m.code}')" style="cursor:pointer;">
+            <div class="stock-item${isChecked ? ' checked' : ''}" onclick="${clickAction}" style="cursor:pointer;">
+                ${multiSelectMode ? `<input type="checkbox" class="stock-checkbox" ${isChecked ? 'checked' : ''} onclick="toggleStockCheck('${m.code}', event)">` : ''}
                 <div class="stock-info">
                     <div class="stock-name">${m.name}</div>
                     <div class="stock-code">${m.code}${subCat ? ` <span class="stock-category ${catClass}">${subCat}</span>` : ''}</div>
@@ -2236,6 +2448,16 @@
         }
 
         // ===== 履歴 =====
+        let historyViewMode = 'timeline'; // 'timeline' or 'patient'
+
+        function setHistoryView(mode) {
+            historyViewMode = mode;
+            document.querySelectorAll('.history-view-toggle button').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            historyDisplayCount = HISTORY_PAGE_SIZE;
+            renderHistoryPaged();
+        }
+
         function renderHistory() {
             applyHistoryFilter();
         }
@@ -2274,47 +2496,85 @@
             renderHistoryPaged();
         }
 
+        function renderHistoryItem(h) {
+            let icon, qtyClass, qtyText;
+            if (h.type === 'adjust') {
+                icon = '📝'; qtyClass = 'adjust'; qtyText = `→${h.quantity}${h.unit}`;
+            } else if (h.type === 'in') {
+                icon = '📥'; qtyClass = 'in'; qtyText = `+${h.quantity}${h.unit}`;
+            } else {
+                icon = '📤'; qtyClass = 'out'; qtyText = `-${h.quantity}${h.unit}`;
+            }
+            return `
+                <div class="history-item">
+                    <div class="history-icon ${h.type}">${icon}</div>
+                    <div class="history-content">
+                        <div class="history-medicine">${h.medicine}</div>
+                        <div class="history-detail">${h.date} ${h.time}${h.operator ? ' • ' + h.operator : ''}${h.patient ? ' • ' + h.patient : ''}${h.type === 'adjust' ? ' • 棚卸修正' : ''}</div>
+                    </div>
+                    <div class="history-qty ${qtyClass}">${qtyText}</div>
+                </div>
+            `;
+        }
+
         function renderHistoryPaged() {
             const container = document.getElementById('history-list');
             const total = filteredHistoryData.length;
-            const showing = Math.min(historyDisplayCount, total);
-            const slice = filteredHistoryData.slice(0, showing);
 
             if (total === 0) {
                 container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">該当する履歴がありません</div>';
                 return;
             }
 
-            let html = slice.map(h => {
-                let icon, qtyClass, qtyText;
-                if (h.type === 'adjust') {
-                    icon = '📝'; qtyClass = 'adjust'; qtyText = `→${h.quantity}${h.unit}`;
-                } else if (h.type === 'in') {
-                    icon = '📥'; qtyClass = 'in'; qtyText = `+${h.quantity}${h.unit}`;
-                } else {
-                    icon = '📤'; qtyClass = 'out'; qtyText = `-${h.quantity}${h.unit}`;
+            if (historyViewMode === 'patient') {
+                // 患者別グループ表示
+                const groups = {};
+                const noPatient = [];
+                filteredHistoryData.forEach(h => {
+                    const key = h.patient || '';
+                    if (!key) { noPatient.push(h); return; }
+                    if (!groups[key]) groups[key] = [];
+                    groups[key].push(h);
+                });
+                // 患者名を最終操作日時の新しい順にソート
+                const sortedKeys = Object.keys(groups).sort((a, b) => {
+                    const aLatest = groups[a][0]?.date + ' ' + groups[a][0]?.time || '';
+                    const bLatest = groups[b][0]?.date + ' ' + groups[b][0]?.time || '';
+                    return bLatest.localeCompare(aLatest);
+                });
+                let html = '';
+                for (const name of sortedKeys) {
+                    const items = groups[name];
+                    html += `<div class="history-group-header">
+                        <span>${name}</span>
+                        <span class="group-count">${items.length}件</span>
+                    </div>`;
+                    html += items.map(h => renderHistoryItem(h)).join('');
                 }
-                return `
-                    <div class="history-item">
-                        <div class="history-icon ${h.type}">${icon}</div>
-                        <div class="history-content">
-                            <div class="history-medicine">${h.medicine}</div>
-                            <div class="history-detail">${h.date} ${h.time}${h.operator ? ' • ' + h.operator : ''}${h.patient ? ' • ' + h.patient : ''}${h.type === 'adjust' ? ' • 棚卸修正' : ''}</div>
-                        </div>
-                        <div class="history-qty ${qtyClass}">${qtyText}</div>
-                    </div>
-                `;
-            }).join('');
+                if (noPatient.length > 0) {
+                    html += `<div class="history-group-header" style="background: var(--text-muted);">
+                        <span>入庫・棚卸（患者なし）</span>
+                        <span class="group-count">${noPatient.length}件</span>
+                    </div>`;
+                    html += noPatient.map(h => renderHistoryItem(h)).join('');
+                }
+                html += `<div style="text-align:center; padding:12px; color:var(--text-muted); font-size:13px;">
+                    全 ${total} 件（${sortedKeys.length + (noPatient.length ? 1 : 0)} グループ）</div>`;
+                container.innerHTML = html;
+            } else {
+                // 時系列表示（従来通り）
+                const showing = Math.min(historyDisplayCount, total);
+                const slice = filteredHistoryData.slice(0, showing);
+                let html = slice.map(h => renderHistoryItem(h)).join('');
 
-            // Show count + load more button
-            html += `<div style="text-align:center; padding:12px; color:var(--text-muted); font-size:13px;">
-                ${showing} / ${total} 件表示`;
-            if (showing < total) {
-                html += ` <button onclick="loadMoreHistory()" style="margin-left:8px; padding:6px 16px; border:1px solid var(--primary); border-radius:6px; background:white; color:var(--primary); font-size:13px; cursor:pointer;">さらに${Math.min(HISTORY_PAGE_SIZE, total - showing)}件読み込む</button>`;
+                html += `<div style="text-align:center; padding:12px; color:var(--text-muted); font-size:13px;">
+                    ${showing} / ${total} 件表示`;
+                if (showing < total) {
+                    html += ` <button onclick="loadMoreHistory()" style="margin-left:8px; padding:6px 16px; border:1px solid var(--primary); border-radius:6px; background:white; color:var(--primary); font-size:13px; cursor:pointer;">さらに${Math.min(HISTORY_PAGE_SIZE, total - showing)}件読み込む</button>`;
+                }
+                html += `</div>`;
+                container.innerHTML = html;
             }
-            html += `</div>`;
-
-            container.innerHTML = html;
         }
 
         function loadMoreHistory() {
