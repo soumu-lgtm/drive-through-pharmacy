@@ -2368,7 +2368,7 @@
                 const patientInputVal = document.getElementById('patient-input').value;
                 const drugsForPrescription = batchItems
                     .filter(item => item.mode === 'out')
-                    .map(item => ({ code: item.medicine.code, name: item.medicine.name, quantity: item.quantity }));
+                    .map(item => ({ name: item.medicine.name, quantity: item.quantity }));
                 if (patientInputVal && drugsForPrescription.length > 0) {
                     try {
                         const prescResult = await gasGet('recordPrescription', {
