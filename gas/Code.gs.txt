@@ -313,7 +313,7 @@ function getCurrentStock() {
  * 入庫を記録
  */
 function recordStockIn(data) {
-  const { code, quantity, operator, note } = data;
+  const { code, medicineName, quantity, operator, note } = data;
 
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEET_NAMES.STOCK_IN);
@@ -326,7 +326,7 @@ function recordStockIn(data) {
   const row = [
     Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy-MM-dd HH:mm:ss'),
     code,
-    getMedicineName(code),
+    medicineName || getMedicineName(code),
     quantity,
     getUnit(code),
     operator || '',
@@ -345,7 +345,7 @@ function recordStockIn(data) {
  * 出庫を記録
  */
 function recordStockOut(data) {
-  const { code, quantity, patientId, patientName, operator, note } = data;
+  const { code, medicineName, quantity, patientId, patientName, operator, note } = data;
 
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEET_NAMES.STOCK_OUT);
@@ -364,7 +364,7 @@ function recordStockOut(data) {
   const row = [
     Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy-MM-dd HH:mm:ss'),
     code,
-    getMedicineName(code),
+    medicineName || getMedicineName(code),
     quantity,
     getUnit(code),
     patientId || '',
@@ -385,7 +385,7 @@ function recordStockOut(data) {
  * 棚卸修正を記録（在庫を指定数量に直接設定）
  */
 function recordStockAdjust(data) {
-  const { code, newQuantity, reason, operator, note } = data;
+  const { code, medicineName, newQuantity, reason, operator, note } = data;
 
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEET_NAMES.STOCK_ADJUST);
@@ -402,7 +402,7 @@ function recordStockAdjust(data) {
   const row = [
     Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy-MM-dd HH:mm:ss'),
     code,
-    getMedicineName(code),
+    medicineName || getMedicineName(code),
     currentStock,     // 修正前
     newQuantity,      // 修正後
     diff,             // 差分

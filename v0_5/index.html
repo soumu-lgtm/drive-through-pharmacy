@@ -2337,11 +2337,11 @@
                 const batchData = batchItems.map(item => {
                     const note = item.entryDate ? '診察日:' + item.entryDate : '';
                     if (item.mode === 'in') {
-                        return { action: 'stockIn', code: item.medicine.code, quantity: item.quantity, operator: item.operator || '担当者', note: note };
+                        return { action: 'stockIn', code: item.medicine.code, medicineName: item.medicine.name, quantity: item.quantity, operator: item.operator || '担当者', note: note };
                     } else if (item.mode === 'adjust') {
-                        return { action: 'stockAdjust', code: item.medicine.code, newQuantity: item.quantity, reason: '棚卸', operator: item.operator || '担当者', note: note };
+                        return { action: 'stockAdjust', code: item.medicine.code, medicineName: item.medicine.name, newQuantity: item.quantity, reason: '棚卸', operator: item.operator || '担当者', note: note };
                     } else {
-                        return { action: 'stockOut', code: item.medicine.code, quantity: item.quantity, patientId: item.patient?.id || '', patientName: item.patient?.name || '', operator: item.operator || '担当者', note: note };
+                        return { action: 'stockOut', code: item.medicine.code, medicineName: item.medicine.name, quantity: item.quantity, patientId: item.patient?.id || '', patientName: item.patient?.name || '', operator: item.operator || '担当者', note: note };
                     }
                 });
                 try {
