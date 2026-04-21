@@ -1107,10 +1107,12 @@ const PRESCRIPTION_SHEET_NAME = '処方履歴';
 
 /**
  * 処方履歴を夜間休日外来DBに記録
- * 患者名で処方履歴シートを検索し、一致すれば薬品を記入。不一致なら右セクションに追加。
+ * 患者名＋診察日で処方履歴シートを検索し、一致すれば薬品を記入。不一致なら右セクションに追加。
+ * 処方管理入力日（H列）は送信日を自動設定。
  */
 function recordPrescription(data) {
   const { patientName, operator, entryDate, drugs } = data;
+  // entryDate = 診察日（フロントエンドの「診察日」フィールド）
   // drugs: [{name, quantity}, ...]
 
   if (!patientName || !drugs || drugs.length === 0) {
@@ -1134,21 +1136,37 @@ function recordPrescription(data) {
       return (n || '').replace(/[\s\u3000]+/g, '').toLowerCase();
     }
 
-    const targetNorm = normName(patientName);
+    // 日付正規化（yyyy-MM-dd形式に統一）
+    function normDate(d) {
+      if (!d) return '';
+      if (d instanceof Date) {
+        return Utilities.formatDate(d, 'Asia/Tokyo', 'yyyy-MM-dd');
+      }
+      const s = String(d).trim();
+      // yyyy/MM/dd → yyyy-MM-dd
+      const m = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+      if (m) return m[1] + '-' + m[2].padStart(2, '0') + '-' + m[3].padStart(2, '0');
+      return s;
+    }
 
-    // 左セクション（A列）で患者名を検索（薬品未記入の行を優先）
-    const colA = sheet.getRange(2, 1, lastRow - 1, 1).getValues(); // A2:A{lastRow}
-    const colK = sheet.getRange(2, 11, lastRow - 1, 1).getValues(); // K2（処方薬A）
+    const targetNorm = normName(patientName);
+    const targetDate = normDate(entryDate);
+
+    // 左セクション: A列(患者名) + D列(診察日) で検索（薬品未記入の行を優先）
+    const dataRange = sheet.getRange(2, 1, lastRow - 1, 11).getValues(); // A2:K{lastRow}
 
     let matchedRow = -1;
-    for (let i = 0; i < colA.length; i++) {
-      if (normName(colA[i][0]) === targetNorm) {
-        // 処方薬Aが空の行を優先
-        if (!colK[i][0]) {
-          matchedRow = i + 2; // シート上の行番号（1-indexed）
+    for (let i = 0; i < dataRange.length; i++) {
+      const rowName = normName(dataRange[i][0]); // A列: 患者名
+      const rowDate = normDate(dataRange[i][3]); // D列: 診察日
+      const rowDrugA = dataRange[i][10];          // K列: 処方薬A
+
+      if (rowName === targetNorm && rowDate === targetDate) {
+        // 患者名＋診察日が一致: 処方薬Aが空の行を優先
+        if (!rowDrugA) {
+          matchedRow = i + 2;
           break;
         }
-        // 既に薬品が入っている場合も候補として保持（最後に見つかったものを使う）
         if (matchedRow === -1) matchedRow = i + 2;
       }
     }
@@ -1157,11 +1175,14 @@ function recordPrescription(data) {
     const maxDrugs = 6;
     const drugList = drugs.slice(0, maxDrugs);
 
+    // 処方管理入力日 = 送信日（今日）を自動設定
+    const today = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd');
+
     if (matchedRow > 0) {
-      // === 患者名一致: 左セクションに記入 ===
-      // G列: 入力担当者、H列: 処方管理入力日
+      // === 患者名＋診察日一致: 左セクションに記入 ===
+      // G列: 入力担当者、H列: 処方管理入力日（自動＝今日）
       sheet.getRange(matchedRow, 7).setValue(operator || '');
-      sheet.getRange(matchedRow, 8).setValue(entryDate || '');
+      sheet.getRange(matchedRow, 8).setValue(today);
 
       // K-V列: 処方薬A~F + 数量（K=11, L=12, M=13, N=14, ...）
       for (let i = 0; i < drugList.length; i++) {
@@ -1172,13 +1193,13 @@ function recordPrescription(data) {
 
       // 7件以上ある場合は右セクションにも追加
       if (drugs.length > maxDrugs) {
-        appendToUnmatchedSection(sheet, patientName, operator, entryDate, drugs.slice(maxDrugs));
+        appendToUnmatchedSection(sheet, patientName, operator, today, drugs.slice(maxDrugs));
       }
 
       return { success: true, message: '処方履歴に記録しました（患者一致）', matched: true, row: matchedRow };
     } else {
       // === 患者名不一致: 右セクション（X列以降、5行目から）に追加 ===
-      appendToUnmatchedSection(sheet, patientName, operator, entryDate, drugs);
+      appendToUnmatchedSection(sheet, patientName, operator, today, drugs);
       return { success: true, message: '処方履歴に記録しました（名前不一致 → 右セクション）', matched: false };
     }
 
@@ -1190,7 +1211,7 @@ function recordPrescription(data) {
 /**
  * 右セクション（X列以降）にデータを追加
  */
-function appendToUnmatchedSection(sheet, patientName, operator, entryDate, drugs) {
+function appendToUnmatchedSection(sheet, patientName, operator, prescriptionDate, drugs) {
   // 右セクションは4行目がヘッダー、5行目からデータ
   // X=24, Y=25, Z=26, AA=27, AB=28, ...
   const startCol = 24; // X列
@@ -1224,7 +1245,7 @@ function appendToUnmatchedSection(sheet, patientName, operator, entryDate, drugs
   // X: 患者名, Y: 入力担当者, Z: 処方管理入力日
   sheet.getRange(nextRow, startCol).setValue(patientName);
   sheet.getRange(nextRow, startCol + 1).setValue(operator || '');
-  sheet.getRange(nextRow, startCol + 2).setValue(entryDate || '');
+  sheet.getRange(nextRow, startCol + 2).setValue(prescriptionDate || '');
 
   // AA以降: 処方薬A, Aの数量, 処方薬B, Bの数量, ...
   const maxDrugs = 6;

@@ -1438,9 +1438,9 @@
                 </select>
             </div>
 
-            <!-- 入力日 -->
+            <!-- 診察日 -->
             <div class="card">
-                <div class="card-title">📅 入力日</div>
+                <div class="card-title">📅 診察日</div>
                 <input type="date" class="form-input" id="entry-date" style="font-size:16px;">
             </div>
 
@@ -2335,7 +2335,7 @@
             if (USE_GAS) {
                 // 全件を1リクエストのバッチで送信（複数リクエスト問題を根本回避）
                 const batchData = batchItems.map(item => {
-                    const note = item.entryDate ? '入力日:' + item.entryDate : '';
+                    const note = item.entryDate ? '診察日:' + item.entryDate : '';
                     if (item.mode === 'in') {
                         return { action: 'stockIn', code: item.medicine.code, quantity: item.quantity, operator: item.operator || '担当者', note: note };
                     } else if (item.mode === 'adjust') {
@@ -2425,7 +2425,7 @@
             // 送信後にフォームをクリア（患者名・担当者・薬品選択）
             document.getElementById('patient-input').value = '';
             document.getElementById('operator-select').value = '';
-            // 入力日は当日にリセット
+            // 診察日は当日にリセット
             document.getElementById('entry-date').value = new Date().toISOString().split('T')[0];
             selectedPatient = null;
             selectedMedicine = null;
@@ -3084,7 +3084,7 @@
             const operator = document.getElementById('operator-select').value;
             const entryDate = document.getElementById('entry-date').value;
             const patient = currentMode === 'out' ? document.getElementById('patient-input').value : '';
-            let meta = `担当者: ${operator} ｜ 入力日: ${entryDate}`;
+            let meta = `担当者: ${operator} ｜ 診察日: ${entryDate}`;
             if (patient) meta += ` ｜ 患者: ${patient}`;
             document.getElementById('confirm-meta').textContent = meta;
 
@@ -3119,7 +3119,7 @@
             }
         });
 
-        // 入力日を当日に初期化
+        // 診察日を当日に初期化
         document.getElementById('entry-date').value = new Date().toISOString().split('T')[0];
 
         setMode(currentMode);
