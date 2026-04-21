@@ -1237,6 +1237,93 @@ function appendToUnmatchedSection(sheet, patientName, operator, entryDate, drugs
 }
 
 /**
+ * 出庫履歴から処方履歴へバックフィル（1回だけ実行）
+ * 出庫履歴の全レコードを患者別にグループ化し、処方履歴シートに転記する。
+ * 既に処方薬Aが記入されている行はスキップする。
+ */
+function backfillPrescriptions() {
+  const ss = getSpreadsheet();
+  const outSheet = ss.getSheetByName(SHEET_NAMES.STOCK_OUT);
+  if (!outSheet) {
+    Logger.log('出庫履歴シートが見つかりません');
+    return;
+  }
+
+  const outData = outSheet.getDataRange().getValues();
+  // ヘッダー: 日時, コード, 薬品名, 数量, 単位, 患者ID, 患者名, 担当者, 備考
+
+  // 患者別にグループ化（同一患者・同一日でグループ）
+  const groups = {};
+  for (let i = 1; i < outData.length; i++) {
+    const row = outData[i];
+    const timestamp = row[0];
+    const drugName = row[2];
+    const quantity = row[3];
+    const patientName = String(row[6] || '').trim();
+    const operator = row[7];
+    const note = row[8] || '';
+
+    if (!patientName || patientName === 'テスト') continue;
+
+    // 入力日を備考から取得、なければタイムスタンプの日付
+    let entryDate = '';
+    const noteStr = String(note);
+    const dateMatch = noteStr.match(/入力日:(\d{4}-\d{2}-\d{2})/);
+    if (dateMatch) {
+      entryDate = dateMatch[1];
+    } else if (timestamp instanceof Date) {
+      entryDate = Utilities.formatDate(timestamp, 'Asia/Tokyo', 'yyyy-MM-dd');
+    } else {
+      entryDate = String(timestamp).substring(0, 10);
+    }
+
+    // キー: 患者名 + 入力日（同じ患者でも別の日は別グループ）
+    const key = patientName + '|' + entryDate;
+    if (!groups[key]) {
+      groups[key] = { patientName, operator, entryDate, drugs: [] };
+    }
+    groups[key].drugs.push({ name: drugName, quantity });
+  }
+
+  // 各グループを処方履歴に記録
+  let successCount = 0;
+  let skipCount = 0;
+  let unmatchedCount = 0;
+
+  for (const key of Object.keys(groups)) {
+    const g = groups[key];
+    const result = recordPrescription({
+      patientName: g.patientName,
+      operator: g.operator,
+      entryDate: g.entryDate,
+      drugs: g.drugs
+    });
+
+    if (result.success) {
+      if (result.matched) {
+        successCount++;
+      } else {
+        unmatchedCount++;
+      }
+    } else {
+      skipCount++;
+      Logger.log('スキップ: ' + g.patientName + ' - ' + result.error);
+    }
+  }
+
+  const msg = `バックフィル完了: ${successCount}件一致, ${unmatchedCount}件不一致(右セクション), ${skipCount}件スキップ`;
+  Logger.log(msg);
+
+  try {
+    SpreadsheetApp.getUi().alert(msg);
+  } catch (e) {
+    // Web App実行時はUIがないのでログのみ
+  }
+
+  return { success: true, message: msg, successCount, unmatchedCount, skipCount };
+}
+
+/**
  * カスタムメニューを追加
  */
 function onOpen() {
@@ -1253,5 +1340,7 @@ function onOpen() {
       .addSeparator()
       .addItem('患者ID自動補完（手動実行）', 'runFillMissingPatientIds')
       .addItem('毎日9時の自動実行を設定', 'setupDailyPatientIdTrigger'))
+    .addSeparator()
+    .addItem('処方履歴バックフィル（出庫→処方履歴転記）', 'backfillPrescriptions')
     .addToUi();
 }
