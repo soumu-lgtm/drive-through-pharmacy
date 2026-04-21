@@ -1473,6 +1473,7 @@
                     <button class="cat-btn" onclick="setCategoryFilter('成人')">成人</button>
                     <button class="cat-btn" onclick="setCategoryFilter('小児')">小児</button>
                     <button class="cat-btn" onclick="setCategoryFilter('外用')">外用</button>
+                    <button class="cat-btn" onclick="setCategoryFilter('検査')">検査</button>
                 </div>
                 <div class="weight-filter" id="weight-filter-bar">
                     <span class="weight-filter-label">体重別:</span>
@@ -1558,6 +1559,7 @@
                 <button class="cat-btn" onclick="setModalCatFilter('成人', event)">成人</button>
                 <button class="cat-btn" onclick="setModalCatFilter('小児', event)">小児</button>
                 <button class="cat-btn" onclick="setModalCatFilter('外用', event)">外用</button>
+                <button class="cat-btn" onclick="setModalCatFilter('検査', event)">検査</button>
             </div>
             <div class="modal-filter-bar" id="modal-weight-filter">
                 <span class="weight-filter-label">体重別:</span>
@@ -2341,7 +2343,12 @@
                     } else if (item.mode === 'adjust') {
                         return { action: 'stockAdjust', code: item.medicine.code, medicineName: item.medicine.name, newQuantity: item.quantity, reason: '棚卸', operator: item.operator || '担当者', note: note };
                     } else {
-                        return { action: 'stockOut', code: item.medicine.code, medicineName: item.medicine.name, quantity: item.quantity, patientId: item.patient?.id || '', patientName: item.patient?.name || '', operator: item.operator || '担当者', note: note };
+                        const outData = { action: 'stockOut', code: item.medicine.code, medicineName: item.medicine.name, quantity: item.quantity, patientId: item.patient?.id || '', patientName: item.patient?.name || '', operator: item.operator || '担当者', note: note };
+                        // 外用薬は出庫履歴に記録するが在庫数は変更しない
+                        if ((item.medicine.category || '').replace('[旧]','').startsWith('外用')) {
+                            outData.skipStockUpdate = true;
+                        }
+                        return outData;
                     }
                 });
                 try {
@@ -2394,11 +2401,13 @@
                 const normalizedCode = normalizeCode(item.medicine.code);
                 const idx = stockData.findIndex(m => normalizeCode(m.code) === normalizedCode);
                 if (idx >= 0) {
+                    const isExt = (stockData[idx].category || '').replace('[旧]','').startsWith('外用');
                     if (item.mode === 'adjust') {
                         stockData[idx].stock = item.quantity;
                     } else if (item.mode === 'in') {
                         stockData[idx].stock += item.quantity;
-                    } else {
+                    } else if (!isExt) {
+                        // 外用薬は出庫時に在庫数を減算しない
                         stockData[idx].stock -= item.quantity;
                     }
                 }
