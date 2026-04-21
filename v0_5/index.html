@@ -2656,7 +2656,7 @@
             const catClass = colorClass || baseClass;
             const subCat = (m.category || '').split('/').slice(1).join('/');
             const metaParts = [m.usage, m.price ? `¥${m.price}` : '', m.target && m.target !== '成人' ? m.target : ''].filter(Boolean);
-            if (isExternal) metaParts.unshift('外部薬局');
+            if (isExternal) metaParts.unshift('外用');
             const isChecked = multiSelectedCodes.has(m.code);
             const clickAction = multiSelectMode
                 ? `toggleStockCheck('${m.code}', event)`
@@ -2673,8 +2673,8 @@
                     ${metaParts.length ? `<div class="stock-meta">${metaParts.join(' ｜ ')}</div>` : ''}
                 </div>
                 <div style="text-align:right">
-                    <span class="stock-qty" style="${isExternal ? 'color:var(--text-muted)' : m.stock <= m.threshold ? 'color:var(--danger)' : ''}">${isExternal ? '--' : m.stock}</span>
-                    <span class="stock-unit">${isExternal ? '' : m.unit}</span>
+                    <span class="stock-qty" style="${m.stock <= m.threshold ? 'color:var(--danger)' : ''}">${m.stock}</span>
+                    <span class="stock-unit">${m.unit}</span>
                 </div>
             </div>`;
         }
