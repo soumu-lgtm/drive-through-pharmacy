@@ -1113,7 +1113,7 @@ const PRESCRIPTION_SHEET_NAME = '処方履歴';
 function recordPrescription(data) {
   const { patientName, operator, entryDate, drugs } = data;
   // entryDate = 診察日（フロントエンドの「診察日」フィールド）
-  // drugs: [{name, quantity}, ...]
+  // drugs: [{code?, name, quantity}, ...]  code があればマスタ名を優先
 
   if (!patientName || !drugs || drugs.length === 0) {
     return { success: false, error: 'patientNameとdrugsが必要です' };
@@ -1171,9 +1171,19 @@ function recordPrescription(data) {
       }
     }
 
+    // 薬品名をマスタから解決（code があればマスタの正式名称を使用）
+    const resolvedDrugs = drugs.map(d => {
+      let resolvedName = d.name;
+      if (d.code) {
+        const masterName = getMedicineName(d.code);
+        if (masterName) resolvedName = masterName;
+      }
+      return { name: resolvedName, quantity: d.quantity };
+    });
+
     // 薬品を最大6つに分割
     const maxDrugs = 6;
-    const drugList = drugs.slice(0, maxDrugs);
+    const drugList = resolvedDrugs.slice(0, maxDrugs);
 
     // 処方管理入力日 = 送信日（今日）を自動設定
     const today = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd');
@@ -1192,14 +1202,14 @@ function recordPrescription(data) {
       }
 
       // 7件以上ある場合は右セクションにも追加
-      if (drugs.length > maxDrugs) {
-        appendToUnmatchedSection(sheet, patientName, operator, today, drugs.slice(maxDrugs));
+      if (resolvedDrugs.length > maxDrugs) {
+        appendToUnmatchedSection(sheet, patientName, operator, today, resolvedDrugs.slice(maxDrugs));
       }
 
       return { success: true, message: '処方履歴に記録しました（患者一致）', matched: true, row: matchedRow };
     } else {
       // === 患者名不一致: 右セクション（X列以降、5行目から）に追加 ===
-      appendToUnmatchedSection(sheet, patientName, operator, today, drugs);
+      appendToUnmatchedSection(sheet, patientName, operator, today, resolvedDrugs);
       return { success: true, message: '処方履歴に記録しました（名前不一致 → 右セクション）', matched: false };
     }
 
