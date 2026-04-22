@@ -131,6 +131,9 @@ function doPost(e) {
     case 'batch':
       result = processBatch(data.items);
       break;
+    case 'deleteHistory':
+      result = deleteHistoryEntries(data.items);
+      break;
     default:
       result = { error: 'Unknown action' };
   }
@@ -345,7 +348,7 @@ function recordStockIn(data) {
  * 出庫を記録
  */
 function recordStockOut(data) {
-  const { code, medicineName, quantity, patientId, patientName, operator, note } = data;
+  const { code, medicineName, quantity, patientId, patientName, operator, note, skipStockUpdate } = data;
 
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEET_NAMES.STOCK_OUT);
@@ -354,10 +357,12 @@ function recordStockOut(data) {
     return { error: 'シートが見つかりません' };
   }
 
-  // 在庫チェック
-  const currentStock = getStockByCode(code);
-  if (currentStock < quantity) {
-    return { error: '在庫が不足しています', currentStock };
+  // 在庫チェック（外用薬はスキップ）
+  if (!skipStockUpdate) {
+    const currentStock = getStockByCode(code);
+    if (currentStock < quantity) {
+      return { error: '在庫が不足しています', currentStock };
+    }
   }
 
   const now = new Date();
@@ -375,8 +380,10 @@ function recordStockOut(data) {
 
   sheet.appendRow(row);
 
-  // 在庫サマリーを更新（マイナス）
-  updateCurrentStock(code, -quantity);
+  // 在庫サマリーを更新（外用薬はスキップ）
+  if (!skipStockUpdate) {
+    updateCurrentStock(code, -quantity);
+  }
 
   return { success: true, message: '出庫を記録しました' };
 }
@@ -1364,4 +1371,133 @@ function onOpen() {
     .addSeparator()
     .addItem('処方履歴バックフィル（出庫→処方履歴転記）', 'backfillPrescriptions')
     .addToUi();
+}
+
+/**
+ * 履歴エントリを削除し、在庫を自動調整する
+ * items: [{type, code, date, time, quantity, medicine, patient}]
+ */
+function deleteHistoryEntries(items) {
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return { error: '削除対象がありません' };
+  }
+
+  const ss = getSpreadsheet();
+  const inSheet = ss.getSheetByName(SHEET_NAMES.STOCK_IN);
+  const outSheet = ss.getSheetByName(SHEET_NAMES.STOCK_OUT);
+  const adjustSheet = ss.getSheetByName(SHEET_NAMES.STOCK_ADJUST);
+
+  let deletedCount = 0;
+
+  // シートごとに削除行を収集（行番号の大きい方から削除するため降順ソート）
+  function findAndDeleteRows(sheet, entries, matchFn) {
+    if (!sheet) return;
+    const data = sheet.getDataRange().getValues();
+    const rowsToDelete = [];
+
+    for (const entry of entries) {
+      for (let i = data.length - 1; i >= 1; i--) {
+        if (matchFn(data[i], entry)) {
+          rowsToDelete.push(i + 1); // 1-indexed
+          data.splice(i, 1); // prevent double-matching
+          break;
+        }
+      }
+    }
+
+    // 降順にソートして削除（行番号がずれないように）
+    rowsToDelete.sort((a, b) => b - a);
+    for (const row of rowsToDelete) {
+      sheet.deleteRow(row);
+      deletedCount++;
+    }
+  }
+
+  function formatTimestamp(val) {
+    if (val instanceof Date) {
+      return Utilities.formatDate(val, 'Asia/Tokyo', 'yyyy-MM-dd HH:mm:ss');
+    }
+    return String(val);
+  }
+
+  // 入庫履歴の削除
+  const inEntries = items.filter(e => e.type === 'in');
+  if (inEntries.length > 0) {
+    findAndDeleteRows(inSheet, inEntries, (row, entry) => {
+      const ts = formatTimestamp(row[0]);
+      const rowDate = ts.substring(0, 10);
+      const rowTime = ts.substring(11, 16);
+      return rowDate === entry.date &&
+             rowTime === entry.time &&
+             normalizeCode(row[1]) === normalizeCode(entry.code) &&
+             Number(row[3]) === Number(entry.quantity);
+    });
+  }
+
+  // 出庫履歴の削除
+  const outEntries = items.filter(e => e.type === 'out');
+  if (outEntries.length > 0) {
+    findAndDeleteRows(outSheet, outEntries, (row, entry) => {
+      const ts = formatTimestamp(row[0]);
+      const rowDate = ts.substring(0, 10);
+      const rowTime = ts.substring(11, 16);
+      return rowDate === entry.date &&
+             rowTime === entry.time &&
+             normalizeCode(row[1]) === normalizeCode(entry.code) &&
+             Number(row[3]) === Number(entry.quantity);
+    });
+  }
+
+  // 修正履歴の削除
+  const adjustEntries = items.filter(e => e.type === 'adjust');
+  if (adjustEntries.length > 0) {
+    findAndDeleteRows(adjustSheet, adjustEntries, (row, entry) => {
+      const ts = formatTimestamp(row[0]);
+      const rowDate = ts.substring(0, 10);
+      const rowTime = ts.substring(11, 16);
+      return rowDate === entry.date &&
+             rowTime === entry.time &&
+             normalizeCode(row[1]) === normalizeCode(entry.code);
+    });
+  }
+
+  // 在庫サマリーを調整
+  for (const entry of items) {
+    if (entry.type === 'in') {
+      // 入庫を取り消す → 在庫を減算
+      updateCurrentStock(entry.code, -Number(entry.quantity));
+    } else if (entry.type === 'out') {
+      // 出庫を取り消す → 在庫を加算
+      updateCurrentStock(entry.code, Number(entry.quantity));
+    }
+    // adjust の取り消しは在庫サマリーを変更しない（棚卸修正は差分管理が複雑なため）
+  }
+
+  // 処方履歴シートからも出庫に対応するレコードを削除
+  const prescSheet = ss.getSheetByName('処方履歴');
+  if (prescSheet && outEntries.length > 0) {
+    const prescData = prescSheet.getDataRange().getValues();
+    const prescRowsToDelete = [];
+
+    for (const entry of outEntries) {
+      for (let i = prescData.length - 1; i >= 1; i--) {
+        const ts = formatTimestamp(prescData[i][0]);
+        const rowDate = ts.substring(0, 10);
+        const rowTime = ts.substring(11, 16);
+        const rowCode = normalizeCode(prescData[i][2]);
+        if (rowDate === entry.date && rowTime === entry.time && rowCode === normalizeCode(entry.code)) {
+          prescRowsToDelete.push(i + 1);
+          prescData.splice(i, 1);
+          break;
+        }
+      }
+    }
+
+    prescRowsToDelete.sort((a, b) => b - a);
+    for (const row of prescRowsToDelete) {
+      prescSheet.deleteRow(row);
+    }
+  }
+
+  return { success: true, deleted: deletedCount };
 }
