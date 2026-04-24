@@ -11139,7 +11139,7 @@
                     <div class="question-header" onclick="toggleQuestion(${idx})">
                         <div class="question-meta">
                             <span class="question-badge">${q.exam_number}${q.section}${q.question_number}</span>${getQuestionImages(q).length > 0 ? '<span class="image-badge">画像</span>' : ''}
-                            <span class="subject-badge">${q.subject}</span>
+                            <span class="subject-badge">${q.subject}</span>${q.correct_rate ? `<span style="font-size:0.75em;padding:2px 8px;border-radius:10px;background:${parseInt(q.correct_rate)>=80?'rgba(76,175,80,0.2);color:#66bb6a':parseInt(q.correct_rate)>=50?'rgba(255,193,7,0.2);color:#ffd54f':'rgba(244,67,54,0.2);color:#ef5350'}">${q.correct_rate}</span>` : ''}
                         </div>
                         <div class="question-preview">${q.question_text.substring(0, 80)}...</div>
                         <span class="expand-icon">▼</span>
@@ -11155,6 +11155,7 @@
                             <div class="answer-display" id="answer-${idx}">
                                 <div class="answer-label">正答</div>
                                 <div class="answer-value">${q.answer.toUpperCase()}</div>
+                                ${q.correct_rate ? `<div class="correct-rate" style="margin-top:8px;padding:6px 14px;background:${parseInt(q.correct_rate)>=80?'rgba(76,175,80,0.15);color:#66bb6a':parseInt(q.correct_rate)>=50?'rgba(255,193,7,0.15);color:#ffd54f':'rgba(244,67,54,0.15);color:#ef5350'};border-radius:8px;font-size:0.9em;display:inline-block;">正答率 <strong>${q.correct_rate}</strong></div>` : ''}
                             </div>
                         </div>
                         ${q.keywords && q.keywords.length > 0 ? `<div class="keyword-tags">${q.keywords.map(k => `<span class="keyword-tag" onclick="event.stopPropagation();document.getElementById('searchInput').value=\'${k}\';applyFilters();">${k}</span>`).join('')}</div>` : ''}
@@ -11228,6 +11229,7 @@
                             <div class="answer-display" id="random-answer">
                                 <div class="answer-label">正答</div>
                                 <div class="answer-value">${q.answer.toUpperCase()}</div>
+                                ${q.correct_rate ? `<div class="correct-rate" style="margin-top:8px;padding:6px 14px;background:${parseInt(q.correct_rate)>=80?'rgba(76,175,80,0.15);color:#66bb6a':parseInt(q.correct_rate)>=50?'rgba(255,193,7,0.15);color:#ffd54f':'rgba(244,67,54,0.15);color:#ef5350'};border-radius:8px;font-size:0.9em;display:inline-block;">正答率 <strong>${q.correct_rate}</strong></div>` : ''}
                             </div>
                         </div>
                     </div>
