@@ -11215,7 +11215,7 @@
                     <div class="question-header" style="cursor: default;">
                         <div class="question-meta">
                             <span class="question-badge">第${q.exam_number}回 ${q.section}${q.question_number}</span>
-                            <span class="subject-badge">${q.subject}</span>
+                            <span class="subject-badge">${q.subject}</span>${q.correct_rate ? `<span style="font-size:0.75em;padding:2px 8px;border-radius:10px;background:${parseInt(q.correct_rate)>=80?'rgba(76,175,80,0.2);color:#66bb6a':parseInt(q.correct_rate)>=50?'rgba(255,193,7,0.2);color:#ffd54f':'rgba(244,67,54,0.2);color:#ef5350'}">正答率 ${q.correct_rate}</span>` : ''}
                         </div>
                     </div>
                     <div class="question-detail" style="display: block;">
