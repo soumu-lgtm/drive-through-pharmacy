@@ -31,8 +31,15 @@
       <div class="stat"><div class="stat-dot" style="background:var(--primary)"></div><span class="stat-num" id="listDone">0</span> 完了</div>
     </div>
     <div class="spacer"></div>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <input type="text" id="dbPatientSearch" placeholder="DB患者検索..." style="width:160px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;" oninput="onDbPatientSearch(this.value)">
+      <button class="new-patient-btn" style="font-size:11px;padding:4px 10px;background:var(--info,#2563eb);border:none;color:#fff;border-radius:6px;cursor:pointer;white-space:nowrap;" onclick="toggleDbPatientList()">DB患者一覧</button>
+    </div>
     <button class="new-patient-btn" onclick="openNewPatientModal()">+ 新規受付</button>
+    <span id="shiftBadge" style="display:none;background:#dbeafe;color:#1d4ed8;padding:4px 10px;border-radius:6px;font-size:11px;white-space:nowrap;"></span>
   </div>
+
+  <div id="dbPatientResults" style="display:none;margin:0 0 8px;max-height:200px;overflow-y:auto;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:12px;"></div>
 
   <div class="list-container">
     <table class="patient-table">
@@ -97,10 +104,7 @@
     <div class="visit-info-item">
       <span class="visit-info-label">担当医</span>
       <select id="visitDoctor" class="visit-info-select" onchange="onVisitInfoChange()">
-        <option value="院長">院長</option>
-        <option value="副院長">副院長</option>
-        <option value="非常勤医A">非常勤医A</option>
-        <option value="非常勤医B">非常勤医B</option>
+        <option value="">---</option>
       </select>
     </div>
     <div class="visit-info-item">

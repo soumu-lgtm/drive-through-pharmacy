@@ -1,5 +1,13 @@
 // ===== Config =====
 const API_URL = 'https://script.google.com/macros/s/AKfycbwFzGLG20GaSLxfdRDAg1ATqQu_s5MWYF045Rlc3OH01duvrL2rqlP9VSQxCEodiePX/exec';
+// 夜間休日外来DB API（GASデプロイ後にURLを設定）
+const DB_API_URL = 'https://script.google.com/macros/s/AKfycbwWCL1aVy4RcCZsr2Wzrpy5JE8LU8pGWa2u_CY7qo7OGMgXrB0OZGir6rGJZiiV6hRd/exec';
+// DB連携データ格納
+let dbDrugs = [];      // DB薬品マスタ
+let dbStock = {};      // 薬品名 → 在庫数
+let dbPatients = [];   // DB患者データ
+let dbShift = [];      // シフトデータ
+let dbLoaded = false;
 
 // ===== Data =====
 const patients = [
@@ -162,20 +170,50 @@ function openKarte(patientId) {
 }
 
 // ===== SCREEN 1: Patient List =====
-function getPatientsForDate(date) { return patients.filter(p => p.visitDate === date); }
+function getPatientsForDate(date) {
+  // ISO日付 "2026-04-13" → "4/13" に変換
+  const md = isoToMD(date);
+  return patients.filter(p => {
+    // 通常患者: visitDate一致
+    if (p.visitDate === date) return true;
+    // DB患者: dbVisitsに該当日の来院がある
+    if (p.dbSource && p.dbVisits) {
+      return p.dbVisits.some(v => v.date === md);
+    }
+    return false;
+  });
+}
+function isoToMD(iso) {
+  if (!iso) return '';
+  const parts = iso.split('-');
+  return parseInt(parts[1]) + '/' + parseInt(parts[2]);
+}
 
 function renderPatientList() {
+  showDateShift(selectedDate);
   const tbody = document.getElementById('patientListBody');
   const filtered = getPatientsForDate(selectedDate);
   let waitC = 0, activeC = 0, doneC = 0;
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-muted);font-size:14px;">この日の受付患者はいません</td></tr>';
+    const dbCount = patients.filter(p => p.dbSource).length;
+    const dbMsg = dbCount > 0 ? '<br><span style="font-size:12px;">DB患者 ' + dbCount + '名あり → 上部の「DB患者一覧」から参照できます</span>' : '';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-muted);font-size:14px;">この日の受付患者はいません' + dbMsg + '</td></tr>';
     document.getElementById('listWait').textContent = 0;
     document.getElementById('listActive').textContent = 0;
     document.getElementById('listDone').textContent = 0;
     return;
   }
   tbody.innerHTML = filtered.map((p, i) => {
+    if (p.dbSource) {
+      // DB患者行
+      const md = isoToMD(selectedDate);
+      const visit = p.dbVisits ? p.dbVisits.find(v => v.date === md) : null;
+      const time = visit ? (visit.time || '') : '';
+      const doctor = visit ? (visit.doctor || '') : '';
+      const tests = visit ? [visit.covid ? 'C+' : '', visit.flu ? 'Flu+' : '', visit.strep ? '溶+' : ''].filter(Boolean).join(' ') : '';
+      const typeBadge = p.type === '新規' ? '<span class="status-badge" style="background:#dcfce7;color:#16a34a;">新規</span>' : '<span class="status-badge" style="background:#dbeafe;color:#2563eb;">再診</span>';
+      return '<tr onclick="openKarte(\'' + p.id + '\')" style="cursor:pointer;background:#f8faff;"><td>' + (i+1) + '</td><td class="td-status">' + typeBadge + '</td><td class="td-name">' + p.name + '<div class="sub">DB / ' + (p.address || '') + ' / ' + time + '</div></td><td>' + p.age + '歳 ' + p.sex + '</td><td>' + p.insurance + '</td><td class="td-allergy">' + (tests || '-') + '</td><td class="td-lane">' + doctor + '</td><td class="td-questionnaire">' + (p.route || '-') + '</td><td class="td-actions"><button class="action-btn karte-btn" onclick="event.stopPropagation();openKarte(\'' + p.id + '\')">カルテ</button></td></tr>';
+    }
     if (p.status === 'waiting') waitC++; else if (p.status === 'active') activeC++; else if (p.status === 'done') doneC++;
     const statusBadge = p.status === 'active' ? '<span class="status-badge active">診察中</span>' : p.status === 'done' ? '<span class="status-badge done">完了</span>' : '<span class="status-badge waiting">待機</span>';
     const allergyStr = p.allergies.length > 0 ? p.allergies.join(', ') : '-';
@@ -339,6 +377,31 @@ function renderHeader(p) {
   document.getElementById('hdrInsurance').textContent = p.insurance;
   document.getElementById('visitDate').textContent = p.visitDate || new Date().toISOString().slice(0, 10);
   document.getElementById('visitInsuranceType').textContent = p.insurance || '---';
+  populateDoctorSelect(p);
+}
+
+function populateDoctorSelect(p) {
+  const sel = document.getElementById('visitDoctor');
+  if (!sel) return;
+  // シフトデータ＋参照マスタから医師一覧を構築
+  const doctors = new Set();
+  dbShift.forEach(s => { if (s.doctor) doctors.add(s.doctor); });
+  // 固定の選択肢も追加
+  ['院長', '副院長'].forEach(d => doctors.add(d));
+  sel.innerHTML = '<option value="">---</option>';
+  doctors.forEach(d => {
+    sel.innerHTML += '<option value="' + d + '">' + d + '</option>';
+  });
+  // DB患者の場合、来院データの担当医を自動選択
+  if (p.dbSource && p.dbVisits && p.dbVisits.length > 0) {
+    const latestVisit = p.dbVisits[0];
+    if (latestVisit.doctor) sel.value = latestVisit.doctor;
+  }
+  // シフトの当番医をデフォルトとして設定（来院データに担当医がない場合）
+  if (!sel.value) {
+    const shiftDoc = getShiftDoctor(selectedDate);
+    if (shiftDoc) sel.value = shiftDoc;
+  }
 }
 
 function onVisitInfoChange() {}
@@ -374,6 +437,16 @@ function renderPatientInfoTab(p) {
       h += '</div>';
       h += '<div class="info-section"><div class="info-section-title">患者メモ</div><textarea class="patient-memo" id="patientMemo" placeholder="メモを入力...">' + (p.memo||'') + '</textarea></div>';
       h += '<div class="info-section"><div class="info-section-title">車両情報</div><div class="vehicle-info"><div class="plate">' + p.vehicle.plate + '</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px;">レーン ' + p.vehicle.lane + '</div></div></div>';
+      if (p.dbSource) {
+        h += '<div class="info-section" style="margin-top:6px;"><div class="info-section-title" style="color:#2563eb;">DB情報</div>';
+        if (p.route) h += '<div class="info-row"><span class="label">流入経路</span><span class="value">' + p.route + '</span></div>';
+        if (p.type) h += '<div class="info-row"><span class="label">患者種別</span><span class="value">' + p.type + '</span></div>';
+        if (p.address) h += '<div class="info-row"><span class="label">エリア</span><span class="value">' + p.address + '</span></div>';
+        h += '<div class="info-row"><span class="label">来院回数</span><span class="value">' + (p.dbVisits ? p.dbVisits.length : 0) + '回</span></div>';
+        if (p.selfPayTotal) h += '<div class="info-row"><span class="label">自己負担累計</span><span class="value">&yen;' + p.selfPayTotal.toLocaleString() + '</span></div>';
+        if (p.revenueTotal) h += '<div class="info-row"><span class="label">診療報酬累計</span><span class="value">' + p.revenueTotal.toLocaleString() + '点</span></div>';
+        h += '</div>';
+      }
       break;
 
     case 'insurance':
@@ -411,20 +484,67 @@ function renderPatientInfoTab(p) {
       h += '<div class="info-section"><div class="info-section-title">診療履歴</div>';
       if (p.pastKartes && p.pastKartes.length > 0) {
         p.pastKartes.forEach(k => {
-          h += '<div class="history-entry"><span class="history-date">' + k.date + '</span><span class="history-diag">' + k.diag + '</span><span class="history-doc">' + k.doc + '</span></div>';
+          h += '<div class="history-entry"><span class="history-date">' + k.date + '</span><span class="history-diag">' + (k.diag || '---') + '</span><span class="history-doc">' + (k.doc || '') + '</span></div>';
         });
       } else h += '<span style="font-size:11px;color:var(--text-muted);">履歴なし</span>';
       h += '</div>';
+      if (p.dbSource && p.dbVisits && p.dbVisits.length > 0) {
+        h += '<div class="info-section" style="margin-top:6px;"><div class="info-section-title" style="color:#2563eb;">来院詳細（DB）</div>';
+        h += '<table style="width:100%;font-size:10px;border-collapse:collapse;"><tr style="background:var(--bg);"><th style="padding:3px;">日付</th><th>時間帯</th><th>担当医</th><th>検査</th><th>自己負担</th></tr>';
+        p.dbVisits.sort((a, b) => compareDateStr(b.date, a.date)).forEach(v => {
+          const tests = [v.covid ? 'C+' : '', v.flu ? 'Flu+' : '', v.strep ? '溶+' : ''].filter(Boolean).join(' ') || '-';
+          h += '<tr style="border-bottom:1px solid var(--border);"><td style="padding:3px;color:var(--primary);font-weight:600;">' + (v.date || '') + '</td><td>' + (v.time || '') + '</td><td>' + (v.doctor || '') + '</td><td>' + tests + '</td><td>' + (v.selfPay ? '&yen;' + v.selfPay.toLocaleString() : '-') + '</td></tr>';
+        });
+        h += '</table></div>';
+      }
       break;
 
     case 'rxhistory':
       h += '<div class="info-section"><div class="info-section-title">投薬履歴</div>';
       if (p.pastKartes && p.pastKartes.length > 0) {
-        p.pastKartes.forEach(k => {
-          h += '<div style="padding:4px 0;border-bottom:1px solid var(--bg);font-size:11px;"><div style="color:var(--primary);font-weight:600;">' + k.date + '</div><div>' + k.rx + '</div></div>';
-        });
+        const hasRx = p.pastKartes.some(k => k.rx);
+        if (hasRx) {
+          p.pastKartes.forEach(k => {
+            if (!k.rx) return;
+            h += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
+            h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">';
+            h += '<span style="color:var(--primary);font-weight:700;font-size:12px;">' + (k.date || '') + '</span>';
+            if (k.doc) h += '<span style="font-size:10px;color:var(--text-muted);">' + k.doc + '</span>';
+            h += '</div>';
+            // rxが配列（{drug,qty}オブジェクト）か文字列かで分岐
+            if (Array.isArray(k.rxItems) && k.rxItems.length > 0) {
+              h += '<table style="width:100%;font-size:11px;border-collapse:collapse;">';
+              k.rxItems.forEach(item => {
+                h += '<tr><td style="padding:2px 0;padding-right:12px;">' + item.drug + '</td>';
+                h += '<td style="padding:2px 0;white-space:nowrap;color:var(--primary);font-weight:600;text-align:right;width:60px;">' + (item.qty || '') + '</td></tr>';
+              });
+              h += '</table>';
+            } else if (typeof k.rx === 'string' && k.rx) {
+              // 旧形式（カンマ区切り文字列）
+              const rxList = k.rx.split(',').map(s => s.trim()).filter(s => s);
+              h += '<table style="width:100%;font-size:11px;border-collapse:collapse;">';
+              rxList.forEach(item => {
+                h += '<tr><td style="padding:2px 0;">' + item + '</td></tr>';
+              });
+              h += '</table>';
+            }
+            h += '</div>';
+          });
+        } else if (p.dbSource) {
+          h += '<span style="font-size:11px;color:var(--text-muted);">DB側に処方データがありません</span>';
+        } else {
+          h += '<span style="font-size:11px;color:var(--text-muted);">履歴なし</span>';
+        }
       } else h += '<span style="font-size:11px;color:var(--text-muted);">履歴なし</span>';
       h += '</div>';
+      if (p.dbSource && p.dbVisits && p.dbVisits.length > 0) {
+        h += '<div class="info-section" style="margin-top:8px;"><div class="info-section-title" style="color:#2563eb;">来院別 診療報酬</div>';
+        h += '<table style="width:100%;font-size:11px;border-collapse:collapse;"><tr style="background:var(--bg);"><th style="padding:4px 6px;text-align:left;">日付</th><th style="text-align:left;">担当医</th><th style="text-align:right;">診療報酬</th><th style="text-align:right;">自己負担</th></tr>';
+        p.dbVisits.sort((a, b) => compareDateStr(b.date, a.date)).forEach(v => {
+          h += '<tr style="border-bottom:1px solid var(--border);"><td style="padding:4px 6px;color:var(--primary);font-weight:600;">' + (v.date || '') + '</td><td>' + (v.doctor || '') + '</td><td style="text-align:right;">' + (v.revenuePoints ? v.revenuePoints.toLocaleString() + '点' : '-') + '</td><td style="text-align:right;">' + (v.selfPay ? '&yen;' + v.selfPay.toLocaleString() : '-') + '</td></tr>';
+        });
+        h += '</table></div>';
+      }
       break;
 
     case 'diseases':
@@ -502,14 +622,14 @@ function renderSelectedDiseases() {
 function renderSetOrders() { document.getElementById('setOrderBtns').innerHTML = setOrders.map((s,i) => '<button class="set-order-btn" onclick="applySetOrder(' + i + ')">' + s.name + '</button>').join(''); }
 function applySetOrder(i) { const s = setOrders[i]; const k = karteData[currentPatientId]; k.prescriptions = []; s.items.forEach(item => { const d = drugs.find(x => x.id === item.drugId); if (d) k.prescriptions.push({drug:d,qty:item.qty}); }); k.rxDays = s.days; document.getElementById('rxDays').value = s.days; renderRxList(); recalcBilling(); showToast(s.name + 'を適用'); }
 function doRx() { const p = patients.find(x => x.id === currentPatientId); const k = karteData[currentPatientId]; k.prescriptions = []; p.prevRx.forEach(rx => { const d = drugs.find(x => x.id === rx.drugId); if (d) k.prescriptions.push({drug:d,qty:rx.qty}); }); k.rxDays = p.prevDays; document.getElementById('rxDays').value = p.prevDays; renderRxList(); recalcBilling(); showToast('Do処方を適用'); }
-function searchDrug(q) { const r = document.getElementById('drugResults'); if (!q) { r.classList.remove('show'); return; } const f = drugs.filter(d => d.name.includes(q) || d.category.includes(q)); if (!f.length) { r.classList.remove('show'); return; } r.innerHTML = f.map(d => '<div class="drug-result-item" onclick="addDrug(\'' + d.id + '\')"><span>' + d.name + '</span><span class="price">' + d.price.toFixed(1) + '円</span></div>').join(''); r.classList.add('show'); }
+function searchDrug(q) { const r = document.getElementById('drugResults'); if (!q) { r.classList.remove('show'); return; } const f = drugs.filter(d => d.name.includes(q) || d.category.includes(q)); if (!f.length) { r.classList.remove('show'); return; } r.innerHTML = f.map(d => '<div class="drug-result-item" onclick="addDrug(\'' + d.id + '\')"><span>' + d.name + stockBadge(d.name) + '</span><span class="price">' + (d.price ? d.price.toFixed(1) + '円' : '') + '</span></div>').join(''); r.classList.add('show'); }
 function addDrug(id) { const d = drugs.find(x => x.id === id); if (!d) return; const k = karteData[currentPatientId]; const ex = k.prescriptions.find(rx => rx.drug.id === id); if (ex) ex.qty += 1; else k.prescriptions.push({drug:d,qty:1}); document.getElementById('drugSearch').value = ''; document.getElementById('drugResults').classList.remove('show'); renderRxList(); recalcBilling(); }
 function removeDrug(i) { karteData[currentPatientId].prescriptions.splice(i,1); renderRxList(); recalcBilling(); }
 function updateDrugQty(i,v) { karteData[currentPatientId].prescriptions[i].qty = Math.max(0.5, parseFloat(v)||1); recalcBilling(); }
 function renderRxList() {
   const k = karteData[currentPatientId]; const list = document.getElementById('rxList');
   if (!k.prescriptions.length) { list.innerHTML = '<li style="color:var(--text-muted);font-size:12px;padding:8px 0;text-align:center;">処方なし</li>'; return; }
-  list.innerHTML = k.prescriptions.map((rx,i) => '<li class="rx-item"><span class="name">' + rx.drug.name + '</span><input type="number" value="' + rx.qty + '" min="0.5" step="0.5" onchange="updateDrugQty(' + i + ',this.value)"><span class="unit">' + rx.drug.unit + '</span><span class="remove-drug" onclick="removeDrug(' + i + ')">&times;</span></li>').join('');
+  list.innerHTML = k.prescriptions.map((rx,i) => '<li class="rx-item"><span class="name">' + rx.drug.name + stockBadge(rx.drug.name) + '</span><input type="number" value="' + rx.qty + '" min="0.5" step="0.5" onchange="updateDrugQty(' + i + ',this.value)"><span class="unit">' + rx.drug.unit + '</span><span class="remove-drug" onclick="removeDrug(' + i + ')">&times;</span></li>').join('');
 }
 
 // ===== Exam =====
@@ -801,8 +921,340 @@ document.addEventListener('click', function(e) {
   if (!e.target.closest('.drug-search-wrap')) document.getElementById('drugResults')?.classList.remove('show');
 });
 
+// ===== DB連携: 薬品マスタ+在庫取得 =====
+async function loadDbData() {
+  if (!DB_API_URL) { console.log('DB_API_URL未設定 → ローカルデータで動作'); return; }
+  try {
+    const indicator = document.createElement('div');
+    indicator.id = 'dbLoadIndicator';
+    indicator.style.cssText = 'position:fixed;top:8px;right:8px;background:#2563eb;color:#fff;padding:6px 14px;border-radius:6px;font-size:12px;z-index:9999;';
+    indicator.textContent = 'DB読込中...';
+    document.body.appendChild(indicator);
+
+    const res = await fetch(DB_API_URL + '?action=all');
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'DB API error');
+
+    // 薬品マスタ統合
+    if (data.drugs && data.drugs.length) {
+      dbDrugs = data.drugs;
+      // DB薬品をdrugs配列に追加（既存と重複しないもの）
+      const existingNames = drugs.map(d => d.name);
+      data.drugs.forEach(dd => {
+        if (!existingNames.includes(dd.name)) {
+          drugs.push({ id: dd.id, name: dd.name, price: 0, unit: guessUnit(dd.name), category: dd.category || '内服' });
+        }
+      });
+    }
+
+    // 在庫データ
+    if (data.stock && data.stock.length) {
+      data.stock.forEach(s => { dbStock[s.name] = s.qty; });
+    }
+
+    // 患者データ
+    if (data.patients) {
+      dbPatients = data.patients;
+      mergeDbPatients(data.patients);
+    }
+
+    // 処方履歴データ → 患者に紐付け
+    if (data.prescriptions && data.prescriptions.length) {
+      mergePrescriptionHistory(data.prescriptions);
+    }
+
+    // シフトデータ（API提供 or 患者データから自動構築）
+    if (data.shift && data.shift.length) {
+      dbShift = data.shift;
+    } else if (data.patients && data.patients.length) {
+      // 患者データから日付→担当医マッピングを自動構築
+      const dateDocMap = {};
+      data.patients.forEach(p => {
+        if (p.date && p.doctor) {
+          if (!dateDocMap[p.date]) dateDocMap[p.date] = {};
+          dateDocMap[p.date][p.doctor] = (dateDocMap[p.date][p.doctor] || 0) + 1;
+        }
+      });
+      dbShift = Object.entries(dateDocMap).map(([date, docs]) => {
+        // 最多担当の医師をメインに
+        const sorted = Object.entries(docs).sort((a, b) => b[1] - a[1]);
+        return {
+          date: date,
+          doctor: sorted[0][0],
+          assistants: sorted.slice(1).map(s => s[0])
+        };
+      });
+    }
+
+    dbLoaded = true;
+    indicator.textContent = 'DB連携OK (' + (data.drugs?.length || 0) + '薬品 / ' + (dbPatients.length || 0) + '患者 / ' + Object.keys(dbStock).length + '在庫)';
+    indicator.style.background = '#16a34a';
+    setTimeout(() => indicator.remove(), 3000);
+
+    // 選択日のシフトを表示
+    showDateShift(document.getElementById('listDate').value);
+    // 患者リストを再描画
+    renderPatientList();
+  } catch (e) {
+    console.error('DB連携エラー:', e);
+    const indicator = document.getElementById('dbLoadIndicator');
+    if (indicator) { indicator.textContent = 'DB接続失敗'; indicator.style.background = '#dc2626'; setTimeout(() => indicator.remove(), 3000); }
+  }
+}
+
+function guessUnit(name) {
+  if (/錠|カプセル/.test(name)) return 'T';
+  if (/散|顆粒|細粒|DS/.test(name)) return '包';
+  if (/坐剤/.test(name)) return '個';
+  if (/軟膏|クリーム/.test(name)) return '本';
+  if (/テープ/.test(name)) return '枚';
+  if (/点眼/.test(name)) return '本';
+  if (/吸入/.test(name)) return 'キット';
+  if (/注|シリンジ/.test(name)) return 'A';
+  if (/エアー/.test(name)) return '本';
+  if (/アドテスト|クイックナビ/.test(name)) return '個';
+  return 'T';
+}
+
+function getStockQty(drugName) {
+  if (!dbLoaded) return null;
+  // 完全一致
+  if (dbStock[drugName] !== undefined) return dbStock[drugName];
+  // 部分一致（全角半角・スペース差異を吸収）
+  const normalized = drugName.replace(/\s+/g, '');
+  for (const [key, val] of Object.entries(dbStock)) {
+    if (key.replace(/\s+/g, '') === normalized) return val;
+  }
+  return null;
+}
+
+function stockBadge(drugName) {
+  const qty = getStockQty(drugName);
+  if (qty === null) return '';
+  if (qty <= 0) return '<span style="background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:3px;font-size:10px;margin-left:4px;">在庫切れ</span>';
+  if (qty <= 10) return '<span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:3px;font-size:10px;margin-left:4px;">残' + qty + '</span>';
+  return '<span style="background:#dcfce7;color:#16a34a;padding:1px 6px;border-radius:3px;font-size:10px;margin-left:4px;">在庫' + qty + '</span>';
+}
+
+function showDateShift(dateStr) {
+  const badge = document.getElementById('shiftBadge');
+  if (!badge || !dbShift.length) { if (badge) badge.style.display = 'none'; return; }
+  // dateStrはISO形式 "2026-04-25" → M/D形式に変換
+  const md = dateStr ? isoToMD(dateStr) : '';
+  const shift = dbShift.find(s => s.date === md);
+  if (!shift) { badge.style.display = 'none'; return; }
+  let text = '当番: ' + shift.doctor;
+  if (shift.assistants && shift.assistants.length) text += ' ／ ' + shift.assistants.join('・');
+  badge.textContent = text;
+  badge.style.display = 'inline-block';
+}
+
+function getShiftDoctor(dateStr) {
+  if (!dbShift.length) return '';
+  const md = dateStr ? isoToMD(dateStr) : '';
+  const shift = dbShift.find(s => s.date === md);
+  return shift ? shift.doctor : '';
+}
+
+// ===== 処方履歴統合 =====
+function mergePrescriptionHistory(rxRecords) {
+  rxRecords.forEach(rec => {
+    const normName = rec.name.replace(/\s+/g, '');
+    const patient = patients.find(p => p.name.replace(/\s+/g, '') === normName);
+    if (!patient) return;
+
+    // rx配列の形式を判定（オブジェクト{drug,qty}配列 or 文字列配列）
+    let rxItems = [];
+    let rxStr = '';
+    if (rec.rx && rec.rx.length > 0) {
+      if (typeof rec.rx[0] === 'object') {
+        rxItems = rec.rx.filter(r => r.drug);
+        rxStr = rxItems.map(r => r.drug + (r.qty ? ' ' + r.qty : '')).join(', ');
+      } else {
+        rxStr = rec.rx.join(', ');
+        rxItems = rec.rx.map(r => ({ drug: r, qty: '' }));
+      }
+    }
+
+    // pastKartesに同日エントリがあれば処方を追記
+    const existing = patient.pastKartes.find(k => k.date === rec.date);
+    if (existing) {
+      if (!existing.rx || existing.rx === '') {
+        existing.rx = rxStr;
+        existing.rxItems = rxItems;
+      } else if (!existing.rx.includes(rxStr)) {
+        existing.rx += ', ' + rxStr;
+        existing.rxItems = (existing.rxItems || []).concat(rxItems);
+      }
+    } else {
+      patient.pastKartes.push({
+        date: rec.date || '',
+        cc: '',
+        diag: '',
+        rx: rxStr,
+        rxItems: rxItems,
+        doc: rec.doctor || ''
+      });
+      patient.pastKartes.sort((a, b) => compareDateStr(b.date, a.date));
+    }
+  });
+}
+
+// ===== DB患者検索・一覧 =====
+function onDbPatientSearch(q) {
+  const results = document.getElementById('dbPatientResults');
+  if (!q || q.length < 1) { results.style.display = 'none'; return; }
+  const dbPats = patients.filter(p => p.dbSource && (p.name.includes(q) || (p.nameKana || '').includes(q) || (p.address || '').includes(q)));
+  if (dbPats.length === 0) { results.innerHTML = '<div style="padding:10px;color:var(--text-muted);text-align:center;">該当なし</div>'; results.style.display = 'block'; return; }
+  results.innerHTML = dbPats.slice(0, 20).map(p => {
+    const visits = p.dbVisits ? p.dbVisits.length : 0;
+    const lastDate = p.pastKartes && p.pastKartes.length > 0 ? p.pastKartes[0].date : '-';
+    return '<div style="padding:6px 10px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onclick="openKarte(\'' + p.id + '\')" onmouseenter="this.style.background=\'var(--bg)\'" onmouseleave="this.style.background=\'#fff\'">' +
+      '<div><strong>' + p.name + '</strong> <span style="color:var(--text-muted);font-size:10px;">' + p.age + '歳 ' + p.sex + ' / ' + p.insurance + '</span></div>' +
+      '<div style="font-size:10px;color:var(--text-muted);">' + visits + '回来院 / 最終:' + lastDate + '</div></div>';
+  }).join('');
+  if (dbPats.length > 20) results.innerHTML += '<div style="padding:6px;text-align:center;color:var(--text-muted);font-size:10px;">他' + (dbPats.length - 20) + '件</div>';
+  results.style.display = 'block';
+}
+
+let dbListVisible = false;
+function toggleDbPatientList() {
+  const results = document.getElementById('dbPatientResults');
+  if (dbListVisible) { results.style.display = 'none'; dbListVisible = false; return; }
+  const dbPats = patients.filter(p => p.dbSource);
+  if (dbPats.length === 0) { results.innerHTML = '<div style="padding:10px;color:var(--text-muted);text-align:center;">DB患者なし（DB未接続）</div>'; results.style.display = 'block'; dbListVisible = true; return; }
+  results.innerHTML = '<div style="padding:6px 10px;background:var(--bg);font-weight:600;font-size:11px;border-bottom:1px solid var(--border);">DB患者一覧（' + dbPats.length + '名）</div>' +
+    dbPats.map(p => {
+      const visits = p.dbVisits ? p.dbVisits.length : 0;
+      const lastDate = p.pastKartes && p.pastKartes.length > 0 ? p.pastKartes[0].date : '-';
+      const typeBadge = p.type === '新規' ? '<span style="background:#dcfce7;color:#16a34a;padding:0 4px;border-radius:3px;font-size:9px;margin-left:4px;">新規</span>' : p.type === '再診' ? '<span style="background:#dbeafe;color:#2563eb;padding:0 4px;border-radius:3px;font-size:9px;margin-left:4px;">再診</span>' : '';
+      return '<div style="padding:5px 10px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onclick="openKarte(\'' + p.id + '\')" onmouseenter="this.style.background=\'var(--bg)\'" onmouseleave="this.style.background=\'#fff\'">' +
+        '<div><strong>' + p.name + '</strong>' + typeBadge + ' <span style="color:var(--text-muted);font-size:10px;">' + p.age + '歳 ' + p.sex + ' / ' + p.insurance + '</span></div>' +
+        '<div style="font-size:10px;color:var(--text-muted);">' + (p.address || '') + ' / ' + visits + '回 / ' + lastDate + '</div></div>';
+    }).join('');
+  results.style.display = 'block';
+  dbListVisible = true;
+}
+
+// ===== DB患者統合 =====
+function mergeDbPatients(dbPats) {
+  // DB患者を名前でグループ化（同一患者の複数来院をまとめる）
+  const grouped = {};
+  dbPats.forEach(dp => {
+    const name = dp.name.replace(/\s+/g, '');
+    if (!grouped[name]) grouped[name] = [];
+    grouped[name].push(dp);
+  });
+
+  // 既存hardcoded患者の名前セット（重複防止）
+  const existingNames = new Set(patients.map(p => p.name.replace(/\s+/g, '')));
+
+  let dbIdx = 0;
+  for (const [normName, visits] of Object.entries(grouped)) {
+    // 既存患者に来院履歴を追加
+    const existingPatient = patients.find(p => p.name.replace(/\s+/g, '') === normName);
+    if (existingPatient) {
+      appendDbVisitHistory(existingPatient, visits);
+      continue;
+    }
+
+    // 新規DB患者をカルテ形式に変換して追加
+    dbIdx++;
+    const latest = visits.sort((a, b) => compareDateStr(b.date, a.date))[0];
+    const newPatient = convertDbPatient(latest, visits, dbIdx);
+    patients.push(newPatient);
+    // カルテデータも初期化
+    karteData[newPatient.id] = { chiefComplaint:'', chiefComplaintSelect:'', findingsHtml:'', vitals:{t:'',bps:'',bpd:'',pulse:'',spo2:''}, selectedDiseases:[], prescriptions:[], rxDays:7, isFirstVisit: latest.type === '新規', selectedExams:[], addedBillingItems:[] };
+  }
+}
+
+function convertDbPatient(latest, visits, idx) {
+  const id = 'DB-' + String(idx).padStart(4, '0');
+  const name = latest.name.replace(/\s+/g, '');
+  // 年齢をパース（"3~5" → 4, "30代" → 35, 数字のみ → そのまま）
+  let age = 0;
+  const ageStr = String(latest.age || '');
+  if (/^\d+$/.test(ageStr)) { age = parseInt(ageStr); }
+  else if (/(\d+)~(\d+)/.test(ageStr)) { const m = ageStr.match(/(\d+)~(\d+)/); age = Math.round((parseInt(m[1]) + parseInt(m[2])) / 2); }
+  else if (/(\d+)代/.test(ageStr)) { const m = ageStr.match(/(\d+)代/); age = parseInt(m[1]) + 5; }
+
+  // 来院履歴をpastKartesに変換
+  const pastKartes = visits.map(v => ({
+    date: v.date || '',
+    cc: '',
+    diag: [v.covid ? 'COVID-19' : '', v.flu ? 'インフルエンザ' : '', v.strep ? '溶連菌' : ''].filter(Boolean).join(', ') || '',
+    rx: '',
+    doc: v.doctor || ''
+  })).sort((a, b) => compareDateStr(b.date, a.date));
+
+  // 保険種別のマッピング
+  let insurance = latest.insurance || '社保3割';
+  let ratio = 0.3;
+  if (insurance.includes('1割')) ratio = 0.1;
+  else if (insurance.includes('2割')) ratio = 0.2;
+  else if (insurance === '公費') ratio = 0;
+  // DB値が短い場合は3割を追加
+  if (/^(社保|国保|後期)$/.test(insurance)) insurance += '3割';
+
+  return {
+    id: id,
+    name: name,
+    age: age,
+    sex: (latest.sex || '').replace(/性$/, '') || '不明',
+    insurance: insurance,
+    ratio: ratio,
+    dob: '',
+    address: latest.area || '',
+    phone: '',
+    nameKana: '',
+    allergies: [],
+    history: pastKartes.map(k => k.diag).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i),
+    prevRx: [],
+    prevDays: 0,
+    prevVisitDate: visits[0]?.date || '',
+    vehicle: { plate: '---', lane: 0 },
+    status: 'none',
+    memo: '',
+    insurancePhoto: null,
+    insuranceNumber: '',
+    questionnaire: null,
+    arrivedAt: '',
+    visitDate: '',
+    pastKartes: pastKartes,
+    pastVitals: [],
+    dbSource: true,
+    dbVisits: visits,
+    selfPayTotal: visits.reduce((s, v) => s + (v.selfPay || 0), 0),
+    revenueTotal: visits.reduce((s, v) => s + (v.revenuePoints || 0), 0),
+    route: latest.route || '',
+    type: latest.type || ''
+  };
+}
+
+function appendDbVisitHistory(patient, visits) {
+  visits.forEach(v => {
+    const diag = [v.covid ? 'COVID-19' : '', v.flu ? 'インフルエンザ' : '', v.strep ? '溶連菌' : ''].filter(Boolean).join(', ') || '';
+    const entry = { date: v.date || '', cc: '', diag: diag, rx: '', doc: v.doctor || '' };
+    // 重複チェック（同日同医師のエントリは追加しない）
+    if (!patient.pastKartes.find(k => k.date === entry.date && k.doc === entry.doc)) {
+      patient.pastKartes.push(entry);
+    }
+  });
+  // 日付降順ソート
+  patient.pastKartes.sort((a, b) => compareDateStr(b.date, a.date));
+}
+
+function compareDateStr(a, b) {
+  // "M/D" 形式の比較（同年内前提）
+  const pa = (a || '').split('/').map(Number);
+  const pb = (b || '').split('/').map(Number);
+  if (pa[0] !== pb[0]) return (pa[0] || 0) - (pb[0] || 0);
+  return (pa[1] || 0) - (pb[1] || 0);
+}
+
 // ===== Init =====
 document.getElementById('listDate').value = selectedDate;
 renderSetOrders();
 renderDiseaseQuickBtns();
 renderPatientList();
+loadDbData();
