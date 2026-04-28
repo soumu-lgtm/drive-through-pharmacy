@@ -113,7 +113,7 @@
     </div>
   </div>
 
-  <div class="main-grid">
+  <div class="main-grid" id="mainGrid">
     <!-- Left: Patient Info (TABBED - Phase 3) -->
     <div class="panel patient-info">
       <div class="panel-title">
@@ -134,6 +134,9 @@
       </div>
       <div class="panel-body" id="patientInfoBody"></div>
     </div>
+
+    <!-- Resize handle: Left | Center -->
+    <div class="col-resize-handle" id="resizeLeft" title="ドラッグで幅調整"></div>
 
     <!-- Center: Karte (LEFT-RIGHT SPLIT - Phase 1+2) -->
     <div class="panel karte-center-panel">
@@ -171,6 +174,8 @@
             </div>
             <div class="richtext-editor" id="findingsEditor" contenteditable="true" data-placeholder="[現病歴]&#10;&#10;[身体所見]&#10;&#10;[A&P]"></div>
           </div>
+          <!-- Resize handle: Findings | Actions -->
+          <div class="split-resize-handle" id="resizeSplit" title="ドラッグで幅調整"></div>
           <!-- Right: Actions & Billing -->
           <div class="karte-split-col">
             <div class="karte-split-title">処置・行為</div>
@@ -235,6 +240,9 @@
         </div>
       </div>
     </div>
+
+    <!-- Resize handle: Center | Right -->
+    <div class="col-resize-handle" id="resizeRight" title="ドラッグで幅調整"></div>
 
     <!-- Right: Billing Menu (TABBED - Phase 4) + Waiting -->
     <div class="panel right-panel">
@@ -426,6 +434,7 @@
 </div>
 
 <script src="db_integration.js"></script>
+<script src="resizer.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

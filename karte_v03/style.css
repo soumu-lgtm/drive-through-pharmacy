@@ -172,12 +172,70 @@ html, body {
 /* ===== Main Grid (v0.3 restructured: 3 columns) ===== */
 .main-grid {
   display: grid;
-  grid-template-columns: 220px 1fr 260px;
+  grid-template-columns: 220px 6px 1fr 6px 260px;
   grid-template-rows: 1fr;
   flex: 1;
-  gap: 1px;
+  gap: 0;
   background: var(--border);
   min-height: 0;
+}
+
+/* Column resize handles */
+.col-resize-handle {
+  width: 6px;
+  cursor: col-resize;
+  background: var(--border);
+  position: relative;
+  z-index: 2;
+  transition: background 0.15s;
+}
+.col-resize-handle:hover,
+.col-resize-handle.active {
+  background: var(--primary);
+}
+.col-resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 1px;
+  width: 4px;
+  height: 32px;
+  transform: translateY(-50%);
+  border-left: 1px solid rgba(255,255,255,0.5);
+  border-right: 1px solid rgba(255,255,255,0.5);
+}
+
+/* Karte split resize handle */
+.split-resize-handle {
+  width: 6px;
+  cursor: col-resize;
+  background: var(--border);
+  position: relative;
+  z-index: 2;
+  transition: background 0.15s;
+}
+.split-resize-handle:hover,
+.split-resize-handle.active {
+  background: var(--primary);
+}
+
+/* Richtext editor bottom resize */
+.richtext-editor {
+  resize: vertical;
+}
+
+/* Prevent text selection during resize */
+body.resizing {
+  cursor: col-resize !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+body.resizing * {
+  cursor: col-resize !important;
+}
+body.resizing iframe,
+body.resizing img {
+  pointer-events: none;
 }
 
 /* ===== Panel Base ===== */
@@ -200,7 +258,7 @@ html, body {
 .panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
 /* ===== Left: Patient Info Tabs (Phase 3) ===== */
-.patient-info { grid-row: 1; grid-column: 1; border-right: 2px solid var(--primary-light); }
+.patient-info { grid-row: 1; grid-column: 1; }
 .patient-tabs-row {
   display: flex; gap: 1px; padding: 2px 4px; background: var(--bg);
   flex-shrink: 0; flex-wrap: wrap;
@@ -289,7 +347,7 @@ html, body {
 .history-doc { color: var(--text-muted); min-width: 40px; text-align: right; }
 
 /* ===== Center: Karte (Left-Right Split) ===== */
-.karte-center-panel { grid-row: 1; grid-column: 2; min-width: 0; }
+.karte-center-panel { grid-row: 1; grid-column: 3; min-width: 0; }
 .karte-center-body { padding: 8px 10px; }
 
 .form-group { margin-bottom: 6px; }
@@ -309,7 +367,7 @@ html, body {
 
 /* ===== Karte Left-Right Split (Phase 1+2) ===== */
 .karte-split {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+  display: grid; grid-template-columns: 1fr 6px 1fr; gap: 0;
   margin-bottom: 6px;
 }
 .karte-split-col {
@@ -337,8 +395,9 @@ html, body {
 .rt-color-blue { color: var(--primary); font-weight: 700; }
 .rt-sep { width: 1px; background: var(--border); margin: 2px 3px; }
 .richtext-editor {
-  min-height: 160px; padding: 8px 10px; font-size: 13px; line-height: 1.8;
-  outline: none; overflow-y: auto; max-height: 300px;
+  min-height: 100px; padding: 8px 10px; font-size: 13px; line-height: 1.8;
+  outline: none; overflow-y: auto; max-height: none; height: 160px;
+  resize: vertical;
 }
 .richtext-editor:empty::before {
   content: attr(data-placeholder); color: var(--text-light); white-space: pre-line;
@@ -401,8 +460,7 @@ html, body {
 
 /* ===== Right Panel ===== */
 .right-panel {
-  grid-row: 1; grid-column: 3;
-  border-left: 2px solid var(--primary-light);
+  grid-row: 1; grid-column: 5;
   display: flex; flex-direction: column; overflow: hidden;
 }
 .right-panel-sections { flex: 1; overflow-y: auto; padding: 0; }
