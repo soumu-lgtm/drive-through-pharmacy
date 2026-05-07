@@ -245,15 +245,25 @@ const OCR_ENGINE = (() => {
     return canvas;
   }
 
-  // --- 2d. シンプル前処理（白背景カード用のフォールバック） ---
+  // --- 2d. シンプル前処理（カードクロップ + グレースケール + コントラスト正規化） ---
   function preprocessSimple(imgElement) {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
-    const scale = Math.min(2400 / imgElement.naturalWidth, 3);
-    canvas.width = Math.round(imgElement.naturalWidth * scale);
-    canvas.height = Math.round(imgElement.naturalHeight * scale);
-    ctx.drawImage(imgElement, 0, 0, canvas.width, canvas.height);
+    // カード領域クロップ（パス1と同じ検出を使用）
+    const cardRect = detectCardRegion(imgElement);
+    let srcX = 0, srcY = 0, srcW = imgElement.naturalWidth, srcH = imgElement.naturalHeight;
+    if (cardRect) {
+      srcX = cardRect.x;
+      srcY = cardRect.y;
+      srcW = cardRect.w;
+      srcH = cardRect.h;
+    }
+
+    const scale = Math.min(2400 / srcW, 3);
+    canvas.width = Math.round(srcW * scale);
+    canvas.height = Math.round(srcH * scale);
+    ctx.drawImage(imgElement, srcX, srcY, srcW, srcH, 0, 0, canvas.width, canvas.height);
 
     sharpen(ctx, canvas.width, canvas.height);
 
@@ -267,38 +277,65 @@ const OCR_ENGINE = (() => {
       d[i*4] = d[i*4+1] = d[i*4+2] = gray;
     }
 
-    // コントラスト強化
-    let min = 255, max = 0;
-    for (let i = 0; i < n; i++) {
-      if (d[i*4] < min) min = d[i*4];
-      if (d[i*4] > max) max = d[i*4];
+    // パーセンタイルベースのコントラスト正規化（外れ値に強い）
+    const histogram = new Array(256).fill(0);
+    for (let i = 0; i < n; i++) histogram[d[i*4]]++;
+    let cumSum = 0;
+    let pLow = 0, pHigh = 255;
+    for (let i = 0; i < 256; i++) {
+      cumSum += histogram[i];
+      if (cumSum >= n * 0.02 && pLow === 0) pLow = i; // 2%ile
+      if (cumSum >= n * 0.98) { pHigh = i; break; } // 98%ile
     }
-    const range = max - min || 1;
+    const range = pHigh - pLow || 1;
     for (let i = 0; i < n; i++) {
-      const v = Math.round(((d[i*4] - min) / range) * 255);
+      const v = Math.max(0, Math.min(255, Math.round(((d[i*4] - pLow) / range) * 255)));
       d[i*4] = d[i*4+1] = d[i*4+2] = v;
     }
 
-    // Otsu二値化
-    const histogram = new Array(256).fill(0);
-    for (let i = 0; i < n; i++) histogram[d[i*4]]++;
-    let sum = 0;
-    for (let i = 0; i < 256; i++) sum += i * histogram[i];
-    let sumB = 0, wB = 0, wF = 0, maxVar = 0, threshold = 128;
-    for (let t = 0; t < 256; t++) {
-      wB += histogram[t];
-      if (wB === 0) continue;
-      wF = n - wB;
-      if (wF === 0) break;
-      sumB += t * histogram[t];
-      const mB = sumB / wB;
-      const mF = (sum - sumB) / wF;
-      const v = wB * wF * (mB - mF) * (mB - mF);
-      if (v > maxVar) { maxVar = v; threshold = t; }
+    // 適応的閾値（パス1より大きいブロックで穏やかに）
+    const w = canvas.width, h = canvas.height;
+    const gray = new Uint8Array(n);
+    for (let i = 0; i < n; i++) gray[i] = d[i*4];
+
+    const blockSize = 40;
+    const C_THRESH = 10;
+    const dw = Math.ceil(w / blockSize);
+    const dh = Math.ceil(h / blockSize);
+    const blockMeans = new Float32Array(dw * dh);
+    const blockCounts = new Uint32Array(dw * dh);
+
+    for (let y = 0; y < h; y++) {
+      const by = Math.min(Math.floor(y / blockSize), dh - 1);
+      for (let x = 0; x < w; x++) {
+        const bx = Math.min(Math.floor(x / blockSize), dw - 1);
+        const bi = by * dw + bx;
+        blockMeans[bi] += gray[y * w + x];
+        blockCounts[bi]++;
+      }
     }
-    for (let i = 0; i < n; i++) {
-      const v = d[i*4] > threshold ? 255 : 0;
-      d[i*4] = d[i*4+1] = d[i*4+2] = v;
+    for (let i = 0; i < dw * dh; i++) {
+      blockMeans[i] = blockCounts[i] > 0 ? blockMeans[i] / blockCounts[i] : 128;
+    }
+
+    for (let y = 0; y < h; y++) {
+      const fy = (y + 0.5) / blockSize - 0.5;
+      const by0 = Math.max(0, Math.min(Math.floor(fy), dh - 2));
+      const by1 = by0 + 1;
+      const ty = fy - by0;
+      for (let x = 0; x < w; x++) {
+        const fx = (x + 0.5) / blockSize - 0.5;
+        const bx0 = Math.max(0, Math.min(Math.floor(fx), dw - 2));
+        const bx1 = bx0 + 1;
+        const tx = fx - bx0;
+        const m00 = blockMeans[by0 * dw + bx0];
+        const m10 = blockMeans[by0 * dw + bx1];
+        const m01 = blockMeans[by1 * dw + bx0];
+        const m11 = blockMeans[by1 * dw + bx1];
+        const localMean = m00*(1-tx)*(1-ty) + m10*tx*(1-ty) + m01*(1-tx)*ty + m11*tx*ty;
+        const idx = y * w + x;
+        d[idx*4] = d[idx*4+1] = d[idx*4+2] = gray[idx] < (localMean - C_THRESH) ? 0 : 255;
+      }
     }
 
     ctx.putImageData(imgData, 0, 0);
@@ -331,8 +368,9 @@ const OCR_ENGINE = (() => {
     const text1 = result1.data.text;
     const fields1 = extractInsuranceFields(text1);
 
-    // 信頼度が十分ならそのまま返す
-    if (fields1.confidence >= 60) {
+    // 重要フィールドが全て揃っていて高信頼度ならパス1のみで返す
+    const hasAllCritical = fields1.insurerNumber && fields1.dob && fields1.nameKana && fields1.name;
+    if (fields1.confidence >= 80 && hasAllCritical) {
       if (progressCb) progressCb('解析完了', 100);
       return result1.data;
     }
@@ -343,6 +381,13 @@ const OCR_ENGINE = (() => {
     const result2 = await worker.recognize(processed2);
     const text2 = result2.data.text;
     const fields2 = extractInsuranceFields(text2);
+
+    // パス2が実質的に空の場合はパス1をそのまま返す
+    if (fields2.confidence <= 5 || (text2 || '').trim().length < 20) {
+      if (progressCb) progressCb('解析完了', 100);
+      result1.data._mergedFields = fields1;
+      return result1.data;
+    }
 
     // フィールドレベルでマージ（各フィールドで見つかった方を採用）
     if (progressCb) progressCb('結果統合中...', 90);
@@ -355,6 +400,14 @@ const OCR_ENGINE = (() => {
     return bestData;
   }
 
+  // カナ名の品質スコア（カタカナ文字の割合で判定）
+  function kanaQuality(str) {
+    if (!str) return 0;
+    const kataCount = (str.match(/[ァ-ヶ]/g) || []).length;
+    const total = str.replace(/[\s　]/g, '').length;
+    return total > 0 ? kataCount / total : 0;
+  }
+
   // フィールドマージ: 2つの結果から各フィールドのベストを選択
   function mergeFields(f1, f2) {
     const result = { ...f1 };
@@ -365,6 +418,28 @@ const OCR_ENGINE = (() => {
       if (!f1[key] && f2[key]) {
         result[key] = f2[key];
         f2Wins++;
+      } else if (f1[key] && f2[key] && key === 'nameKana') {
+        // カナ名は品質が高い方を採用
+        if (kanaQuality(f2[key]) > kanaQuality(f1[key])) {
+          result[key] = f2[key];
+          f2Wins++;
+        }
+      } else if (f1[key] && f2[key] && key === 'insurerNumber') {
+        // 保険者番号は8桁に近い方を優先
+        const d1 = Math.abs(f1[key].length - 8);
+        const d2 = Math.abs(f2[key].length - 8);
+        if (d2 < d1) {
+          result[key] = f2[key];
+          f2Wins++;
+        }
+      } else if (f1[key] && f2[key] && key === 'name') {
+        // 漢字名は漢字比率が高い方を優先
+        const k1 = (f1[key].match(/[\u4e00-\u9fff]/g) || []).length;
+        const k2 = (f2[key].match(/[\u4e00-\u9fff]/g) || []).length;
+        if (k2 > k1) {
+          result[key] = f2[key];
+          f2Wins++;
+        }
       }
     }
     // 信頼度を再計算
@@ -422,7 +497,42 @@ const OCR_ENGINE = (() => {
     return kataStr;
   }
 
-  // ===== 5. 保険証フィールド抽出 =====
+  // ===== 5. 保険証フィールド抽出（v4: OCR誤字耐性強化） =====
+
+  // OCR文字列から数字だけを抽出する（記号・スペース・誤認識文字を除去）
+  function extractDigits(str) {
+    return (str || '').replace(/[^\d]/g, '');
+  }
+
+  // OCRが「保険者番号」を誤認識するパターンに対応
+  function isInsurerNumberLabel(str) {
+    // 保険者番号、保険者番呈、保険者番号 etc
+    return /保険者\s*番[号呈暑署]/.test(str) || /保険者\s*番\s*[号呈暑署]/.test(str);
+  }
+
+  // 「生年月日」ラベル近傍から年号を柔軟に読む
+  // OCRが「平成」を「ギ成」「平或」等に誤認識するケースに対応
+  function fuzzyEraMatch(str) {
+    // 正確なマッチ
+    const exact = str.match(/(昭和|平成|令和)\s*(\d{1,2})/);
+    if (exact) return { era: exact[1], year: parseInt(exact[2]), index: exact.index };
+
+    // 平成の誤認識パターン（ギ成、干成、ギ4、半成 etc）
+    // 「生年月日」の後に 数字 数字 月 数字 のパターンを見つける
+    const fuzzyHeisei = str.match(/[ギ干半平ギヤ][成或]\s*(\d{1,2})/);
+    if (fuzzyHeisei) return { era: '平成', year: parseInt(fuzzyHeisei[1]), index: fuzzyHeisei.index };
+
+    // 昭和の誤認識
+    const fuzzyShowa = str.match(/[昭照]\s*[和知]\s*(\d{1,2})/);
+    if (fuzzyShowa) return { era: '昭和', year: parseInt(fuzzyShowa[1]), index: fuzzyShowa.index };
+
+    // 令和の誤認識
+    const fuzzyReiwa = str.match(/[令今冷]\s*[和知]\s*(\d{1,2})/);
+    if (fuzzyReiwa) return { era: '令和', year: parseInt(fuzzyReiwa[1]), index: fuzzyReiwa.index };
+
+    return null;
+  }
+
   function extractInsuranceFields(ocrText) {
     const text = normalizeOcrText(ocrText);
     const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
@@ -446,10 +556,10 @@ const OCR_ENGINE = (() => {
     };
 
     // --- 保険者番号（6桁 or 8桁の数字列） ---
+    // まず正確なパターンで試す
     const insurerPatterns = [
       /保険者番号[:\s：]*(\d{6,8})/,
       /保険者[番号\s]*[:\s：]*(\d{6,8})/,
-      // ボックス表示: 各桁がスペースで区切られている場合
       /保険者番号[:\s：]*(\d[\s]*\d[\s]*\d[\s]*\d[\s]*\d[\s]*\d[\s]*\d[\s]*\d)/,
     ];
     for (const pat of insurerPatterns) {
@@ -459,64 +569,204 @@ const OCR_ENGINE = (() => {
         if (result.insurerNumber.length >= 6) break;
       }
     }
-    // フォールバック: 行単位で保険者番号を探す
+    // フォールバック1: ラベル誤認識対応（番呈、番署 等）+ 数字だけ抽出
     if (!result.insurerNumber) {
       for (const line of lines) {
-        if (/保険者番号/.test(line) || /保険者\s*番号/.test(line)) {
-          const nums = line.match(/\d/g);
-          if (nums && nums.length >= 6) {
-            result.insurerNumber = nums.slice(0, 8).join('');
+        if (isInsurerNumberLabel(line) || /保険者番号/.test(line) || /保険者\s*番\s*号/.test(line)) {
+          const digits = extractDigits(line);
+          if (digits.length >= 6) {
+            result.insurerNumber = digits.substring(0, 8);
             break;
           }
         }
+      }
+    }
+    // フォールバック2: 「保険者番」の後ろの文字列から数字を拾う（OCR記号混入対応）
+    if (!result.insurerNumber) {
+      const m = fullText.match(/保険者\s*番[^\n]{0,5}([\d\s\.\[\]lIO,]{6,20})/);
+      if (m) {
+        // lを1に、Oを0に置換してから数字抽出
+        const cleaned = m[1].replace(/[lI|]/g, '1').replace(/[Oo]/g, '0');
+        const digits = extractDigits(cleaned);
+        if (digits.length >= 6) {
+          result.insurerNumber = digits.substring(0, 8);
+        }
+      }
+    }
+
+    // チェックディジットで保険者番号を検証・修正
+    if (result.insurerNumber && result.insurerNumber.length === 8) {
+      const check = validateInsurerNumber(result.insurerNumber);
+      if (!check.valid) {
+        result.insurerNumber = check.corrected;
+        result._insurerNumberCorrected = true;
       }
     }
 
     // --- 記号・番号 ---
     const symbolPatterns = [
       /記号[:\s：]*([^\s番]{1,20})/,
-      /記号\s+(\S+)/
+      /記号\s+(\S+)/,
+      // OCR誤認識: 「記」の後にゴミ文字 + 数字列
+      /記[ーー号\s]*(\d{4,10})/,
     ];
     for (const pat of symbolPatterns) {
       const m = fullText.match(pat);
-      if (m) { result.symbol = m[1].replace(/[番号]/g, '').trim(); break; }
+      if (m) {
+        const val = m[1].replace(/[番号ーー\s]/g, '').trim();
+        // 数字のみの値で、保険者番号と異なる場合に採用
+        if (/^\d+$/.test(val) && val !== result.insurerNumber) {
+          result.symbol = val;
+          break;
+        } else if (val.length >= 2 && !/^\d+$/.test(val)) {
+          result.symbol = val;
+          break;
+        }
+      }
     }
 
     const numPatterns = [
       /記号[^\n]*?番号[:\s：]*(\d{1,10})/,
       /被保険者番号[:\s：]*(\d{1,10})/,
       /(?<!保険者)番号[:\s：]*(\d{1,10})/,
-      /番\s*号\s+(\d+)/
+      /番\s*号\s+(\d+)/,
+      // 記号の数字列の後に続く別の数字列（「8010441 和30」→ 30が番号）
+      // 「和」「番」は OCRで「番号」の誤認識
     ];
     for (const pat of numPatterns) {
       const m = fullText.match(pat);
-      if (m && m[1] !== result.insurerNumber) { result.memberNumber = m[1]; break; }
+      if (m && m[1] !== result.insurerNumber && m[1] !== result.symbol) {
+        result.memberNumber = m[1];
+        break;
+      }
+    }
+    // フォールバック: 記号の直後に「和 NN」や「番号 NN」のパターン
+    if (!result.memberNumber && result.symbol) {
+      const afterSymbol = fullText.substring(fullText.indexOf(result.symbol) + result.symbol.length);
+      const numAfter = afterSymbol.match(/[和番号\s]+(\d{1,5})/);
+      if (numAfter) {
+        result.memberNumber = numAfter[1];
+      }
     }
 
     // --- 枝番 ---
-    const edaMatch = fullText.match(/枝番[:\s：）)]*(\d{1,2})/);
+    const edaMatch = fullText.match(/枝番[:\s：）)]*(\d{1,2})/) || fullText.match(/[革草枝][番]\s*[)）]\s*(\d{1,2})/);
     if (edaMatch) result.branchNumber = edaMatch[1];
 
-    // --- 生年月日 ---
-    const dobPatterns = [
-      /生年月日[:\s：]*(昭和|平成|令和)\s*(\d{1,2})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/,
-      /(昭和|平成|令和)\s*(\d{1,2})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/,
-      /生年月日[:\s：]*(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/,
-      /(\d{4})\s*[年\/\-\.]\s*(\d{1,2})\s*[月\/\-\.]\s*(\d{1,2})\s*日?/,
-    ];
-    for (const pat of dobPatterns) {
-      const m = fullText.match(pat);
-      if (m) {
-        if (['昭和','平成','令和'].includes(m[1])) {
-          const year = eraToWestern(m[1], parseInt(m[2]));
-          result.dob = `${year}-${String(m[3]).padStart(2,'0')}-${String(m[4]).padStart(2,'0')}`;
-        } else {
-          const y = parseInt(m[1]);
-          if (y >= 1900 && y <= 2030) {
-            result.dob = `${y}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+    // --- 生年月日（v4: 年号誤認識・交付日誤認識対応） ---
+    // 方針: 「生年月日」ラベルの直後にある日付を最優先。交付日と区別する
+    let dobFound = false;
+
+    // ステップ1: 「生年月日」ラベル付きの行を探す
+    for (const line of lines) {
+      if (!/生年月日/.test(line)) continue;
+      // ラベルの後ろの文字列から年号を探す
+      const afterLabel = line.replace(/.*生年月日[\s：:]*/, '');
+
+      // 正確な年号マッチ
+      const exactEra = afterLabel.match(/(昭和|平成|令和)\s*(\d{1,2})\s*年?\s*(\d{1,2})\s*月\s*(\d{1,2})/);
+      if (exactEra) {
+        const year = eraToWestern(exactEra[1], parseInt(exactEra[2]));
+        result.dob = `${year}-${String(exactEra[3]).padStart(2,'0')}-${String(exactEra[4]).padStart(2,'0')}`;
+        dobFound = true;
+        break;
+      }
+
+      // 誤認識年号 + 数字パターン（「ギ 4 4月 16」→ 平成4年4月16日）
+      const fuzzy = fuzzyEraMatch(afterLabel);
+      if (fuzzy) {
+        // 年号の後ろから月日を探す
+        const rest = afterLabel.substring(fuzzy.index);
+        const md = rest.match(/\d{1,2}\s*[年\/\-\.]\s*(\d{1,2})\s*月?\s*(\d{1,2})/);
+        if (md) {
+          const year = eraToWestern(fuzzy.era, fuzzy.year);
+          result.dob = `${year}-${String(md[1]).padStart(2,'0')}-${String(md[2]).padStart(2,'0')}`;
+          dobFound = true;
+          break;
+        }
+        // 「ギ4 4月16」形式: 最初の数字が年、次が月、次が日
+        const nums = rest.match(/(\d{1,2})\s+(\d{1,2})\s*月\s*(\d{1,2})/);
+        if (nums) {
+          const year = eraToWestern(fuzzy.era, parseInt(nums[1]));
+          result.dob = `${year}-${String(nums[2]).padStart(2,'0')}-${String(nums[3]).padStart(2,'0')}`;
+          dobFound = true;
+          break;
+        }
+      }
+
+      // 数字のみ抽出してパターンマッチ（最終手段）
+      const digits = afterLabel.match(/\d+/g);
+      if (digits && digits.length >= 3) {
+        // 生年月日行の数字列: [年号年, 月, 日] を推定
+        const candidates = digits.map(d => parseInt(d));
+        // 月（1-12）と日（1-31）の妥当性チェック
+        for (let i = 0; i < candidates.length - 2; i++) {
+          const y = candidates[i], mo = candidates[i+1], day = candidates[i+2];
+          if (mo >= 1 && mo <= 12 && day >= 1 && day <= 31) {
+            if (y >= 1 && y <= 64) {
+              // 年号年として妥当（昭和1-64, 平成1-31, 令和1-xx）
+              // 年号を推定: 交付日が令和なら、生年月日は平成以前が多い
+              let era = '平成';
+              if (y > 31) era = '昭和';
+              const year = eraToWestern(era, y);
+              if (year >= 1926 && year <= 2025) {
+                result.dob = `${year}-${String(mo).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                dobFound = true;
+                break;
+              }
+            } else if (y >= 1926 && y <= 2025) {
+              result.dob = `${y}-${String(mo).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+              dobFound = true;
+              break;
+            }
           }
         }
-        if (result.dob) break;
+        if (dobFound) break;
+      }
+    }
+
+    // フォールバック: fullTextから年号付き日付を探す（交付日と区別）
+    if (!dobFound) {
+      const dobPatterns = [
+        /生年月日[:\s：]*(昭和|平成|令和)\s*(\d{1,2})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/,
+        /生年月日[:\s：]*(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/,
+      ];
+      for (const pat of dobPatterns) {
+        const m = fullText.match(pat);
+        if (m) {
+          if (['昭和','平成','令和'].includes(m[1])) {
+            const year = eraToWestern(m[1], parseInt(m[2]));
+            result.dob = `${year}-${String(m[3]).padStart(2,'0')}-${String(m[4]).padStart(2,'0')}`;
+          } else {
+            const y = parseInt(m[1]);
+            if (y >= 1900 && y <= 2030) {
+              result.dob = `${y}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+            }
+          }
+          if (result.dob) break;
+        }
+      }
+    }
+
+    // フォールバック2: 全文から「平成/昭和 N年 N月 N日」を探す（ラベルなし対応）
+    // 交付日（令和）と生年月日（平成/昭和）を区別する
+    if (!dobFound) {
+      const allDates = [];
+      const globalEraRe = /(昭和|平成)\s*(\d{1,2})\s*年?\s*(\d{1,2})\s*月\s*(\d{1,2})/g;
+      let em;
+      while ((em = globalEraRe.exec(fullText)) !== null) {
+        const year = eraToWestern(em[1], parseInt(em[2]));
+        const mo = parseInt(em[3]);
+        const day = parseInt(em[4]);
+        if (year >= 1926 && year <= 2025 && mo >= 1 && mo <= 12 && day >= 1 && day <= 31) {
+          allDates.push({ year, mo, day, era: em[1] });
+        }
+      }
+      // 昭和/平成の日付が見つかれば、最も生年月日らしいもの（1926-2010年）を採用
+      const dobCandidates = allDates.filter(d => d.year >= 1926 && d.year <= 2010);
+      if (dobCandidates.length > 0) {
+        const d = dobCandidates[0];
+        result.dob = `${d.year}-${String(d.mo).padStart(2,'0')}-${String(d.day).padStart(2,'0')}`;
       }
     }
 
@@ -530,7 +780,8 @@ const OCR_ENGINE = (() => {
       result.sex = '女';
     }
 
-    // --- フリガナ（カタカナ列の抽出） ---
+    // --- フリガナ（v4: OCR誤認識カタカナの修正強化） ---
+    // まず正確なカタカナ姓名パターン
     const kanaPattern = /([ァ-ヶー]{2,}[\s　]+[ァ-ヶー]{1,})/g;
     const kanaMatches = [];
     let km;
@@ -540,6 +791,33 @@ const OCR_ENGINE = (() => {
     if (kanaMatches.length > 0) {
       kanaMatches.sort((a, b) => b.length - a.length);
       result.nameKana = kanaMatches[0].replace(/[\s　]+/g, ' ').trim();
+    }
+
+    // フォールバック: カナ文字＋ひらがな混合を修正（OCRが「サ」→「が」等に誤認識）
+    if (!result.nameKana || kanaQuality(result.nameKana) < 0.7) {
+      for (const line of lines) {
+        // カタカナを1文字でも含む行を検査
+        if (!/[ァ-ヶー]/.test(line)) continue;
+        // ラベル類を除去
+        const cleaned = line.replace(/[#＃※◆●○◎□■△▲▽▼]/g, '')
+          .replace(/記号|番号|保険|住所|生年|証|被|健康|氏名|性別|資格/g, '').trim();
+        if (cleaned.length < 3) continue;
+
+        // ひらがな→カタカナ変換
+        const asKata = cleaned.replace(/[ぁ-ん]/g, ch => String.fromCharCode(ch.charCodeAt(0) + 0x60));
+        // カタカナ・長音のみ抽出
+        const kataOnly = asKata.replace(/[^ァ-ヶー]/g, '');
+        if (kataOnly.length < 3 || kataOnly.length > 15) continue;
+
+        // NAME_DICTで姓名分割を試みる
+        const split = guessKanaSplit(kataOnly);
+        if (split.includes(' ') && split.length >= 4) {
+          // 現在の結果より品質が良ければ採用
+          if (!result.nameKana || kanaQuality(split) > kanaQuality(result.nameKana)) {
+            result.nameKana = split;
+          }
+        }
+      }
     }
 
     // --- 氏名（漢字） ---
@@ -562,6 +840,72 @@ const OCR_ENGINE = (() => {
         if (name.length >= 2 && name.length <= 12 && /[\u4e00-\u9fff]/.test(name)) {
           result.name = name;
           break;
+        }
+      }
+    }
+    // フォールバック: ラベルなしでも、テキスト中の姓辞書マッチで氏名を検出
+    if (!result.name && typeof NAME_DICT !== 'undefined') {
+      const excludeWords = /保険|協会|健康|番号|資格|取得|確認|名称|所在|全国|支部|都道府県|市区町村|交付|有効|期限|被保|條/;
+      let bestNameCandidate = null;
+      let bestScore = 0;
+
+      for (const line of lines) {
+        const kanjiSegs = line.match(/[\u4e00-\u9fff]{2,}/g);
+        if (!kanjiSegs) continue;
+        for (const seg of kanjiSegs) {
+          if (excludeWords.test(seg)) continue;
+          for (let sLen = Math.min(seg.length - 1, 3); sLen >= 1; sLen--) {
+            const surPart = seg.substring(0, sLen);
+            let surMatch = false;
+            for (const kanjis of Object.values(NAME_DICT.SURNAME)) {
+              if (kanjis.includes(surPart)) { surMatch = true; break; }
+            }
+            if (!surMatch) continue;
+
+            // 名前候補を1〜3文字で切り出し、最もスコアの高いものを採用
+            const rest = seg.substring(sLen);
+            for (let gLen = Math.min(rest.length, 3); gLen >= 1; gLen--) {
+              const givPart = rest.substring(0, gLen);
+              const fullName = surPart + givPart;
+              if (fullName.length < 2 || fullName.length > 5) continue;
+
+              // スコア計算: 名前辞書にあれば高得点
+              // 一般的な日本人名は姓1-3文字 + 名1-3文字 = 全体2-5文字
+              // 名前部分が1-2文字のとき最も信頼度が高い
+              let score = (gLen <= 2) ? 5 : (gLen === 3) ? 3 : 1;
+              // 名前辞書チェック（MALE_GIVEN/FEMALE_GIVENのvalues内を検索）
+              for (const givKanjis of Object.values(NAME_DICT.MALE_GIVEN || {})) {
+                if (givKanjis.includes(givPart)) { score += 10; break; }
+              }
+              for (const givKanjis of Object.values(NAME_DICT.FEMALE_GIVEN || {})) {
+                if (givKanjis.includes(givPart)) { score += 10; break; }
+              }
+
+              if (score > bestScore) {
+                bestScore = score;
+                bestNameCandidate = fullName;
+              }
+            }
+          }
+        }
+      }
+      if (bestNameCandidate) {
+        result.name = bestNameCandidate;
+      }
+    }
+    // フォールバック: カナ名から辞書逆引きで漢字名を推定
+    if (!result.name && result.nameKana && typeof NAME_DICT !== 'undefined') {
+      const parts = result.nameKana.split(/[\s　]+/);
+      if (parts.length === 2) {
+        const surKana = parts[0];
+        const givKana = parts[1];
+        const surKanjis = NAME_DICT.SURNAME[surKana];
+        let givKanjis = NAME_DICT.MALE_GIVEN[givKana] || NAME_DICT.FEMALE_GIVEN[givKana];
+        if (surKanjis && givKanjis) {
+          // 最も一般的な漢字表記（配列の先頭）を使用
+          const surKanji = Array.isArray(surKanjis) ? surKanjis[0] : surKanjis;
+          const givKanji = Array.isArray(givKanjis) ? givKanjis[0] : givKanjis;
+          result.name = surKanji + givKanji;
         }
       }
     }
@@ -679,6 +1023,28 @@ const OCR_ENGINE = (() => {
     return result.data.text.replace(/\s/g, '');
   }
 
+  // ===== 7. 保険者番号チェックディジット検証・修正 =====
+  // 保険者番号は8桁。末尾1桁がチェックディジット（モジュラス10）
+  function validateInsurerNumber(num) {
+    if (!num || num.length !== 8) return { valid: false, corrected: num };
+    // 法別番号（1-2桁）+ 都道府県番号（3-4桁）+ 保険者番号（5-7桁）+ 検証番号（8桁目）
+    // チェックディジット: 下1桁以外の各桁に交互に2,1を掛け、各桁の和のmod10の補数
+    const digits = num.split('').map(Number);
+    const weights = [2, 1, 2, 1, 2, 1, 2]; // 7桁分
+    let sum = 0;
+    for (let i = 0; i < 7; i++) {
+      const product = digits[i] * weights[i];
+      // 2桁になった場合は各桁を足す
+      sum += product >= 10 ? Math.floor(product / 10) + (product % 10) : product;
+    }
+    const expected = (10 - (sum % 10)) % 10;
+    if (digits[7] === expected) {
+      return { valid: true, corrected: num };
+    }
+    // 修正: 正しいチェックディジットに置換
+    return { valid: false, corrected: num.substring(0, 7) + String(expected) };
+  }
+
   // ===== ユーティリティ =====
   function eraToWestern(era, year) {
     const base = { '明治': 1867, '大正': 1911, '昭和': 1925, '平成': 1988, '令和': 2018 };
@@ -731,6 +1097,7 @@ const OCR_ENGINE = (() => {
     splitAddress,
     extractPrefecture,
     eraToWestern,
+    validateInsurerNumber,
     terminate
   };
 })();
