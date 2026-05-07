@@ -234,12 +234,261 @@ function onDateChange() { selectedDate = document.getElementById('listDate').val
 
 // ===== New Patient (Phase 5 - enhanced) =====
 function openNewPatientModal() {
-  ['newName','newNameKana','newPhone','newPhone2','newPlate','newFacility','newZip','newPref','newCity','newStreet','newBuilding'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  ['newName','newNameKana','newPhone','newPhone2','newPlate','newFacility','newZip','newPref','newCity','newStreet','newBuilding','newInsurerNumber'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   document.getElementById('newDob').value = '';
   document.getElementById('newLane').value = patients.length + 1;
   document.getElementById('newPatientNo').value = 'P-' + String(patients.length + 1).padStart(5, '0');
   document.querySelector('input[name="newSex"][value="男"]').checked = true;
+  document.getElementById('newInsurance').value = '社保3割';
+  // OCR状態をクリア
+  clearOcrPreview();
+  stopOcrCamera();
+  const statusEl = document.getElementById('newInsurerStatus');
+  if (statusEl) statusEl.textContent = '';
+  const hint = document.getElementById('newNameGuess');
+  if (hint) hint.style.display = 'none';
   document.getElementById('newPatientModal').classList.add('show');
+}
+
+// ===== OCR: 保険証読取機能 =====
+let ocrStream = null;       // カメラストリーム
+let ocrExtracted = null;    // 最新の抽出結果
+
+function startOcrCamera() {
+  const wrap = document.getElementById('ocrCameraWrap');
+  const video = document.getElementById('ocrVideo');
+  wrap.style.display = 'block';
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } })
+    .then(stream => { ocrStream = stream; video.srcObject = stream; })
+    .catch(e => { showToast('カメラを起動できません: ' + e.message); wrap.style.display = 'none'; });
+}
+
+function stopOcrCamera() {
+  if (ocrStream) { ocrStream.getTracks().forEach(t => t.stop()); ocrStream = null; }
+  const video = document.getElementById('ocrVideo');
+  video.srcObject = null;
+  document.getElementById('ocrCameraWrap').style.display = 'none';
+}
+
+function captureOcrPhoto() {
+  const video = document.getElementById('ocrVideo');
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  stopOcrCamera();
+  processOcrImage(canvas.toDataURL('image/jpeg', 0.9));
+}
+
+function onOcrFileSelected(input) {
+  if (!input.files || !input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => processOcrImage(e.target.result);
+  reader.readAsDataURL(input.files[0]);
+  input.value = '';
+}
+
+function processOcrImage(dataUrl) {
+  // プレビュー表示
+  const wrap = document.getElementById('ocrPreviewWrap');
+  const img = document.getElementById('ocrPreviewImg');
+  const progressArea = document.getElementById('ocrProgressArea');
+  const resultArea = document.getElementById('ocrResultArea');
+  const applyBtn = document.getElementById('ocrApplyBtn');
+
+  wrap.style.display = 'block';
+  img.src = dataUrl;
+  img.style.display = 'block';
+  progressArea.style.display = 'block';
+  resultArea.style.display = 'none';
+  applyBtn.style.display = 'none';
+
+  // OCR実行
+  OCR_ENGINE.recognize(dataUrl, (status, pct) => {
+    document.getElementById('ocrProgressText').textContent = status;
+    document.getElementById('ocrProgressFill').style.width = pct + '%';
+  }).then(data => {
+    progressArea.style.display = 'none';
+    const fields = OCR_ENGINE.extractInsuranceFields(data.text);
+    ocrExtracted = fields;
+
+    // フリガナから漢字推測
+    if (fields.nameKana && typeof NAME_DICT !== 'undefined') {
+      const guess = NAME_DICT.guessKanji(fields.nameKana);
+      if (guess && guess.full) {
+        fields.nameGuess = guess.full;
+        fields.nameGuessCandidates = guess;
+      }
+      // フリガナから性別推測
+      if (!fields.sex) {
+        const parts = fields.nameKana.split(/[\s　]+/);
+        if (parts.length >= 2) {
+          const sexGuess = NAME_DICT.guessSex(parts[1]);
+          if (sexGuess) fields.sexGuess = sexGuess;
+        }
+      }
+    }
+
+    // 結果表示
+    renderOcrResult(fields);
+  }).catch(err => {
+    progressArea.style.display = 'none';
+    resultArea.style.display = 'block';
+    resultArea.innerHTML = '<div style="color:var(--danger);font-size:12px;">OCRエラー: ' + err.message + '</div>';
+  });
+}
+
+function renderOcrResult(f) {
+  const area = document.getElementById('ocrResultArea');
+  area.style.display = 'block';
+  document.getElementById('ocrApplyBtn').style.display = 'inline-block';
+
+  let html = '<div style="font-size:11px;font-weight:700;color:var(--primary);margin-bottom:4px;">読取結果（信頼度: ' + f.confidence + '%）</div>';
+
+  const rows = [
+    { label: '保険者番号', val: f.insurerNumber, icon: f.insurerNumber ? 'check' : '' },
+    { label: '記号', val: f.symbol },
+    { label: '番号', val: f.memberNumber },
+    { label: 'フリガナ', val: f.nameKana, icon: f.nameKana ? 'check' : '' },
+    { label: '氏名(推測)', val: f.nameGuess || f.name, icon: f.nameGuess ? 'guess' : (f.name ? 'warn' : '') },
+    { label: '生年月日', val: f.dob, icon: f.dob ? 'check' : '' },
+    { label: '性別', val: f.sex || f.sexGuess || null, icon: f.sexGuess && !f.sex ? 'guess' : (f.sex ? 'check' : '') },
+    { label: '郵便番号', val: f.postalCode },
+    { label: '住所', val: f.address, icon: f.address ? 'warn' : '' },
+  ];
+
+  for (const r of rows) {
+    if (!r.val) continue;
+    const iconHtml = r.icon === 'check' ? ' <span class="ocr-field-check">&#10003;</span>' :
+                     r.icon === 'warn' ? ' <span class="ocr-field-warn">&#9888; 要確認</span>' :
+                     r.icon === 'guess' ? ' <span class="ocr-field-warn">&#9733; 推測</span>' : '';
+    const valClass = (r.icon === 'warn' || r.icon === 'guess') ? ' low-conf' : '';
+    html += '<div class="ocr-field-row"><span class="ocr-field-label">' + r.label + '</span><span class="ocr-field-value' + valClass + '">' + r.val + '</span>' + iconHtml + '</div>';
+  }
+
+  // 漢字候補がある場合
+  if (f.nameGuessCandidates) {
+    const gc = f.nameGuessCandidates;
+    if (gc.surnameCandidates.length > 1 || gc.givenCandidates.length > 1) {
+      html += '<div style="font-size:10px;color:var(--text-muted);margin-top:4px;">漢字候補: ';
+      if (gc.surnameCandidates.length > 1) html += '姓=' + gc.surnameCandidates.join('/') + ' ';
+      if (gc.givenCandidates.length > 1) html += '名=' + gc.givenCandidates.join('/');
+      html += '</div>';
+    }
+  }
+
+  if (!f.insurerNumber && !f.nameKana && !f.dob) {
+    html += '<div style="color:var(--danger);font-size:11px;margin-top:6px;">&#9888; 保険証のテキストを十分に認識できませんでした。<br>画像が鮮明でない場合は、再度撮影してください。</div>';
+  }
+
+  area.innerHTML = html;
+}
+
+function applyOcrResults() {
+  if (!ocrExtracted) return;
+  const f = ocrExtracted;
+
+  // フリガナ反映
+  if (f.nameKana) {
+    document.getElementById('newNameKana').value = f.nameKana;
+  }
+
+  // 漢字氏名（推測 or OCR直接）
+  if (f.nameGuess) {
+    document.getElementById('newName').value = f.nameGuess;
+    // 候補がある場合にヒント表示
+    if (f.nameGuessCandidates && (f.nameGuessCandidates.surnameCandidates.length > 1 || f.nameGuessCandidates.givenCandidates.length > 1)) {
+      const hint = document.getElementById('newNameGuess');
+      if (hint) {
+        hint.style.display = 'inline';
+        const allCombos = [];
+        const sc = f.nameGuessCandidates.surnameCandidates;
+        const gc = f.nameGuessCandidates.givenCandidates;
+        for (const s of (sc.length ? sc : [f.nameKana.split(/[\s　]+/)[0]])) {
+          for (const g of (gc.length ? gc : [f.nameKana.split(/[\s　]+/)[1] || ''])) {
+            allCombos.push(s + ' ' + g);
+          }
+        }
+        hint.textContent = '他候補: ' + allCombos.slice(1, 5).join(', ');
+        hint.title = '全候補: ' + allCombos.join(', ');
+      }
+    }
+  } else if (f.name) {
+    document.getElementById('newName').value = f.name;
+  }
+
+  // 生年月日
+  if (f.dob) {
+    document.getElementById('newDob').value = f.dob;
+  }
+
+  // 性別
+  const sex = f.sex || f.sexGuess;
+  if (sex) {
+    const radio = document.querySelector('input[name="newSex"][value="' + sex + '"]');
+    if (radio) radio.checked = true;
+  }
+
+  // 保険者番号
+  if (f.insurerNumber) {
+    document.getElementById('newInsurerNumber').value = f.insurerNumber;
+    onNewInsurerNumberInput(f.insurerNumber);
+  }
+
+  // 郵便番号→住所自動入力
+  if (f.postalCode) {
+    const cleaned = f.postalCode.replace(/[^0-9]/g, '');
+    document.getElementById('newZip').value = f.postalCode;
+    // zipcloudで住所を引く
+    if (cleaned.length === 7) {
+      fetch('https://zipcloud.ibsnet.co.jp/api/search?zipcode=' + cleaned)
+        .then(r => r.json())
+        .then(data => {
+          if (data.results && data.results[0]) {
+            const r = data.results[0];
+            document.getElementById('newPref').value = r.address1;
+            document.getElementById('newCity').value = r.address2 + r.address3;
+            // OCRの住所から番地部分を抽出
+            if (f.address) {
+              const addrParts = OCR_ENGINE.splitAddress(f.address);
+              if (addrParts.street) document.getElementById('newStreet').value = addrParts.street;
+              if (addrParts.building) document.getElementById('newBuilding').value = addrParts.building;
+            }
+          }
+        }).catch(() => {
+          // zipcloud失敗時はOCRの住所をそのまま分割
+          if (f.address) {
+            const addrParts = OCR_ENGINE.splitAddress(f.address);
+            document.getElementById('newPref').value = addrParts.pref;
+            document.getElementById('newCity').value = addrParts.city;
+            document.getElementById('newStreet').value = addrParts.street;
+            document.getElementById('newBuilding').value = addrParts.building;
+          }
+        });
+    }
+  } else if (f.address) {
+    // 郵便番号なし→OCR住所をそのまま分割
+    const addrParts = OCR_ENGINE.splitAddress(f.address);
+    document.getElementById('newPref').value = addrParts.pref;
+    document.getElementById('newCity').value = addrParts.city;
+    document.getElementById('newStreet').value = addrParts.street;
+    document.getElementById('newBuilding').value = addrParts.building;
+  }
+
+  // 保険証画像をpatient dataに保存するためbase64をキャッシュ
+  ocrExtracted._imageData = document.getElementById('ocrPreviewImg').src;
+
+  showToast('読取結果を反映しました（漢字氏名・住所は要確認）');
+}
+
+function clearOcrPreview() {
+  document.getElementById('ocrPreviewWrap').style.display = 'none';
+  document.getElementById('ocrPreviewImg').src = '';
+  document.getElementById('ocrResultArea').innerHTML = '';
+  document.getElementById('ocrApplyBtn').style.display = 'none';
+  ocrExtracted = null;
+  const hint = document.getElementById('newNameGuess');
+  if (hint) hint.style.display = 'none';
 }
 
 function autoFillAddress(zip) {
@@ -322,7 +571,7 @@ function addNewPatient(andOpen) {
     allergies: [], history: [], prevRx: [], prevDays: 0, prevVisitDate: '',
     vehicle: { plate: document.getElementById('newPlate').value || '---', lane: parseInt(document.getElementById('newLane').value) || 1 },
     status: andOpen ? 'waiting' : 'waiting', memo: '',
-    insurancePhoto: null, insuranceNumber: '', insurerNumber: (newInsurerNum ? newInsurerNum.value : ''), kouhiNumber: '', incomeLevel: 'ippan', questionnaire: null,
+    insurancePhoto: (ocrExtracted && ocrExtracted._imageData) ? ocrExtracted._imageData : null, insuranceNumber: '', insurerNumber: (newInsurerNum ? newInsurerNum.value : ''), kouhiNumber: '', incomeLevel: 'ippan', questionnaire: null,
     arrivedAt: now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0'),
     visitDate: selectedDate, pastKartes: [], pastVitals: []
   };

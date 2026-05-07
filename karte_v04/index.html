@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=1024">
 <title>ドライブスルー診療 電子カルテ v0.4</title>
 <link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 
@@ -335,12 +336,49 @@
 <div class="modal-overlay" id="newPatientModal">
   <div class="modal" style="min-width:500px;">
     <h3>新規患者登録 <button class="modal-close" onclick="closeModal('newPatientModal')">&times;</button></h3>
+
+    <!-- 保険証読取セクション -->
+    <div class="ocr-section">
+      <div class="ocr-header">
+        <span class="ocr-icon">&#128247;</span>
+        <span>保険証読取</span>
+        <button class="btn btn-sm btn-outline" onclick="document.getElementById('ocrFileInput').click()">ファイル選択</button>
+        <button class="btn btn-sm btn-primary" onclick="startOcrCamera()">カメラ起動</button>
+        <input type="file" id="ocrFileInput" accept="image/*" style="display:none" onchange="onOcrFileSelected(this)">
+      </div>
+      <!-- カメラプレビュー -->
+      <div id="ocrCameraWrap" style="display:none;">
+        <video id="ocrVideo" autoplay playsinline style="width:100%;max-height:240px;border-radius:6px;background:#000;"></video>
+        <div style="text-align:center;margin-top:6px;">
+          <button class="btn btn-sm btn-primary" onclick="captureOcrPhoto()">撮影</button>
+          <button class="btn btn-sm btn-outline" onclick="stopOcrCamera()">閉じる</button>
+        </div>
+      </div>
+      <!-- 読取結果プレビュー -->
+      <div id="ocrPreviewWrap" style="display:none;">
+        <div class="ocr-preview-row">
+          <img id="ocrPreviewImg" style="max-height:160px;border-radius:6px;border:1px solid var(--border);">
+          <div id="ocrResultPanel" class="ocr-result-panel">
+            <div id="ocrProgressArea" style="display:none;">
+              <div class="ocr-progress-bar"><div id="ocrProgressFill" class="ocr-progress-fill"></div></div>
+              <span id="ocrProgressText" style="font-size:11px;color:var(--text-muted);">準備中...</span>
+            </div>
+            <div id="ocrResultArea" style="display:none;"></div>
+          </div>
+        </div>
+        <div style="text-align:right;margin-top:6px;">
+          <button class="btn btn-sm btn-outline" onclick="clearOcrPreview()">クリア</button>
+          <button class="btn btn-sm btn-success" id="ocrApplyBtn" style="display:none;" onclick="applyOcrResults()">読取結果を反映</button>
+        </div>
+      </div>
+    </div>
+
     <div class="edit-form-row">
       <label>患者番号<span class="req">*</span></label>
       <input type="text" id="newPatientNo" class="auto-field" readonly>
       <span style="font-size:10px;color:var(--text-muted);">自動採番</span>
     </div>
-    <div class="edit-form-row"><label>漢字氏名<span class="req">*</span></label><input type="text" id="newName" placeholder="山田 太郎"></div>
+    <div class="edit-form-row"><label>漢字氏名<span class="req">*</span></label><input type="text" id="newName" placeholder="山田 太郎"><span id="newNameGuess" class="ocr-guess-hint" style="display:none;"></span></div>
     <div class="edit-form-row"><label>カナ氏名<span class="req">*</span></label><input type="text" id="newNameKana" placeholder="ヤマダ タロウ（全角カナ）"></div>
     <div class="edit-form-row">
       <label>性別<span class="req">*</span></label>
@@ -499,6 +537,8 @@
 </div>
 
 <script src="insurance_calc.js"></script>
+<script src="name_dict.js"></script>
+<script src="ocr_engine.js"></script>
 <script src="db_integration.js"></script>
 <script src="resizer.js"></script>
 <script src="app.js"></script>

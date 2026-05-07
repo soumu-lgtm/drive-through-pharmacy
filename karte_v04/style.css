@@ -593,3 +593,96 @@ body.resizing img {
 .calc-detail { font-size: 11px; color: var(--text-muted); padding-left: 8px; }
 .calc-warnings { background: #fef9c3; border: 1px solid #fde68a; }
 .calc-warning { font-size: 11px; color: #92400e; padding: 2px 0; }
+
+/* ===== OCR Section ===== */
+.ocr-section {
+  background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+  border: 1px dashed var(--primary);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+.ocr-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.ocr-icon { font-size: 18px; }
+.ocr-header > span:nth-child(2) {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--primary);
+  flex: 1;
+}
+.btn-sm {
+  padding: 3px 10px;
+  font-size: 11px;
+  border-radius: 5px;
+}
+.ocr-preview-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.ocr-preview-row > img {
+  flex-shrink: 0;
+  max-width: 45%;
+  object-fit: contain;
+}
+.ocr-result-panel {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+}
+.ocr-progress-bar {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+.ocr-progress-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 3px;
+  width: 0%;
+  transition: width 0.3s;
+}
+.ocr-field-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: 12px;
+}
+.ocr-field-label {
+  font-weight: 600;
+  color: var(--text-muted);
+  min-width: 70px;
+  flex-shrink: 0;
+}
+.ocr-field-value {
+  font-weight: 700;
+  color: var(--text);
+  word-break: break-all;
+}
+.ocr-field-value.low-conf {
+  color: var(--warning);
+}
+.ocr-field-check {
+  color: var(--success);
+  font-size: 11px;
+}
+.ocr-field-warn {
+  color: var(--warning);
+  font-size: 11px;
+}
+.ocr-guess-hint {
+  font-size: 10px;
+  color: var(--primary);
+  margin-left: 4px;
+  cursor: pointer;
+  text-decoration: underline;
+  white-space: nowrap;
+}
