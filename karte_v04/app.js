@@ -309,7 +309,8 @@ function processOcrImage(dataUrl) {
     document.getElementById('ocrProgressFill').style.width = pct + '%';
   }).then(data => {
     progressArea.style.display = 'none';
-    const fields = OCR_ENGINE.extractInsuranceFields(data.text);
+    // マルチパスOCRのマージ結果があればそれを使用
+    const fields = data._mergedFields || OCR_ENGINE.extractInsuranceFields(data.text);
     ocrExtracted = fields;
 
     // フリガナから漢字推測

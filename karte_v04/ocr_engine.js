@@ -1,5 +1,5 @@
-// ocr_engine.js - 保険証OCRエンジン（完全ローカル処理、外部送信なし）
-// Tesseract.js v5 + 画像前処理 + スマートフィールド抽出
+// ocr_engine.js - 保険証OCRエンジン v2（完全ローカル処理、外部送信なし）
+// Tesseract.js v5 + HSV彩度フィルタ + 適応的閾値処理 + マルチパスOCR
 
 const OCR_ENGINE = (() => {
 
@@ -26,9 +26,8 @@ const OCR_ENGINE = (() => {
           }
         }
       });
-      // 数字と日本語の認識精度向上のためPSMを設定
       await worker.setParameters({
-        tessedit_pageseg_mode: '6', // Assume a single uniform block of text
+        tessedit_pageseg_mode: '6',
       });
       isInitialized = true;
       if (progressCb) progressCb('準備完了', 100);
@@ -36,80 +35,193 @@ const OCR_ENGINE = (() => {
     return initPromise;
   }
 
-  // ===== 2. 画像前処理（Canvas） =====
-  function preprocessImage(imgElement) {
+  // ===== 2. 画像前処理 v2: 保険証特化 =====
+
+  // --- 2a. アンシャープマスク（カメラぼけ補正） ---
+  function sharpen(ctx, w, h) {
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const src = new Uint8ClampedArray(imgData.data);
+    const dst = imgData.data;
+    // 3x3 sharpen kernel (center=9, cross=-1, corners=-1 → edge-preserving sharpen)
+    const amount = 0.4; // mix ratio
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        for (let c = 0; c < 3; c++) {
+          const idx = (y * w + x) * 4 + c;
+          const sharp = 5 * src[idx]
+            - src[((y-1)*w+x)*4+c]
+            - src[((y+1)*w+x)*4+c]
+            - src[(y*w+x-1)*4+c]
+            - src[(y*w+x+1)*4+c];
+          dst[idx] = Math.max(0, Math.min(255, Math.round(src[idx] * (1 - amount) + sharp * amount)));
+        }
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+  }
+
+  // --- 2b. メイン前処理: 彩度フィルタ + 適応的閾値 ---
+  function preprocessInsuranceCard(imgElement) {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
-    // 解像度を上げてOCR精度向上（最大2000px幅）
-    const scale = Math.min(2000 / imgElement.naturalWidth, 2);
+    // 解像度を上げてOCR精度向上（最大2400px幅）
+    const scale = Math.min(2400 / imgElement.naturalWidth, 3);
     canvas.width = Math.round(imgElement.naturalWidth * scale);
     canvas.height = Math.round(imgElement.naturalHeight * scale);
     ctx.drawImage(imgElement, 0, 0, canvas.width, canvas.height);
 
-    // グレースケール変換 + コントラスト強化 + 二値化
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
+    // シャープニング
+    sharpen(ctx, canvas.width, canvas.height);
 
-    // Step 1: グレースケール
-    for (let i = 0; i < data.length; i += 4) {
-      const gray = data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114;
-      data[i] = data[i+1] = data[i+2] = gray;
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const d = imgData.data;
+    const w = canvas.width, h = canvas.height, n = w * h;
+
+    // ====== Phase 1: HSV彩度フィルタ ======
+    // 色付きピクセル（黄色背景、ウォーターマーク）→ 白に変換
+    // 黒/灰色テキスト（低彩度+暗い）→ グレースケールとして保持
+    const gray = new Uint8Array(n);
+
+    for (let i = 0; i < n; i++) {
+      const r = d[i*4], g = d[i*4+1], b = d[i*4+2];
+      const maxC = Math.max(r, g, b);
+      const minC = Math.min(r, g, b);
+      const sat = maxC > 0 ? (maxC - minC) / maxC : 0;
+
+      // 彩度が高い → 色付き背景/ウォーターマーク → 白
+      // 彩度が低い + 暗い → テキスト候補 → グレースケール保持
+      if (sat > 0.15 && maxC > 60) {
+        gray[i] = 255; // 色付きピクセルは白に
+      } else {
+        gray[i] = Math.round(r * 0.299 + g * 0.587 + b * 0.114);
+      }
     }
 
-    // Step 2: コントラスト強化（CLAHE的な簡易版）
+    // ====== Phase 2: 適応的閾値（ダウンサンプル平均法） ======
+    // グローバルOtsuの代わりに局所平均を使う
+    // これによりキーボード等の暗い背景領域でも正しく処理できる
+    const blockSize = 32;
+    const C_THRESH = 12; // 局所平均からの差分閾値
+    const dw = Math.ceil(w / blockSize);
+    const dh = Math.ceil(h / blockSize);
+    const blockMeans = new Float32Array(dw * dh);
+    const blockCounts = new Uint32Array(dw * dh);
+
+    // ブロック平均を計算
+    for (let y = 0; y < h; y++) {
+      const by = Math.min(Math.floor(y / blockSize), dh - 1);
+      for (let x = 0; x < w; x++) {
+        const bx = Math.min(Math.floor(x / blockSize), dw - 1);
+        const bi = by * dw + bx;
+        blockMeans[bi] += gray[y * w + x];
+        blockCounts[bi]++;
+      }
+    }
+    for (let i = 0; i < dw * dh; i++) {
+      blockMeans[i] = blockCounts[i] > 0 ? blockMeans[i] / blockCounts[i] : 128;
+    }
+
+    // バイリニア補間で各ピクセルの局所閾値を計算し、二値化
+    for (let y = 0; y < h; y++) {
+      const fy = (y + 0.5) / blockSize - 0.5;
+      const by0 = Math.max(0, Math.min(Math.floor(fy), dh - 2));
+      const by1 = by0 + 1;
+      const ty = fy - by0;
+
+      for (let x = 0; x < w; x++) {
+        const fx = (x + 0.5) / blockSize - 0.5;
+        const bx0 = Math.max(0, Math.min(Math.floor(fx), dw - 2));
+        const bx1 = bx0 + 1;
+        const tx = fx - bx0;
+
+        // 4ブロックの平均をバイリニア補間
+        const m00 = blockMeans[by0 * dw + bx0];
+        const m10 = blockMeans[by0 * dw + bx1];
+        const m01 = blockMeans[by1 * dw + bx0];
+        const m11 = blockMeans[by1 * dw + bx1];
+        const localMean = m00*(1-tx)*(1-ty) + m10*tx*(1-ty) + m01*(1-tx)*ty + m11*tx*ty;
+
+        const idx = y * w + x;
+        const threshold = localMean - C_THRESH;
+        const v = gray[idx] < threshold ? 0 : 255;
+        d[idx*4] = d[idx*4+1] = d[idx*4+2] = v;
+      }
+    }
+
+    ctx.putImageData(imgData, 0, 0);
+    return canvas;
+  }
+
+  // --- 2c. シンプル前処理（白背景カード用のフォールバック） ---
+  function preprocessSimple(imgElement) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const scale = Math.min(2400 / imgElement.naturalWidth, 3);
+    canvas.width = Math.round(imgElement.naturalWidth * scale);
+    canvas.height = Math.round(imgElement.naturalHeight * scale);
+    ctx.drawImage(imgElement, 0, 0, canvas.width, canvas.height);
+
+    sharpen(ctx, canvas.width, canvas.height);
+
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const d = imgData.data;
+    const n = d.length / 4;
+
+    // グレースケール変換
+    for (let i = 0; i < n; i++) {
+      const gray = Math.round(d[i*4] * 0.299 + d[i*4+1] * 0.587 + d[i*4+2] * 0.114);
+      d[i*4] = d[i*4+1] = d[i*4+2] = gray;
+    }
+
+    // コントラスト強化
     let min = 255, max = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      if (data[i] < min) min = data[i];
-      if (data[i] > max) max = data[i];
+    for (let i = 0; i < n; i++) {
+      if (d[i*4] < min) min = d[i*4];
+      if (d[i*4] > max) max = d[i*4];
     }
     const range = max - min || 1;
-    for (let i = 0; i < data.length; i += 4) {
-      const v = Math.round(((data[i] - min) / range) * 255);
-      data[i] = data[i+1] = data[i+2] = v;
+    for (let i = 0; i < n; i++) {
+      const v = Math.round(((d[i*4] - min) / range) * 255);
+      d[i*4] = d[i*4+1] = d[i*4+2] = v;
     }
 
-    // Step 3: 適応的二値化（Otsu's method 簡易版）
+    // Otsu二値化
     const histogram = new Array(256).fill(0);
-    for (let i = 0; i < data.length; i += 4) histogram[data[i]]++;
-    const totalPixels = data.length / 4;
+    for (let i = 0; i < n; i++) histogram[d[i*4]]++;
     let sum = 0;
     for (let i = 0; i < 256; i++) sum += i * histogram[i];
-
-    let sumB = 0, wB = 0, wF = 0, maxVariance = 0, threshold = 128;
+    let sumB = 0, wB = 0, wF = 0, maxVar = 0, threshold = 128;
     for (let t = 0; t < 256; t++) {
       wB += histogram[t];
       if (wB === 0) continue;
-      wF = totalPixels - wB;
+      wF = n - wB;
       if (wF === 0) break;
       sumB += t * histogram[t];
       const mB = sumB / wB;
       const mF = (sum - sumB) / wF;
-      const variance = wB * wF * (mB - mF) * (mB - mF);
-      if (variance > maxVariance) { maxVariance = variance; threshold = t; }
+      const v = wB * wF * (mB - mF) * (mB - mF);
+      if (v > maxVar) { maxVar = v; threshold = t; }
+    }
+    for (let i = 0; i < n; i++) {
+      const v = d[i*4] > threshold ? 255 : 0;
+      d[i*4] = d[i*4+1] = d[i*4+2] = v;
     }
 
-    for (let i = 0; i < data.length; i += 4) {
-      const v = data[i] > threshold ? 255 : 0;
-      data[i] = data[i+1] = data[i+2] = v;
-    }
-
-    ctx.putImageData(imageData, 0, 0);
+    ctx.putImageData(imgData, 0, 0);
     return canvas;
   }
 
-  // ===== 3. OCR実行 =====
+  // ===== 3. OCR実行（マルチパス） =====
   async function recognize(imgSource, progressCb) {
     await init(progressCb);
 
-    // 画像要素を作成
+    // 画像読み込み
     let imgEl;
-    if (imgSource instanceof HTMLImageElement) {
-      imgEl = imgSource;
-    } else if (imgSource instanceof HTMLCanvasElement) {
+    if (imgSource instanceof HTMLImageElement || imgSource instanceof HTMLCanvasElement) {
       imgEl = imgSource;
     } else if (typeof imgSource === 'string') {
-      // base64 or URL
       imgEl = new Image();
       imgEl.src = imgSource;
       await new Promise((resolve, reject) => {
@@ -118,43 +230,84 @@ const OCR_ENGINE = (() => {
       });
     }
 
-    // 前処理
-    if (progressCb) progressCb('画像前処理中...', 0);
-    const processed = (imgEl instanceof HTMLCanvasElement) ? imgEl : preprocessImage(imgEl);
+    // === パス1: 保険証特化前処理 ===
+    if (progressCb) progressCb('前処理中（カラーフィルタ）...', 5);
+    const processed1 = preprocessInsuranceCard(imgEl);
 
-    // OCR実行
-    if (progressCb) progressCb('文字認識中...', 10);
-    const result = await worker.recognize(processed);
+    if (progressCb) progressCb('文字認識中（1回目）...', 10);
+    const result1 = await worker.recognize(processed1);
+    const text1 = result1.data.text;
+    const fields1 = extractInsuranceFields(text1);
+
+    // 信頼度が十分ならそのまま返す
+    if (fields1.confidence >= 60) {
+      if (progressCb) progressCb('解析完了', 100);
+      return result1.data;
+    }
+
+    // === パス2: シンプル前処理で再試行 ===
+    if (progressCb) progressCb('精度不足、別の前処理で再試行中...', 50);
+    const processed2 = preprocessSimple(imgEl);
+    const result2 = await worker.recognize(processed2);
+    const text2 = result2.data.text;
+    const fields2 = extractInsuranceFields(text2);
+
+    // フィールドレベルでマージ（各フィールドで見つかった方を採用）
+    if (progressCb) progressCb('結果統合中...', 90);
+    const merged = mergeFields(fields1, fields2);
+
+    // マージ結果のテキストを設定
+    const bestData = merged._source2Better ? result2.data : result1.data;
+    bestData._mergedFields = merged;
     if (progressCb) progressCb('解析完了', 100);
+    return bestData;
+  }
 
-    return result.data;
+  // フィールドマージ: 2つの結果から各フィールドのベストを選択
+  function mergeFields(f1, f2) {
+    const result = { ...f1 };
+    const fieldNames = ['insurerNumber','symbol','memberNumber','name','nameKana',
+      'dob','sex','address','postalCode','expiry','insurerName','qualifier'];
+    let f2Wins = 0;
+    for (const key of fieldNames) {
+      if (!f1[key] && f2[key]) {
+        result[key] = f2[key];
+        f2Wins++;
+      }
+    }
+    // 信頼度を再計算
+    let score = 0;
+    if (result.insurerNumber) score += 25;
+    if (result.dob) score += 20;
+    if (result.nameKana) score += 15;
+    if (result.name) score += 10;
+    if (result.sex) score += 5;
+    if (result.postalCode) score += 10;
+    if (result.address) score += 10;
+    if (result.memberNumber) score += 5;
+    result.confidence = score;
+    result._source2Better = f2.confidence > f1.confidence;
+    result.rawText = f1.rawText + '\n---\n' + f2.rawText;
+    return result;
   }
 
   // ===== 4. OCRテキスト正規化（Tesseract.jsの文字間スペース除去） =====
   function normalizeOcrText(rawText) {
-    // Tesseract.jsは日本語文字間にスペースを挿入する傾向がある
-    // 例: "ヤマ ダ タロ ウ" → "ヤマダ タロウ"
-    // 例: "愛知 県 北 名 古屋 市" → "愛知県北名古屋市"
     return rawText.replace(/\r\n/g, '\n').split('\n').map(line => {
-      // カタカナ行: 1-2文字のカタカナ間のスペースを除去し、3文字以上の区切りは姓名の区切りとして残す
+      // カタカナ行: スペース除去後に辞書で姓名分割
       if (/[ァ-ヶー]/.test(line) && !/[a-zA-Z0-9]/.test(line)) {
-        // まず全スペースを除去してから、カタカナ列を分析
         const noSpace = line.replace(/\s+/g, '');
         if (/^[ァ-ヶー]+$/.test(noSpace) && noSpace.length >= 3) {
-          // 全部カタカナ→姓名辞書で分割ポイントを推測
           return guessKanaSplit(noSpace);
         }
       }
-      // 漢字・日本語文字間の不要スペース除去
-      // 「漢字 漢字」のパターンで、両方が漢字/ひらがな/カタカナなら結合
       let normalized = line;
-      // CJK文字間の1スペースを除去（数字・ラテン文字の前後は残す）
-      normalized = normalized.replace(/([\u3000-\u9fff\uff00-\uffef])\s+([\u3000-\u9fff\uff00-\uffef])/g, '$1$2');
-      // 繰り返し適用（3文字以上の連続に対応）
-      normalized = normalized.replace(/([\u3000-\u9fff\uff00-\uffef])\s+([\u3000-\u9fff\uff00-\uffef])/g, '$1$2');
-      normalized = normalized.replace(/([\u3000-\u9fff\uff00-\uffef])\s+([\u3000-\u9fff\uff00-\uffef])/g, '$1$2');
+      // CJK文字間のスペース除去（3回適用で連続対応）
+      for (let i = 0; i < 3; i++) {
+        normalized = normalized.replace(/([\u3000-\u9fff\uff00-\uffef])\s+([\u3000-\u9fff\uff00-\uffef])/g, '$1$2');
+      }
       // ラベルキーワードの後にスペースを復元
-      normalized = normalized.replace(/(氏名|住所|記号|番号|性別|生年月日|有効期限|保険者番号|被保険者番号|保険者名称|資格取得)(?=[^\s])/g, '$1 ');
+      normalized = normalized.replace(/(氏名|住所|記号|番号|性別|生年月日|有効期限|保険者番号|被保険者番号|保険者名称|資格取得|保険者所在地|枝番)(?=[^\s])/g, '$1 ');
       return normalized;
     }).join('\n');
   }
@@ -162,14 +315,12 @@ const OCR_ENGINE = (() => {
   // カタカナ列を姓名に分割（辞書ベース）
   function guessKanaSplit(kataStr) {
     if (typeof NAME_DICT === 'undefined') return kataStr;
-    // 前方一致で姓を探す（長い方優先）
     for (let len = Math.min(kataStr.length - 1, 5); len >= 2; len--) {
       const surPart = kataStr.substring(0, len);
       if (NAME_DICT.SURNAME[surPart]) {
         return surPart + ' ' + kataStr.substring(len);
       }
     }
-    // 後方一致で名を探す
     for (let len = Math.min(kataStr.length - 1, 5); len >= 2; len--) {
       const givPart = kataStr.substring(kataStr.length - len);
       if (NAME_DICT.MALE_GIVEN[givPart] || NAME_DICT.FEMALE_GIVEN[givPart]) {
@@ -186,31 +337,47 @@ const OCR_ENGINE = (() => {
     const fullText = lines.join(' ');
 
     const result = {
-      insurerNumber: null,     // 保険者番号
-      symbol: null,            // 記号
-      memberNumber: null,      // 番号
-      name: null,              // 氏名（漢字）
-      nameKana: null,          // フリガナ
-      dob: null,               // 生年月日（YYYY-MM-DD）
-      sex: null,               // 性別
-      address: null,           // 住所
-      postalCode: null,        // 郵便番号
-      expiry: null,            // 有効期限
-      insurerName: null,       // 保険者名称
-      qualifier: null,         // 資格取得年月日
+      insurerNumber: null,
+      symbol: null,
+      memberNumber: null,
+      name: null,
+      nameKana: null,
+      dob: null,
+      sex: null,
+      address: null,
+      postalCode: null,
+      expiry: null,
+      insurerName: null,
+      qualifier: null,
       rawText: text,
       confidence: 0
     };
 
     // --- 保険者番号（6桁 or 8桁の数字列） ---
     const insurerPatterns = [
+      /保険者番号[:\s：]*(\d{6,8})/,
       /保険者[番号\s]*[:\s：]*(\d{6,8})/,
-      /保険者番号\s*(\d{6,8})/,
-      /(?:^|\s)(\d{8})(?:\s|$)/m,  // 単独の8桁数字
+      // ボックス表示: 各桁がスペースで区切られている場合
+      /保険者番号[:\s：]*(\d[\s]*\d[\s]*\d[\s]*\d[\s]*\d[\s]*\d[\s]*\d[\s]*\d)/,
     ];
     for (const pat of insurerPatterns) {
       const m = fullText.match(pat);
-      if (m) { result.insurerNumber = m[1]; break; }
+      if (m) {
+        result.insurerNumber = m[1].replace(/\s/g, '');
+        if (result.insurerNumber.length >= 6) break;
+      }
+    }
+    // フォールバック: 行単位で保険者番号を探す
+    if (!result.insurerNumber) {
+      for (const line of lines) {
+        if (/保険者番号/.test(line) || /保険者\s*番号/.test(line)) {
+          const nums = line.match(/\d/g);
+          if (nums && nums.length >= 6) {
+            result.insurerNumber = nums.slice(0, 8).join('');
+            break;
+          }
+        }
+      }
     }
 
     // --- 記号・番号 ---
@@ -223,7 +390,6 @@ const OCR_ENGINE = (() => {
       if (m) { result.symbol = m[1].replace(/[番号]/g, '').trim(); break; }
     }
 
-    // 「番号」は「保険者番号」のマッチを避ける
     const numPatterns = [
       /記号[^\n]*?番号[:\s：]*(\d{1,10})/,
       /被保険者番号[:\s：]*(\d{1,10})/,
@@ -235,23 +401,21 @@ const OCR_ENGINE = (() => {
       if (m && m[1] !== result.insurerNumber) { result.memberNumber = m[1]; break; }
     }
 
+    // --- 枝番 ---
+    const edaMatch = fullText.match(/枝番[:\s：）)]*(\d{1,2})/);
+    if (edaMatch) result.branchNumber = edaMatch[1];
+
     // --- 生年月日 ---
     const dobPatterns = [
-      // 和暦パターン
-      /(昭和|平成|令和)\s*(\d{1,2})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/,
-      // 西暦パターン
-      /(\d{4})\s*[年\/\-\.]\s*(\d{1,2})\s*[月\/\-\.]\s*(\d{1,2})\s*日?/,
-      // 生年月日ラベル付き
-      /生年月日[:\s：]*(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/,
       /生年月日[:\s：]*(昭和|平成|令和)\s*(\d{1,2})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/,
+      /(昭和|平成|令和)\s*(\d{1,2})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/,
+      /生年月日[:\s：]*(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/,
+      /(\d{4})\s*[年\/\-\.]\s*(\d{1,2})\s*[月\/\-\.]\s*(\d{1,2})\s*日?/,
     ];
     for (const pat of dobPatterns) {
       const m = fullText.match(pat);
       if (m) {
         if (['昭和','平成','令和'].includes(m[1])) {
-          const year = eraToWestern(m[1], parseInt(m[2]));
-          result.dob = `${year}-${String(m[3]).padStart(2,'0')}-${String(m[4]).padStart(2,'0')}`;
-        } else if (m.length === 5 && ['昭和','平成','令和'].includes(m[1])) {
           const year = eraToWestern(m[1], parseInt(m[2]));
           result.dob = `${year}-${String(m[3]).padStart(2,'0')}-${String(m[4]).padStart(2,'0')}`;
         } else {
@@ -265,12 +429,13 @@ const OCR_ENGINE = (() => {
     }
 
     // --- 性別 ---
-    if (/男/.test(fullText) && !/女/.test(fullText)) result.sex = '男';
-    else if (/女/.test(fullText) && !/男/.test(fullText)) result.sex = '女';
-    else {
-      // 「男」「女」の出現位置で判断（性別欄に近い方）
-      const sexAreaMatch = fullText.match(/(?:性別|sex)[:\s：]*(男|女)/i);
-      if (sexAreaMatch) result.sex = sexAreaMatch[1];
+    const sexMatch = fullText.match(/性別[:\s：]*(男|女)/);
+    if (sexMatch) {
+      result.sex = sexMatch[1];
+    } else if (/男/.test(fullText) && !/女/.test(fullText)) {
+      result.sex = '男';
+    } else if (/女/.test(fullText) && !/男/.test(fullText)) {
+      result.sex = '女';
     }
 
     // --- フリガナ（カタカナ列の抽出） ---
@@ -280,19 +445,16 @@ const OCR_ENGINE = (() => {
     while ((km = kanaPattern.exec(fullText)) !== null) {
       kanaMatches.push(km[1]);
     }
-    // 最も長いカタカナ列を名前のフリガナとする
     if (kanaMatches.length > 0) {
       kanaMatches.sort((a, b) => b.length - a.length);
       result.nameKana = kanaMatches[0].replace(/[\s　]+/g, ' ').trim();
     }
 
     // --- 氏名（漢字） ---
-    // 行単位で「氏名」ラベルを探し、その後ろの漢字を取る
     for (const line of lines) {
       const m = line.match(/氏名[\s：:]+(.+)/);
       if (m) {
         let name = m[1].replace(/[（(].*/,'').replace(/記号|番号|保険|住所|生年|証|被|健康/g,'').trim();
-        // 漢字が連結されている場合（「山田太郎」）、姓名辞書で分割
         if (/^[\u4e00-\u9fff]+$/.test(name) && name.length >= 3 && typeof NAME_DICT !== 'undefined') {
           for (let len = Math.min(name.length - 1, 4); len >= 1; len--) {
             const surPart = name.substring(0, len);
@@ -311,11 +473,9 @@ const OCR_ENGINE = (() => {
         }
       }
     }
-    // fallback: フリガナの直前行を漢字氏名とみなす
     if (!result.name && result.nameKana) {
       for (let i = 1; i < lines.length; i++) {
         if (/[ァ-ヶー]{2,}/.test(lines[i]) && lines[i].includes(result.nameKana.replace(' ',''))) {
-          // 前の行が漢字を含むか
           const prev = lines[i-1];
           if (/[\u4e00-\u9fff]{1,}[\s　]+[\u4e00-\u9fff]{1,}/.test(prev)) {
             result.name = prev.trim();
@@ -332,23 +492,21 @@ const OCR_ENGINE = (() => {
     }
 
     // --- 住所 ---
-    // 行単位で住所を探す（次のフィールドラベルで切る）
     for (const line of lines) {
-      const m = line.match(/住\s*所[:\s：]*(.*)/);
-      if (m && m[1].length >= 5) {
+      const m = line.match(/(?:住\s*所|所在地)[:\s：]*(.*)/);
+      if (m && m[1].length >= 3) {
         result.address = m[1].replace(/電話|TEL|tel|保険者|有効期限|資格|事業所/g, '').trim();
         break;
       }
     }
-    // fallback: fullTextから（ただし後続ラベルで切る）
     if (!result.address) {
       const addrPatterns = [
-        /住\s*所[:\s：]*(.+?)(?=\s*(?:電話|TEL|有効期限|保険者|資格|事業所|$))/,
+        /(?:住\s*所|所在地)[:\s：]*(.+?)(?=\s*(?:電話|TEL|有効期限|保険者|資格|事業所|$))/,
         /(?:〒\s*\d{3}[\-ー]\d{4}\s*)(.+?)(?=\s*(?:電話|TEL|有効期限|保険者|資格|事業所|$))/,
       ];
       for (const pat of addrPatterns) {
         const m = fullText.match(pat);
-        if (m && m[1].length >= 5) {
+        if (m && m[1].length >= 3) {
           result.address = m[1].replace(/電話|TEL|tel|保険者/g, '').trim();
           break;
         }
@@ -372,10 +530,31 @@ const OCR_ENGINE = (() => {
       }
     }
 
+    // --- 資格取得年月日 ---
+    const qualPatterns = [
+      /資格取得[年月日:\s：]*(令和|平成)\s*(\d{1,2})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/,
+    ];
+    for (const pat of qualPatterns) {
+      const m = fullText.match(pat);
+      if (m) {
+        result.qualifier = `${eraToWestern(m[1], parseInt(m[2]))}-${String(m[3]).padStart(2,'0')}-${String(m[4]).padStart(2,'0')}`;
+        break;
+      }
+    }
+
     // --- 保険者名称 ---
-    const insurerNameMatch = fullText.match(/保険者[名称\s]*[:\s：]*([^\n\d]{2,30})/);
-    if (insurerNameMatch && !insurerNameMatch[1].match(/番号/)) {
-      result.insurerName = insurerNameMatch[1].trim();
+    for (const line of lines) {
+      const m = line.match(/保険者名称[:\s：]*(.*)/);
+      if (m && m[1].length >= 2 && !/番号/.test(m[1])) {
+        result.insurerName = m[1].trim();
+        break;
+      }
+    }
+    if (!result.insurerName) {
+      const insurerNameMatch = fullText.match(/保険者名称[:\s：]*([^\n\d]{2,30})/);
+      if (insurerNameMatch && !insurerNameMatch[1].match(/番号/)) {
+        result.insurerName = insurerNameMatch[1].trim();
+      }
     }
 
     // --- 信頼度スコア計算 ---
@@ -393,24 +572,18 @@ const OCR_ENGINE = (() => {
     return result;
   }
 
-  // ===== 5. 数字特化OCR（保険者番号・郵便番号向け） =====
+  // ===== 6. 数字特化OCR（保険者番号・郵便番号向け） =====
   async function recognizeNumbers(imgSource, progressCb) {
     await init(progressCb);
-
-    // 数字認識用に whitelist 設定
     await worker.setParameters({
       tessedit_char_whitelist: '0123456789',
-      tessedit_pageseg_mode: '7', // Treat the image as a single text line
+      tessedit_pageseg_mode: '7',
     });
-
     const result = await worker.recognize(imgSource);
-
-    // 設定を元に戻す
     await worker.setParameters({
       tessedit_char_whitelist: '',
       tessedit_pageseg_mode: '6',
     });
-
     return result.data.text.replace(/\s/g, '');
   }
 
@@ -420,34 +593,25 @@ const OCR_ENGINE = (() => {
     return (base[era] || 0) + year;
   }
 
-  // 住所から郵便番号推定（逆引き）はzipcloud APIでは不可なので、
-  // 都道府県の抽出だけ行う
   function extractPrefecture(address) {
     if (!address) return null;
     const prefMatch = address.match(/(北海道|青森県|岩手県|宮城県|秋田県|山形県|福島県|茨城県|栃木県|群馬県|埼玉県|千葉県|東京都|神奈川県|新潟県|富山県|石川県|福井県|山梨県|長野県|岐阜県|静岡県|愛知県|三重県|滋賀県|京都府|大阪府|兵庫県|奈良県|和歌山県|鳥取県|島根県|岡山県|広島県|山口県|徳島県|香川県|愛媛県|高知県|福岡県|佐賀県|長崎県|熊本県|大分県|宮崎県|鹿児島県|沖縄県)/);
     return prefMatch ? prefMatch[1] : null;
   }
 
-  // 住所分割（都道府県・市区町村・番地・建物）
   function splitAddress(address) {
     if (!address) return { pref: '', city: '', street: '', building: '' };
     const pref = extractPrefecture(address) || '';
     let rest = pref ? address.substring(address.indexOf(pref) + pref.length) : address;
-
-    // 市区町村を抽出
     const cityMatch = rest.match(/^(.+?[市区町村郡])/);
     const city = cityMatch ? cityMatch[1] : '';
     rest = city ? rest.substring(rest.indexOf(city) + city.length) : rest;
-
-    // 番地以降
     const buildingMatch = rest.match(/(\S*(?:ビル|マンション|アパート|ハイツ|コーポ|メゾン|荘|号室|棟|階).*)$/);
     const building = buildingMatch ? buildingMatch[1].trim() : '';
     const street = buildingMatch ? rest.substring(0, rest.indexOf(buildingMatch[1])).trim() : rest.trim();
-
     return { pref, city, street, building };
   }
 
-  // クリーンアップ
   async function terminate() {
     if (worker) {
       await worker.terminate();
@@ -457,6 +621,11 @@ const OCR_ENGINE = (() => {
     }
   }
 
+  // 後方互換: 旧 preprocessImage は preprocessInsuranceCard を使用
+  function preprocessImage(imgElement) {
+    return preprocessInsuranceCard(imgElement);
+  }
+
   return {
     init,
     recognize,
@@ -464,6 +633,8 @@ const OCR_ENGINE = (() => {
     extractInsuranceFields,
     normalizeOcrText,
     preprocessImage,
+    preprocessInsuranceCard,
+    preprocessSimple,
     splitAddress,
     extractPrefecture,
     eraToWestern,
