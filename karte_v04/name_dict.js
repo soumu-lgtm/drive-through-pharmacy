@@ -152,7 +152,7 @@ const NAME_DICT = (() => {
           given: givenCandidates[0] || null,
           surnameCandidates,
           givenCandidates: [...(MALE_GIVEN[origParts[1]] || []), ...(FEMALE_GIVEN[origParts[1]] || [])],
-          full: (surnameCandidates[0] || origParts[0]) + ' ' + (givenCandidates[0] || origParts[1]),
+          full: (surnameCandidates[0] || origParts[0]) + '\u3000' + (givenCandidates[0] || origParts[1]),
           confidence: (surnameCandidates.length > 0 ? 0.5 : 0) + (givenCandidates.length > 0 ? 0.5 : 0)
         };
       }
