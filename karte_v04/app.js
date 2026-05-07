@@ -288,6 +288,67 @@ function onOcrFileSelected(input) {
   input.value = '';
 }
 
+// === OCRフィールド厳格バリデーション ===
+// 間違った値を入れるより空白の方が遥かに安全。不正な値は容赦なく却下する。
+function validateOcrFields(f) {
+  const today = new Date();
+  const warnings = [];
+
+  // --- 生年月日: 未来日・1歳未満・120歳超は却下 ---
+  if (f.dob) {
+    const dobDate = new Date(f.dob);
+    const ageMsec = today - dobDate;
+    const ageYears = ageMsec / (365.25 * 24 * 60 * 60 * 1000);
+    if (isNaN(dobDate.getTime()) || dobDate > today || ageYears < 1 || ageYears > 120) {
+      warnings.push('生年月日 "' + f.dob + '" は不正（交付日の誤認識の可能性）。却下しました。');
+      f.dob = null;
+    }
+  }
+
+  // --- フリガナ: カタカナ文字が50%未満なら却下 ---
+  if (f.nameKana) {
+    const cleaned = f.nameKana.replace(/[\s　]/g, '');
+    const kataCount = (cleaned.match(/[ァ-ヶ]/g) || []).length;
+    if (cleaned.length === 0 || kataCount / cleaned.length < 0.5) {
+      warnings.push('フリガナ "' + f.nameKana + '" はカタカナとして不正。却下しました。');
+      f.nameKana = null;
+    }
+  }
+
+  // --- 保険者番号: 6-8桁の数字以外は却下 ---
+  if (f.insurerNumber) {
+    const cleaned = f.insurerNumber.replace(/\s/g, '');
+    if (!/^\d{6,8}$/.test(cleaned)) {
+      warnings.push('保険者番号 "' + f.insurerNumber + '" は数字6-8桁でない。却下しました。');
+      f.insurerNumber = null;
+    }
+  }
+
+  // --- 記号: 空白やゴミ文字のみなら却下 ---
+  if (f.symbol) {
+    const cleaned = f.symbol.replace(/[ーー\-\s]/g, '');
+    if (cleaned.length < 1) {
+      f.symbol = null;
+    }
+  }
+
+  // --- 氏名: 漢字を1文字も含まない場合は却下 ---
+  if (f.name) {
+    if (!/[\u4e00-\u9fff]/.test(f.name)) {
+      warnings.push('氏名 "' + f.name + '" に漢字が含まれない。却下しました。');
+      f.name = null;
+    }
+  }
+
+  // --- 住所: 都道府県名を含まない場合はwarnフラグ ---
+  if (f.address) {
+    f._addressUncertain = !/[都道府県]/.test(f.address) && !/市|区|町|村/.test(f.address);
+  }
+
+  f._validationWarnings = warnings;
+  return f;
+}
+
 function processOcrImage(dataUrl) {
   // プレビュー表示
   const wrap = document.getElementById('ocrPreviewWrap');
@@ -303,14 +364,34 @@ function processOcrImage(dataUrl) {
   resultArea.style.display = 'none';
   applyBtn.style.display = 'none';
 
-  // OCR実行
-  OCR_ENGINE.recognize(dataUrl, (status, pct) => {
-    document.getElementById('ocrProgressText').textContent = status;
-    document.getElementById('ocrProgressFill').style.width = pct + '%';
-  }).then(data => {
+  // ===== ハイブリッド方式: QRコード優先 → OCR補完 =====
+  // Step 1: QRコード検出（高速・確実）
+  document.getElementById('ocrProgressText').textContent = 'QRコード検出中...';
+  document.getElementById('ocrProgressFill').style.width = '10%';
+
+  const qrPromise = (typeof QR_DECODER !== 'undefined')
+    ? QR_DECODER.decodeFromDataUrl(dataUrl)
+    : Promise.resolve(null);
+
+  qrPromise.then(qrResult => {
+    // Step 2: OCR実行（QR有無に関わらず個人情報取得のため実行）
+    document.getElementById('ocrProgressText').textContent = 'OCR実行中...';
+    document.getElementById('ocrProgressFill').style.width = '20%';
+
+    return OCR_ENGINE.recognize(dataUrl, (status, pct) => {
+      document.getElementById('ocrProgressText').textContent = status;
+      document.getElementById('ocrProgressFill').style.width = (20 + pct * 0.8) + '%';
+    }).then(data => ({ qrResult, ocrData: data }));
+  }).then(({ qrResult, ocrData }) => {
     progressArea.style.display = 'none';
-    // マルチパスOCRのマージ結果があればそれを使用
-    const fields = data._mergedFields || OCR_ENGINE.extractInsuranceFields(data.text);
+
+    // OCRフィールド抽出
+    const ocrFields = ocrData._mergedFields || OCR_ENGINE.extractInsuranceFields(ocrData.text);
+    validateOcrFields(ocrFields);
+
+    // QRデータをOCR結果にマージ（QR優先）
+    const fields = mergeQrAndOcr(qrResult, ocrFields);
+
     ocrExtracted = fields;
 
     // フリガナから漢字推測
@@ -320,7 +401,6 @@ function processOcrImage(dataUrl) {
         fields.nameGuess = guess.full;
         fields.nameGuessCandidates = guess;
       }
-      // フリガナから性別推測
       if (!fields.sex) {
         const parts = fields.nameKana.split(/[\s　]+/);
         if (parts.length >= 2) {
@@ -330,13 +410,48 @@ function processOcrImage(dataUrl) {
       }
     }
 
-    // 結果表示
     renderOcrResult(fields);
   }).catch(err => {
     progressArea.style.display = 'none';
     resultArea.style.display = 'block';
-    resultArea.innerHTML = '<div style="color:var(--danger);font-size:12px;">OCRエラー: ' + err.message + '</div>';
+    resultArea.innerHTML = '<div style="color:var(--danger);font-size:12px;">読取エラー: ' + err.message + '</div>';
   });
+}
+
+/**
+ * QRコード結果とOCR結果をマージ
+ * QRコードのデータは100%信頼。OCRは個人情報のフォールバック。
+ */
+function mergeQrAndOcr(qrResult, ocrFields) {
+  const fields = Object.assign({}, ocrFields);
+  fields._qrResult = qrResult;
+
+  if (!qrResult || qrResult.format === 'unknown') return fields;
+
+  // QRから取得できるフィールドを上書き（QR=確実）
+  if (qrResult.insurerNumber) {
+    fields.insurerNumber = qrResult.insurerNumber;
+    fields._insurerFromQR = true;
+  }
+  if (qrResult.symbol) {
+    fields.symbol = qrResult.symbol;
+    fields._symbolFromQR = true;
+  }
+  if (qrResult.memberNumber) {
+    fields.memberNumber = qrResult.memberNumber;
+    fields._memberFromQR = true;
+  }
+  if (qrResult.edaban) {
+    fields.edaban = qrResult.edaban;
+    fields._edabanFromQR = true;
+  }
+
+  // 信頼度を再計算: QRから保険番号系が取れれば大幅アップ
+  if (qrResult.insurerNumber && qrResult.symbol && qrResult.memberNumber) {
+    fields.confidence = Math.max(fields.confidence || 0, 80);
+  }
+
+  return fields;
 }
 
 function renderOcrResult(f) {
@@ -344,27 +459,55 @@ function renderOcrResult(f) {
   area.style.display = 'block';
   document.getElementById('ocrApplyBtn').style.display = 'inline-block';
 
-  let html = '<div style="font-size:11px;font-weight:700;color:var(--primary);margin-bottom:4px;">読取結果（信頼度: ' + f.confidence + '%）</div>';
+  const hasQR = f._qrResult && f._qrResult.format !== 'unknown';
 
+  let html = '';
+
+  // QRコード読取成功バナー
+  if (hasQR) {
+    html += '<div style="background:#d4edda;border:1px solid #28a745;border-radius:4px;padding:4px 8px;margin-bottom:6px;font-size:11px;color:#155724;font-weight:700;">';
+    html += '&#10004; QRコード読取成功（保険番号系は確実）';
+    html += '</div>';
+  }
+
+  html += '<div style="font-size:11px;font-weight:700;color:var(--primary);margin-bottom:4px;">読取結果</div>';
+
+  // バリデーション警告を表示
+  if (f._validationWarnings && f._validationWarnings.length > 0) {
+    html += '<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:4px 8px;margin-bottom:6px;font-size:10px;color:#856404;">';
+    html += '&#9888; ' + f._validationWarnings.join('<br>&#9888; ');
+    html += '</div>';
+  }
+
+  // QR由来 = ✓確認済み（緑）, OCR由来 = ⚠要確認（黄）
   const rows = [
-    { label: '保険者番号', val: f.insurerNumber, icon: f.insurerNumber ? 'check' : '' },
-    { label: '記号', val: f.symbol },
-    { label: '番号', val: f.memberNumber },
-    { label: 'フリガナ', val: f.nameKana, icon: f.nameKana ? 'check' : '' },
-    { label: '氏名(推測)', val: f.nameGuess || f.name, icon: f.nameGuess ? 'guess' : (f.name ? 'warn' : '') },
-    { label: '生年月日', val: f.dob, icon: f.dob ? 'check' : '' },
-    { label: '性別', val: f.sex || f.sexGuess || null, icon: f.sexGuess && !f.sex ? 'guess' : (f.sex ? 'check' : '') },
-    { label: '郵便番号', val: f.postalCode },
-    { label: '住所', val: f.address, icon: f.address ? 'warn' : '' },
+    { label: '保険者番号', val: f.insurerNumber, qr: f._insurerFromQR },
+    { label: '記号', val: f.symbol, qr: f._symbolFromQR },
+    { label: '番号', val: f.memberNumber, qr: f._memberFromQR },
+    { label: '枝番', val: f.edaban, qr: f._edabanFromQR },
+    { label: 'フリガナ', val: f.nameKana, qr: false },
+    { label: '氏名', val: f.nameGuess || f.name, qr: false },
+    { label: '生年月日', val: f.dob, qr: false },
+    { label: '性別', val: f.sex || f.sexGuess || null, qr: false, guess: f.sexGuess && !f.sex },
+    { label: '郵便番号', val: f.postalCode, qr: false },
+    { label: '住所', val: f.address, qr: false },
   ];
 
   for (const r of rows) {
     if (!r.val) continue;
-    const iconHtml = r.icon === 'check' ? ' <span class="ocr-field-check">&#10003;</span>' :
-                     r.icon === 'warn' ? ' <span class="ocr-field-warn">&#9888; 要確認</span>' :
-                     r.icon === 'guess' ? ' <span class="ocr-field-warn">&#9733; 推測</span>' : '';
-    const valClass = (r.icon === 'warn' || r.icon === 'guess') ? ' low-conf' : '';
-    html += '<div class="ocr-field-row"><span class="ocr-field-label">' + r.label + '</span><span class="ocr-field-value' + valClass + '">' + r.val + '</span>' + iconHtml + '</div>';
+    let iconHtml;
+    let valueClass;
+    if (r.qr) {
+      iconHtml = ' <span style="color:#28a745;font-size:10px;font-weight:700;">&#10004; QR確認済</span>';
+      valueClass = 'ocr-field-value';
+    } else if (r.guess) {
+      iconHtml = ' <span class="ocr-field-warn">&#9733; 推測</span>';
+      valueClass = 'ocr-field-value low-conf';
+    } else {
+      iconHtml = r.val ? ' <span class="ocr-field-warn">&#9888; 要確認</span>' : '';
+      valueClass = 'ocr-field-value low-conf';
+    }
+    html += '<div class="ocr-field-row"><span class="ocr-field-label">' + r.label + '</span><span class="' + valueClass + '">' + r.val + '</span>' + iconHtml + '</div>';
   }
 
   // 漢字候補がある場合
@@ -378,7 +521,18 @@ function renderOcrResult(f) {
     }
   }
 
-  if (!f.insurerNumber && !f.nameKana && !f.dob) {
+  // 情報バナー
+  if (hasQR) {
+    html += '<div style="background:#e8f4fd;border-radius:4px;padding:4px 8px;margin-top:6px;font-size:10px;color:#0c5460;">';
+    html += '&#9432; 保険番号系はQRコードから取得（確実）。氏名・生年月日はOCR参考値のため目視確認してください。';
+    html += '</div>';
+  } else {
+    html += '<div style="background:#fff3cd;border-radius:4px;padding:4px 8px;margin-top:6px;font-size:10px;color:#856404;">';
+    html += '&#9888; QRコードを検出できませんでした。全項目がOCR参考値です。反映後に必ず目視確認してください。';
+    html += '</div>';
+  }
+
+  if (!f.insurerNumber && !f.nameKana && !f.dob && !f.symbol) {
     html += '<div style="color:var(--danger);font-size:11px;margin-top:6px;">&#9888; 保険証のテキストを十分に認識できませんでした。<br>画像が鮮明でない場合は、再度撮影してください。</div>';
   }
 
@@ -436,6 +590,11 @@ function applyOcrResults() {
     onNewInsurerNumberInput(f.insurerNumber);
   }
 
+  // QR由来のソース情報をトースト表示
+  if (f._qrResult && f._qrResult.format !== 'unknown') {
+    showToast('QRコードから保険番号を取得しました');
+  }
+
   // 郵便番号→住所自動入力
   if (f.postalCode) {
     const cleaned = f.postalCode.replace(/[^0-9]/g, '');
@@ -480,6 +639,17 @@ function applyOcrResults() {
   ocrExtracted._imageData = document.getElementById('ocrPreviewImg').src;
 
   showToast('読取結果を反映しました（漢字氏名・住所は要確認）');
+}
+
+function buildInsuranceNumberStr(fields) {
+  if (!fields) return '';
+  const parts = [];
+  if (fields.symbol) parts.push(fields.symbol);
+  if (fields.memberNumber) parts.push(fields.memberNumber);
+  if (parts.length === 0) return '';
+  let str = parts.join('-');
+  if (fields.edaban && fields.edaban !== '00') str += '(' + fields.edaban + ')';
+  return str;
 }
 
 function clearOcrPreview() {
@@ -572,7 +742,7 @@ function addNewPatient(andOpen) {
     allergies: [], history: [], prevRx: [], prevDays: 0, prevVisitDate: '',
     vehicle: { plate: document.getElementById('newPlate').value || '---', lane: parseInt(document.getElementById('newLane').value) || 1 },
     status: andOpen ? 'waiting' : 'waiting', memo: '',
-    insurancePhoto: (ocrExtracted && ocrExtracted._imageData) ? ocrExtracted._imageData : null, insuranceNumber: '', insurerNumber: (newInsurerNum ? newInsurerNum.value : ''), kouhiNumber: '', incomeLevel: 'ippan', questionnaire: null,
+    insurancePhoto: (ocrExtracted && ocrExtracted._imageData) ? ocrExtracted._imageData : null, insuranceNumber: buildInsuranceNumberStr(ocrExtracted), insurerNumber: (newInsurerNum ? newInsurerNum.value : ''), kouhiNumber: '', incomeLevel: 'ippan', questionnaire: null,
     arrivedAt: now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0'),
     visitDate: selectedDate, pastKartes: [], pastVitals: []
   };
