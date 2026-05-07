@@ -1,5 +1,5 @@
-// ocr_engine.js - 保険証OCRエンジン v2（完全ローカル処理、外部送信なし）
-// Tesseract.js v5 + HSV彩度フィルタ + 適応的閾値処理 + マルチパスOCR
+// ocr_engine.js - 保険証OCRエンジン v3（完全ローカル処理、外部送信なし）
+// Tesseract.js v5 + カード自動クロップ + HSV彩度フィルタv2 + 適応的閾値 + ノイズ除去 + マルチパスOCR
 
 const OCR_ENGINE = (() => {
 
@@ -60,16 +60,89 @@ const OCR_ENGINE = (() => {
     ctx.putImageData(imgData, 0, 0);
   }
 
-  // --- 2b. メイン前処理: 彩度フィルタ + 適応的閾値 ---
+  // --- 2b. カード領域自動クロップ ---
+  function detectCardRegion(imgElement) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const sw = 400;
+    const sh = Math.round(imgElement.naturalHeight * (sw / imgElement.naturalWidth));
+    canvas.width = sw;
+    canvas.height = sh;
+    ctx.drawImage(imgElement, 0, 0, sw, sh);
+    const imgData = ctx.getImageData(0, 0, sw, sh);
+    const d = imgData.data;
+
+    // 黄色〜ベージュ + 白領域を検出（保険証カード背景色）
+    const mask = new Uint8Array(sw * sh);
+    for (let i = 0; i < sw * sh; i++) {
+      const r = d[i*4], g = d[i*4+1], b = d[i*4+2];
+      const maxC = Math.max(r, g, b);
+      const minC = Math.min(r, g, b);
+      const delta = maxC - minC;
+      if (maxC === 0) continue;
+      let h = 0;
+      if (delta > 0) {
+        if (maxC === r) h = 60 * (((g - b) / delta) % 6);
+        else if (maxC === g) h = 60 * ((b - r) / delta + 2);
+        else h = 60 * ((r - g) / delta + 4);
+        if (h < 0) h += 360;
+      }
+      const s = delta / maxC;
+      const v = maxC / 255;
+      // 黄色〜ベージュ範囲 or 白っぽい領域
+      if (((h >= 15 && h <= 75 && s > 0.05) || (s < 0.15 && v > 0.82)) && v > 0.4) {
+        mask[i] = 1;
+      }
+    }
+
+    let minX = sw, maxX = 0, minY = sh, maxY = 0, count = 0;
+    for (let y = 0; y < sh; y++) {
+      for (let x = 0; x < sw; x++) {
+        if (mask[y * sw + x]) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+          count++;
+        }
+      }
+    }
+
+    const ratio = count / (sw * sh);
+    if (ratio < 0.25 || (maxX - minX) < sw * 0.25 || (maxY - minY) < sh * 0.15) {
+      return null;
+    }
+
+    const pad = Math.round(Math.max(maxX - minX, maxY - minY) * 0.03);
+    const scaleBack = imgElement.naturalWidth / sw;
+    return {
+      x: Math.max(0, Math.round((minX - pad) * scaleBack)),
+      y: Math.max(0, Math.round((minY - pad) * scaleBack)),
+      w: Math.min(imgElement.naturalWidth, Math.round((maxX - minX + pad * 2) * scaleBack)),
+      h: Math.min(imgElement.naturalHeight, Math.round((maxY - minY + pad * 2) * scaleBack)),
+    };
+  }
+
+  // --- 2c. メイン前処理: カードクロップ + 彩度フィルタv2 + 適応的閾値 + ノイズ除去 ---
   function preprocessInsuranceCard(imgElement) {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
-    // 解像度を上げてOCR精度向上（最大2400px幅）
-    const scale = Math.min(2400 / imgElement.naturalWidth, 3);
-    canvas.width = Math.round(imgElement.naturalWidth * scale);
-    canvas.height = Math.round(imgElement.naturalHeight * scale);
-    ctx.drawImage(imgElement, 0, 0, canvas.width, canvas.height);
+    // カード領域を検出してクロップ
+    const cardRect = detectCardRegion(imgElement);
+    let srcX = 0, srcY = 0, srcW = imgElement.naturalWidth, srcH = imgElement.naturalHeight;
+    if (cardRect) {
+      srcX = cardRect.x;
+      srcY = cardRect.y;
+      srcW = cardRect.w;
+      srcH = cardRect.h;
+    }
+
+    // 解像度を上げてOCR精度向上（最大2800px幅）
+    const scale = Math.min(2800 / srcW, 3.5);
+    canvas.width = Math.round(srcW * scale);
+    canvas.height = Math.round(srcH * scale);
+    ctx.drawImage(imgElement, srcX, srcY, srcW, srcH, 0, 0, canvas.width, canvas.height);
 
     // シャープニング
     sharpen(ctx, canvas.width, canvas.height);
@@ -78,9 +151,7 @@ const OCR_ENGINE = (() => {
     const d = imgData.data;
     const w = canvas.width, h = canvas.height, n = w * h;
 
-    // ====== Phase 1: HSV彩度フィルタ ======
-    // 色付きピクセル（黄色背景、ウォーターマーク）→ 白に変換
-    // 黒/灰色テキスト（低彩度+暗い）→ グレースケールとして保持
+    // ====== Phase 1: HSV彩度フィルタ v2（強化版） ======
     const gray = new Uint8Array(n);
 
     for (let i = 0; i < n; i++) {
@@ -88,27 +159,28 @@ const OCR_ENGINE = (() => {
       const maxC = Math.max(r, g, b);
       const minC = Math.min(r, g, b);
       const sat = maxC > 0 ? (maxC - minC) / maxC : 0;
+      const lum = (r * 0.299 + g * 0.587 + b * 0.114);
 
-      // 彩度が高い → 色付き背景/ウォーターマーク → 白
-      // 彩度が低い + 暗い → テキスト候補 → グレースケール保持
-      if (sat > 0.15 && maxC > 60) {
-        gray[i] = 255; // 色付きピクセルは白に
+      // テキスト判定: 暗い + 低彩度
+      const isDarkText = lum < 100 && sat < 0.25;
+      // 中間トーン: やや暗い + 低彩度（印字かすれ対応）
+      const isMidText = lum < 150 && sat < 0.10;
+
+      if (isDarkText || isMidText) {
+        gray[i] = Math.round(lum);
       } else {
-        gray[i] = Math.round(r * 0.299 + g * 0.587 + b * 0.114);
+        gray[i] = 255;
       }
     }
 
-    // ====== Phase 2: 適応的閾値（ダウンサンプル平均法） ======
-    // グローバルOtsuの代わりに局所平均を使う
-    // これによりキーボード等の暗い背景領域でも正しく処理できる
-    const blockSize = 32;
-    const C_THRESH = 12; // 局所平均からの差分閾値
+    // ====== Phase 2: 適応的閾値（より細かいブロック） ======
+    const blockSize = 24;
+    const C_THRESH = 15;
     const dw = Math.ceil(w / blockSize);
     const dh = Math.ceil(h / blockSize);
     const blockMeans = new Float32Array(dw * dh);
     const blockCounts = new Uint32Array(dw * dh);
 
-    // ブロック平均を計算
     for (let y = 0; y < h; y++) {
       const by = Math.min(Math.floor(y / blockSize), dh - 1);
       for (let x = 0; x < w; x++) {
@@ -122,7 +194,6 @@ const OCR_ENGINE = (() => {
       blockMeans[i] = blockCounts[i] > 0 ? blockMeans[i] / blockCounts[i] : 128;
     }
 
-    // バイリニア補間で各ピクセルの局所閾値を計算し、二値化
     for (let y = 0; y < h; y++) {
       const fy = (y + 0.5) / blockSize - 0.5;
       const by0 = Math.max(0, Math.min(Math.floor(fy), dh - 2));
@@ -135,7 +206,6 @@ const OCR_ENGINE = (() => {
         const bx1 = bx0 + 1;
         const tx = fx - bx0;
 
-        // 4ブロックの平均をバイリニア補間
         const m00 = blockMeans[by0 * dw + bx0];
         const m10 = blockMeans[by0 * dw + bx1];
         const m01 = blockMeans[by1 * dw + bx0];
@@ -149,11 +219,33 @@ const OCR_ENGINE = (() => {
       }
     }
 
+    // ====== Phase 3: ノイズ除去（孤立黒点の白化） ======
     ctx.putImageData(imgData, 0, 0);
+    const binData = ctx.getImageData(0, 0, w, h);
+    const bd = binData.data;
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        const idx = (y * w + x) * 4;
+        if (bd[idx] === 0) {
+          let blackN = 0;
+          for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+              if (dy === 0 && dx === 0) continue;
+              if (bd[((y+dy)*w+(x+dx))*4] === 0) blackN++;
+            }
+          }
+          if (blackN <= 1) {
+            bd[idx] = bd[idx+1] = bd[idx+2] = 255;
+          }
+        }
+      }
+    }
+    ctx.putImageData(binData, 0, 0);
+
     return canvas;
   }
 
-  // --- 2c. シンプル前処理（白背景カード用のフォールバック） ---
+  // --- 2d. シンプル前処理（白背景カード用のフォールバック） ---
   function preprocessSimple(imgElement) {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -635,6 +727,7 @@ const OCR_ENGINE = (() => {
     preprocessImage,
     preprocessInsuranceCard,
     preprocessSimple,
+    detectCardRegion,
     splitAddress,
     extractPrefecture,
     eraToWestern,
