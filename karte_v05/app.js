@@ -1745,15 +1745,15 @@ function openPrescriptionPreview() {
   let rxRows = '';
   k.prescriptions.forEach((rx, i) => {
     const usage = rx.drug.usage || '1日3回 毎食後';
-    rxRows += '<tr>' +
-      '<td style="text-align:right;padding:3px 8px;vertical-align:top;">' + (i+1) + '</td>' +
-      '<td style="padding:3px 8px;">' +
-        '<div style="font-weight:600;">' + escHtml(rx.drug.name) + '</div>' +
-        '<div style="font-size:11px;color:#555;margin-top:1px;">' +
-          rx.qty + (rx.drug.unit||'錠') + ' ' + escHtml(usage) +
+    rxRows += '<tr style="' + (i > 0 ? 'border-top:0.5pt dotted #ccc;' : '') + '">' +
+      '<td style="text-align:right;padding:8pt 10pt 8pt 0;vertical-align:top;width:28pt;font-size:10pt;color:#555;">' + (i+1) + '</td>' +
+      '<td style="padding:8pt 4pt;">' +
+        '<div style="font-size:12pt;font-weight:600;">' + escHtml(rx.drug.name) + '</div>' +
+        '<div style="font-size:9pt;color:#444;margin-top:2pt;">　' +
+          rx.qty + (rx.drug.unit||'錠') + '　' + escHtml(usage) +
         '</div>' +
       '</td>' +
-      '<td style="text-align:center;padding:3px 8px;">' + k.rxDays + '日分</td>' +
+      '<td style="text-align:right;padding:8pt 0;vertical-align:top;width:55pt;font-size:11pt;">' + k.rxDays + '日分</td>' +
     '</tr>';
   });
 
@@ -1770,98 +1770,123 @@ function openPrescriptionPreview() {
 }
 
 function buildPrescriptionHtml(d) {
-  return '<div id="rxFormContent" style="font-family:\'Yu Mincho\',\'YuMincho\',\'Hiragino Mincho ProN\',serif;max-width:720px;margin:0 auto;border:2px solid #000;padding:0;font-size:12px;line-height:1.5;background:#fff;">' +
+  // A4印刷を想定した処方箋（様式第二号ベース）
+  var F = 'font-family:"Yu Mincho","YuMincho","Hiragino Mincho ProN","MS PMincho",serif;';
+  var B = 'border:1.5pt solid #000;';
+  var BB = 'border-bottom:1pt solid #000;';
 
-  // ヘッダー
-  '<div style="text-align:center;padding:10px 0 6px;border-bottom:2px solid #000;font-size:18px;font-weight:700;letter-spacing:4px;">処 方 箋</div>' +
+  // 生年月日を和暦変換
+  var dobDisplay = '';
+  if (d.patientDob) {
+    var dp = new Date(d.patientDob);
+    if (!isNaN(dp)) {
+      var y = dp.getFullYear(), m = dp.getMonth()+1, dd2 = dp.getDate();
+      var era = '';
+      if (y >= 2019) era = '令和' + (y-2018);
+      else if (y >= 1989) era = '平成' + (y-1988);
+      else if (y >= 1926) era = '昭和' + (y-1925);
+      dobDisplay = era + '年' + m + '月' + dd2 + '日';
+    }
+  }
 
-  // 上部情報バー
-  '<div style="display:flex;border-bottom:1px solid #000;">' +
-    '<div style="flex:1;padding:6px 10px;border-right:1px solid #000;">' +
-      '<div style="font-size:10px;color:#666;">交付年月日</div>' +
-      '<div style="font-weight:600;">' + d.issueDate + '</div>' +
-    '</div>' +
-    '<div style="flex:1;padding:6px 10px;">' +
-      '<div style="font-size:10px;color:#666;">処方箋の使用期間</div>' +
-      '<div>' + d.expiryStr + ' まで</div>' +
-      '<div style="font-size:9px;color:#888;">特に記載のある場合を除き、交付日を含めて4日以内</div>' +
-    '</div>' +
-  '</div>' +
+  return '<div id="rxFormContent" style="' + F + 'width:170mm;margin:0 auto;padding:0;color:#000;line-height:1.6;background:#fff;">' +
 
-  // 患者情報
-  '<div style="border-bottom:1px solid #000;padding:6px 10px;">' +
-    '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+  // タイトル
+  '<div style="text-align:center;padding:14pt 0 10pt;font-size:22pt;font-weight:700;letter-spacing:12pt;">処 方 箋</div>' +
+
+  // 外枠テーブル開始
+  '<table style="width:100%;' + B + 'border-collapse:collapse;' + F + '">' +
+
+  // Row 1: 交付年月日 / 使用期間
+  '<tr>' +
+    '<td style="' + BB + 'border-right:1pt solid #000;padding:8pt 12pt;width:50%;vertical-align:top;">' +
+      '<div style="font-size:8pt;color:#555;margin-bottom:2pt;">交付年月日</div>' +
+      '<div style="font-size:13pt;font-weight:600;">' + d.issueDate + '</div>' +
+    '</td>' +
+    '<td style="' + BB + 'padding:8pt 12pt;vertical-align:top;">' +
+      '<div style="font-size:8pt;color:#555;margin-bottom:2pt;">処方箋の使用期間</div>' +
+      '<div style="font-size:12pt;">' + d.expiryStr + ' まで</div>' +
+      '<div style="font-size:7.5pt;color:#888;margin-top:1pt;">特に記載のある場合を除き、交付の日を含めて4日以内に保険薬局に提出すること。</div>' +
+    '</td>' +
+  '</tr>' +
+
+  // Row 2: 患者情報
+  '<tr><td colspan="2" style="' + BB + 'padding:10pt 12pt;">' +
+    '<table style="width:100%;border-collapse:collapse;">' +
       '<tr>' +
-        '<td style="width:80px;font-weight:600;padding:2px 0;">患者氏名</td>' +
-        '<td style="font-size:14px;font-weight:700;">' + escHtml(d.patientName) +
-          (d.patientKana ? ' <span style="font-size:10px;font-weight:400;color:#666;">(' + escHtml(d.patientKana) + ')</span>' : '') +
+        '<td style="font-size:9pt;color:#555;width:70pt;padding:3pt 0;vertical-align:top;">患 者</td>' +
+        '<td style="padding:3pt 0;">' +
+          '<div style="font-size:8pt;color:#888;margin-bottom:1pt;">' + escHtml(d.patientKana) + '</div>' +
+          '<div style="font-size:15pt;font-weight:700;">' + escHtml(d.patientName) + '</div>' +
         '</td>' +
-        '<td style="width:140px;text-align:right;">' +
+        '<td style="text-align:right;vertical-align:top;padding:3pt 0;font-size:11pt;white-space:nowrap;">' +
           (d.patientAge ? d.patientAge + '歳' : '') +
-          (d.patientSex ? ' / ' + d.patientSex : '') +
+          (d.patientSex ? '　' + d.patientSex : '') +
         '</td>' +
       '</tr>' +
       '<tr>' +
-        '<td style="font-weight:600;padding:2px 0;">生年月日</td>' +
-        '<td>' + (d.patientDob || '') + '</td>' +
-        '<td></td>' +
+        '<td style="font-size:9pt;color:#555;padding:3pt 0;">生年月日</td>' +
+        '<td colspan="2" style="font-size:11pt;padding:3pt 0;">' + dobDisplay + '</td>' +
       '</tr>' +
     '</table>' +
-  '</div>' +
+  '</td></tr>' +
 
-  // 保険情報
-  '<div style="border-bottom:1px solid #000;padding:4px 10px;display:flex;gap:16px;font-size:11px;">' +
-    '<div><span style="color:#666;">保険者番号:</span> <strong>' + escHtml(d.insurerNo) + '</strong></div>' +
-    '<div><span style="color:#666;">記号・番号:</span> <strong>' + escHtml(d.insuranceNo) + '</strong></div>' +
-    '<div><span style="color:#666;">保険種別:</span> ' + escHtml(d.insuranceType) + '</div>' +
-  '</div>' +
-
-  // 注意書き
-  '<div style="text-align:center;padding:4px;border-bottom:1px solid #000;font-size:10px;background:#f8f8f8;">' +
-    'この処方箋は、どの保険薬局でも有効です。' +
-  '</div>' +
-
-  // 処方内容
-  '<div style="padding:8px 10px;min-height:200px;border-bottom:1px solid #000;">' +
-    '<div style="font-size:11px;font-weight:700;margin-bottom:4px;color:#333;">処方内容</div>' +
-    '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
-      '<thead><tr style="border-bottom:1px solid #ccc;">' +
-        '<th style="width:30px;text-align:right;padding:3px 8px;font-size:10px;">No.</th>' +
-        '<th style="text-align:left;padding:3px 8px;font-size:10px;">薬剤名 / 用法・用量</th>' +
-        '<th style="width:70px;text-align:center;padding:3px 8px;font-size:10px;">日数</th>' +
-      '</tr></thead>' +
-      '<tbody>' + d.rxRows + '</tbody>' +
+  // Row 3: 保険情報
+  '<tr><td colspan="2" style="' + BB + 'padding:6pt 12pt;">' +
+    '<table style="width:100%;border-collapse:collapse;font-size:10pt;">' +
+      '<tr>' +
+        '<td style="width:33%;padding:2pt 0;"><span style="font-size:8pt;color:#555;">保険者番号</span>　<strong>' + escHtml(d.insurerNo) + '</strong></td>' +
+        '<td style="width:34%;padding:2pt 0;"><span style="font-size:8pt;color:#555;">記号・番号</span>　<strong>' + escHtml(d.insuranceNo) + '</strong></td>' +
+        '<td style="width:33%;padding:2pt 0;"><span style="font-size:8pt;color:#555;">保険種別</span>　' + escHtml(d.insuranceType) + '</td>' +
+      '</tr>' +
     '</table>' +
-  '</div>' +
+  '</td></tr>' +
 
-  // 後発医薬品
-  '<div style="padding:6px 10px;border-bottom:1px solid #000;font-size:11px;display:flex;align-items:center;gap:12px;">' +
-    '<span style="font-weight:600;">後発医薬品（ジェネリック医薬品）への変更</span>' +
-    '<label style="display:flex;align-items:center;gap:3px;"><input type="checkbox" id="rxGenericOk" checked> 変更可</label>' +
-    '<label style="display:flex;align-items:center;gap:3px;"><input type="checkbox" id="rxGenericNg"> 変更不可</label>' +
-  '</div>' +
+  // Row 4: 注意書き
+  '<tr><td colspan="2" style="' + BB + 'text-align:center;padding:5pt;font-size:9pt;background:#fafafa;">' +
+    'この処方箋は、どの保険薬局でも有効です。' +
+  '</td></tr>' +
 
-  // リフィル
-  '<div style="padding:6px 10px;border-bottom:1px solid #000;font-size:11px;display:flex;align-items:center;gap:12px;">' +
-    '<span style="font-weight:600;">リフィル処方箋</span>' +
-    '<label style="display:flex;align-items:center;gap:3px;"><input type="checkbox" id="rxRefill"> リフィル可（ 回）</label>' +
-  '</div>' +
+  // Row 5: 処方内容
+  '<tr><td colspan="2" style="' + BB + 'padding:10pt 12pt;min-height:240pt;">' +
+    '<div style="font-size:10pt;font-weight:700;margin-bottom:6pt;padding-bottom:4pt;border-bottom:0.5pt solid #ccc;">処 方</div>' +
+    '<table style="width:100%;border-collapse:collapse;font-size:11pt;">' +
+      d.rxRows +
+    '</table>' +
+  '</td></tr>' +
 
-  // 医療機関情報
-  '<div style="padding:8px 10px;display:flex;gap:20px;">' +
-    '<div style="flex:1;">' +
-      '<div style="font-size:10px;color:#666;margin-bottom:2px;">保険医療機関の名称・所在地</div>' +
-      '<div style="font-weight:700;font-size:13px;">' + escHtml(d.facilityName) + '</div>' +
-      '<div style="font-size:11px;">' + escHtml(CLINIC_INFO.zip) + ' ' + escHtml(CLINIC_INFO.address) + '</div>' +
-      '<div style="font-size:11px;">TEL: ' + escHtml(CLINIC_INFO.tel) + (CLINIC_INFO.fax ? ' / FAX: ' + escHtml(CLINIC_INFO.fax) : '') + '</div>' +
+  // Row 6: 後発医薬品 / リフィル
+  '<tr><td colspan="2" style="' + BB + 'padding:6pt 12pt;font-size:9pt;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+      '<div>' +
+        '<span style="font-weight:600;">後発医薬品（ジェネリック医薬品）への変更</span>　' +
+        '<label style="margin-left:6pt;"><input type="checkbox" id="rxGenericOk" checked style="margin-right:2pt;">変更可</label>　' +
+        '<label><input type="checkbox" id="rxGenericNg" style="margin-right:2pt;">変更不可</label>' +
+      '</div>' +
+      '<div>' +
+        '<span style="font-weight:600;">リフィル</span>　' +
+        '<label><input type="checkbox" id="rxRefill" style="margin-right:2pt;">可（　回）</label>' +
+      '</div>' +
     '</div>' +
-    '<div style="text-align:right;">' +
-      '<div style="font-size:10px;color:#666;margin-bottom:2px;">保険医署名</div>' +
-      '<div style="font-size:15px;font-weight:700;padding:4px 0;border-bottom:1px solid #000;min-width:160px;">' + escHtml(d.doctor) + '</div>' +
-      '<div style="font-size:9px;color:#888;margin-top:2px;">印</div>' +
-    '</div>' +
-  '</div>' +
+  '</td></tr>' +
 
+  // Row 7: 医療機関 / 医師署名
+  '<tr>' +
+    '<td style="padding:10pt 12pt;border-right:1pt solid #000;vertical-align:top;">' +
+      '<div style="font-size:8pt;color:#555;margin-bottom:4pt;">保険医療機関の名称・所在地</div>' +
+      '<div style="font-size:13pt;font-weight:700;margin-bottom:3pt;">' + escHtml(d.facilityName) + '</div>' +
+      '<div style="font-size:9pt;color:#333;">' + escHtml(CLINIC_INFO.zip) + '</div>' +
+      '<div style="font-size:9pt;color:#333;">' + escHtml(CLINIC_INFO.address) + '</div>' +
+      '<div style="font-size:9pt;color:#333;margin-top:2pt;">TEL: ' + escHtml(CLINIC_INFO.tel) + '</div>' +
+    '</td>' +
+    '<td style="padding:10pt 12pt;vertical-align:top;">' +
+      '<div style="font-size:8pt;color:#555;margin-bottom:4pt;">保険医署名</div>' +
+      '<div style="font-size:16pt;font-weight:700;padding:8pt 0 6pt;text-align:center;">' + escHtml(d.doctor) + '</div>' +
+      '<div style="border-top:1pt solid #000;text-align:right;padding-top:2pt;font-size:8pt;color:#888;">&#12958;</div>' +
+    '</td>' +
+  '</tr>' +
+
+  '</table>' +
   '</div>';
 }
 
