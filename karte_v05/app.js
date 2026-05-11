@@ -142,10 +142,19 @@ function doMasterSearch() {
   }, 300);
 }
 
-// 起動時にマスタステータス確認
+// 起動時にマスタステータス確認 + 未取込なら自動取込
 setTimeout(async () => {
   try {
     await MasterDB.open();
+    const status = await MasterDB.getStatus();
+    const total = (status.drugs?.count || 0) + (status.diseases?.count || 0) + (status.medical?.count || 0);
+    if (total === 0) {
+      console.log('マスタ未取込 → 自動取込開始');
+      const btn = document.getElementById('masterStatusBtn');
+      if (btn) btn.textContent = '\u2699 マスタ取込中...';
+      await MasterDB.autoImportFromFolder();
+      console.log('マスタ自動取込完了');
+    }
     await refreshMasterStatus();
   } catch(e) { console.log('MasterDB init:', e); }
 }, 500);
