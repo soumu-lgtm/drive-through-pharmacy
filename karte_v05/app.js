@@ -1880,17 +1880,23 @@ function printPrescription() {
   const content = document.getElementById('rxFormContent');
   if (!content) { showToast('処方箋データがありません'); return; }
 
+  // モーダルを閉じてから印刷（モーダルが印刷範囲に入らないように）
+  closeModal('prescriptionModal');
+
   const printArea = document.getElementById('prescriptionPrintArea');
   printArea.innerHTML = content.outerHTML;
   printArea.style.display = 'block';
   document.body.classList.add('printing-prescription');
 
-  window.print();
-
+  // 少し待ってから印刷（DOM反映待ち）
   setTimeout(() => {
-    document.body.classList.remove('printing-prescription');
-    printArea.style.display = 'none';
-  }, 500);
+    window.print();
+    // 印刷ダイアログ閉じた後にクリーンアップ
+    setTimeout(() => {
+      document.body.classList.remove('printing-prescription');
+      printArea.style.display = 'none';
+    }, 300);
+  }, 100);
 }
 
 // ===== Modals =====

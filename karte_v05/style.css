@@ -872,12 +872,29 @@ body.resizing img {
 
 /* ===== Prescription Print Styles ===== */
 @media print {
-  body.printing-prescription * { visibility: hidden !important; }
-  body.printing-prescription #prescriptionPrintArea,
-  body.printing-prescription #prescriptionPrintArea * { visibility: visible !important; }
+  body.printing-prescription .screen,
+  body.printing-prescription .header,
+  body.printing-prescription .header-karte,
+  body.printing-prescription .modal-overlay,
+  body.printing-prescription .toast { display: none !important; }
+
   body.printing-prescription #prescriptionPrintArea {
-    position: fixed; left: 0; top: 0; width: 100%; z-index: 99999;
-    background: #fff; padding: 10mm;
+    display: block !important;
+    position: absolute;
+    left: 0; top: 0;
+    width: 100%;
+    background: #fff;
+    z-index: 99999;
   }
-  @page { size: A4; margin: 10mm; }
+  body.printing-prescription #prescriptionPrintArea #rxFormContent {
+    max-width: 100% !important;
+    width: 100% !important;
+    font-size: 14pt !important;
+    border-width: 2px !important;
+  }
+  body.printing-prescription #prescriptionPrintArea table { font-size: 13pt !important; }
+  body.printing-prescription #prescriptionPrintArea td,
+  body.printing-prescription #prescriptionPrintArea th { padding: 4pt 8pt !important; }
+
+  @page { size: A4; margin: 12mm; }
 }
