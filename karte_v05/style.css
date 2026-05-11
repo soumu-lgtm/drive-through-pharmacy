@@ -869,3 +869,15 @@ body.resizing img {
 .master-search-results .empty-msg {
   padding: 20px; text-align: center; color: var(--text-light); font-size: 13px;
 }
+
+/* ===== Prescription Print Styles ===== */
+@media print {
+  body.printing-prescription * { visibility: hidden !important; }
+  body.printing-prescription #prescriptionPrintArea,
+  body.printing-prescription #prescriptionPrintArea * { visibility: visible !important; }
+  body.printing-prescription #prescriptionPrintArea {
+    position: fixed; left: 0; top: 0; width: 100%; z-index: 99999;
+    background: #fff; padding: 10mm;
+  }
+  @page { size: A4; margin: 10mm; }
+}

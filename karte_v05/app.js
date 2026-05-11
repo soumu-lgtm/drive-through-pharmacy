@@ -1709,6 +1709,190 @@ function confirmBilling() {
 function postToApi(action, data) { try { fetch(API_URL, { method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'}, body:JSON.stringify({action, data}) }); } catch(e) { console.warn('API error:', e); } }
 function printBilling() { showToast('印刷プレビュー（モック）'); }
 
+// ===== 処方箋発行（様式第二号準拠） =====
+const CLINIC_INFO = {
+  name: '西春内科・在宅クリニック',
+  zip: '481-0041',
+  address: '愛知県北名古屋市九之坪南町1番',
+  tel: '0568-65-5560',
+  fax: '',
+  code: '2311234567', // 医療機関コード（仮）
+  prefCode: '23'
+};
+
+function openPrescriptionPreview() {
+  const p = patients.find(x => x.id === currentPatientId);
+  const k = karteData[currentPatientId];
+  if (!p) { showToast('患者を選択してください'); return; }
+  if (!k.prescriptions || !k.prescriptions.length) { showToast('処方が入力されていません'); return; }
+
+  const doctor = document.getElementById('visitDoctor')?.value || '院長';
+  const facilityName = document.getElementById('orcaFacilityName')?.value || CLINIC_INFO.name;
+  const today = new Date();
+  const issueDate = today.getFullYear() + '年' + (today.getMonth()+1) + '月' + today.getDate() + '日';
+  const expiryDate = new Date(today.getTime() + 4*24*60*60*1000);
+  const expiryStr = expiryDate.getFullYear() + '年' + (expiryDate.getMonth()+1) + '月' + expiryDate.getDate() + '日';
+
+  // 年齢計算
+  const age = p.age || calcAge(p.dob);
+
+  // 保険情報
+  const insurerNo = p.insurerNumber || '';
+  const insuranceNo = p.insuranceNumber || '';
+  const insuranceType = p.insurance || '';
+
+  // 処方内容を構築
+  let rxRows = '';
+  k.prescriptions.forEach((rx, i) => {
+    const usage = rx.drug.usage || '1日3回 毎食後';
+    rxRows += '<tr>' +
+      '<td style="text-align:right;padding:3px 8px;vertical-align:top;">' + (i+1) + '</td>' +
+      '<td style="padding:3px 8px;">' +
+        '<div style="font-weight:600;">' + escHtml(rx.drug.name) + '</div>' +
+        '<div style="font-size:11px;color:#555;margin-top:1px;">' +
+          rx.qty + (rx.drug.unit||'錠') + ' ' + escHtml(usage) +
+        '</div>' +
+      '</td>' +
+      '<td style="text-align:center;padding:3px 8px;">' + k.rxDays + '日分</td>' +
+    '</tr>';
+  });
+
+  const html = buildPrescriptionHtml({
+    facilityName, doctor, issueDate, expiryStr,
+    patientName: p.name, patientKana: p.nameKana || '',
+    patientDob: p.dob || '', patientAge: age, patientSex: p.sex || '',
+    insurerNo, insuranceNo, insuranceType,
+    rxRows, rxCount: k.prescriptions.length
+  });
+
+  document.getElementById('prescriptionPreviewBody').innerHTML = html;
+  document.getElementById('prescriptionModal').classList.add('show');
+}
+
+function buildPrescriptionHtml(d) {
+  return '<div id="rxFormContent" style="font-family:\'Yu Mincho\',\'YuMincho\',\'Hiragino Mincho ProN\',serif;max-width:720px;margin:0 auto;border:2px solid #000;padding:0;font-size:12px;line-height:1.5;background:#fff;">' +
+
+  // ヘッダー
+  '<div style="text-align:center;padding:10px 0 6px;border-bottom:2px solid #000;font-size:18px;font-weight:700;letter-spacing:4px;">処 方 箋</div>' +
+
+  // 上部情報バー
+  '<div style="display:flex;border-bottom:1px solid #000;">' +
+    '<div style="flex:1;padding:6px 10px;border-right:1px solid #000;">' +
+      '<div style="font-size:10px;color:#666;">交付年月日</div>' +
+      '<div style="font-weight:600;">' + d.issueDate + '</div>' +
+    '</div>' +
+    '<div style="flex:1;padding:6px 10px;">' +
+      '<div style="font-size:10px;color:#666;">処方箋の使用期間</div>' +
+      '<div>' + d.expiryStr + ' まで</div>' +
+      '<div style="font-size:9px;color:#888;">特に記載のある場合を除き、交付日を含めて4日以内</div>' +
+    '</div>' +
+  '</div>' +
+
+  // 患者情報
+  '<div style="border-bottom:1px solid #000;padding:6px 10px;">' +
+    '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+      '<tr>' +
+        '<td style="width:80px;font-weight:600;padding:2px 0;">患者氏名</td>' +
+        '<td style="font-size:14px;font-weight:700;">' + escHtml(d.patientName) +
+          (d.patientKana ? ' <span style="font-size:10px;font-weight:400;color:#666;">(' + escHtml(d.patientKana) + ')</span>' : '') +
+        '</td>' +
+        '<td style="width:140px;text-align:right;">' +
+          (d.patientAge ? d.patientAge + '歳' : '') +
+          (d.patientSex ? ' / ' + d.patientSex : '') +
+        '</td>' +
+      '</tr>' +
+      '<tr>' +
+        '<td style="font-weight:600;padding:2px 0;">生年月日</td>' +
+        '<td>' + (d.patientDob || '') + '</td>' +
+        '<td></td>' +
+      '</tr>' +
+    '</table>' +
+  '</div>' +
+
+  // 保険情報
+  '<div style="border-bottom:1px solid #000;padding:4px 10px;display:flex;gap:16px;font-size:11px;">' +
+    '<div><span style="color:#666;">保険者番号:</span> <strong>' + escHtml(d.insurerNo) + '</strong></div>' +
+    '<div><span style="color:#666;">記号・番号:</span> <strong>' + escHtml(d.insuranceNo) + '</strong></div>' +
+    '<div><span style="color:#666;">保険種別:</span> ' + escHtml(d.insuranceType) + '</div>' +
+  '</div>' +
+
+  // 注意書き
+  '<div style="text-align:center;padding:4px;border-bottom:1px solid #000;font-size:10px;background:#f8f8f8;">' +
+    'この処方箋は、どの保険薬局でも有効です。' +
+  '</div>' +
+
+  // 処方内容
+  '<div style="padding:8px 10px;min-height:200px;border-bottom:1px solid #000;">' +
+    '<div style="font-size:11px;font-weight:700;margin-bottom:4px;color:#333;">処方内容</div>' +
+    '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+      '<thead><tr style="border-bottom:1px solid #ccc;">' +
+        '<th style="width:30px;text-align:right;padding:3px 8px;font-size:10px;">No.</th>' +
+        '<th style="text-align:left;padding:3px 8px;font-size:10px;">薬剤名 / 用法・用量</th>' +
+        '<th style="width:70px;text-align:center;padding:3px 8px;font-size:10px;">日数</th>' +
+      '</tr></thead>' +
+      '<tbody>' + d.rxRows + '</tbody>' +
+    '</table>' +
+  '</div>' +
+
+  // 後発医薬品
+  '<div style="padding:6px 10px;border-bottom:1px solid #000;font-size:11px;display:flex;align-items:center;gap:12px;">' +
+    '<span style="font-weight:600;">後発医薬品（ジェネリック医薬品）への変更</span>' +
+    '<label style="display:flex;align-items:center;gap:3px;"><input type="checkbox" id="rxGenericOk" checked> 変更可</label>' +
+    '<label style="display:flex;align-items:center;gap:3px;"><input type="checkbox" id="rxGenericNg"> 変更不可</label>' +
+  '</div>' +
+
+  // リフィル
+  '<div style="padding:6px 10px;border-bottom:1px solid #000;font-size:11px;display:flex;align-items:center;gap:12px;">' +
+    '<span style="font-weight:600;">リフィル処方箋</span>' +
+    '<label style="display:flex;align-items:center;gap:3px;"><input type="checkbox" id="rxRefill"> リフィル可（ 回）</label>' +
+  '</div>' +
+
+  // 医療機関情報
+  '<div style="padding:8px 10px;display:flex;gap:20px;">' +
+    '<div style="flex:1;">' +
+      '<div style="font-size:10px;color:#666;margin-bottom:2px;">保険医療機関の名称・所在地</div>' +
+      '<div style="font-weight:700;font-size:13px;">' + escHtml(d.facilityName) + '</div>' +
+      '<div style="font-size:11px;">' + escHtml(CLINIC_INFO.zip) + ' ' + escHtml(CLINIC_INFO.address) + '</div>' +
+      '<div style="font-size:11px;">TEL: ' + escHtml(CLINIC_INFO.tel) + (CLINIC_INFO.fax ? ' / FAX: ' + escHtml(CLINIC_INFO.fax) : '') + '</div>' +
+    '</div>' +
+    '<div style="text-align:right;">' +
+      '<div style="font-size:10px;color:#666;margin-bottom:2px;">保険医署名</div>' +
+      '<div style="font-size:15px;font-weight:700;padding:4px 0;border-bottom:1px solid #000;min-width:160px;">' + escHtml(d.doctor) + '</div>' +
+      '<div style="font-size:9px;color:#888;margin-top:2px;">印</div>' +
+    '</div>' +
+  '</div>' +
+
+  '</div>';
+}
+
+function escHtml(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function calcAge(dob) {
+  if (!dob) return '';
+  const b = new Date(dob);
+  const t = new Date();
+  let a = t.getFullYear() - b.getFullYear();
+  if (t.getMonth() < b.getMonth() || (t.getMonth() === b.getMonth() && t.getDate() < b.getDate())) a--;
+  return a;
+}
+
+function printPrescription() {
+  const content = document.getElementById('rxFormContent');
+  if (!content) { showToast('処方箋データがありません'); return; }
+
+  const printArea = document.getElementById('prescriptionPrintArea');
+  printArea.innerHTML = content.outerHTML;
+  printArea.style.display = 'block';
+  document.body.classList.add('printing-prescription');
+
+  window.print();
+
+  setTimeout(() => {
+    document.body.classList.remove('printing-prescription');
+    printArea.style.display = 'none';
+  }, 500);
+}
+
 // ===== Modals =====
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 function openEditPatientModal() {
