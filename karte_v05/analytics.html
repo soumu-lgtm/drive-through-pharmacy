@@ -6,6 +6,7 @@
 <title>カルテ分析ダッシュボード</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <script src="config.js"></script>
 <style>
 :root {
@@ -27,9 +28,24 @@ body { font-family: 'Segoe UI', 'Hiragino Sans', sans-serif; background: var(--b
 .header .badge { background: var(--accent); color: #0f172a; padding: 2px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; }
 .header .back { color: var(--muted); text-decoration: none; font-size: 13px; margin-left: auto; }
 .header .back:hover { color: var(--text); }
-.header .refresh-btn { background: var(--card); border: 1px solid var(--border); color: var(--accent); padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; }
-.header .refresh-btn:hover { background: var(--border); }
-.header .last-update { font-size: 11px; color: var(--muted); }
+.date-filter { display: flex; align-items: center; gap: 12px; padding: 16px 32px; background: var(--card); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.date-filter label { font-size: 13px; color: var(--muted); font-weight: 600; }
+.date-filter input[type="date"] {
+  background: var(--bg); color: var(--text); border: 1px solid var(--border);
+  padding: 6px 12px; border-radius: 6px; font-size: 13px; font-family: inherit;
+}
+.date-filter input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; }
+.date-filter .filter-btn {
+  background: var(--accent); color: #0f172a; border: none; padding: 7px 18px;
+  border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.date-filter .filter-btn:hover { background: #7dd3fc; }
+.date-filter .reset-btn {
+  background: transparent; color: var(--muted); border: 1px solid var(--border);
+  padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer;
+}
+.date-filter .reset-btn:hover { color: var(--text); border-color: var(--text); }
+.date-filter .range-info { font-size: 12px; color: var(--accent); margin-left: 8px; }
 .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; padding: 24px 32px; }
 .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
 .stat-card .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
@@ -42,7 +58,7 @@ body { font-family: 'Segoe UI', 'Hiragino Sans', sans-serif; background: var(--b
 .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px; padding: 0 32px 24px; }
 .chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
 .chart-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--muted); }
-.chart-card canvas { max-height: 280px; }
+.chart-card canvas { max-height: 300px; }
 .tables { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px; padding: 0 32px 32px; }
 .table-section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
 .table-section h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--muted); }
@@ -56,14 +72,12 @@ td { padding: 8px 12px; font-size: 13px; border-bottom: 1px solid rgba(51,65,85,
 .pill-purple { background: rgba(167,139,250,0.15); color: var(--purple); }
 .loading { text-align: center; padding: 80px; color: var(--muted); font-size: 16px; }
 .error { color: var(--rose); }
-.bar-bg { background: rgba(56,189,248,0.1); border-radius: 4px; height: 20px; position: relative; }
-.bar-fill { height: 100%; border-radius: 4px; background: var(--accent); min-width: 2px; }
-.bar-label { position: absolute; right: 6px; top: 2px; font-size: 11px; color: var(--text); }
 .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; padding: 0 32px 24px; }
 .kpi-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
 .kpi-card h3 { font-size: 13px; color: var(--muted); margin-bottom: 12px; font-weight: 600; }
 .kpi-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 13px; }
 .kpi-row + .kpi-row { border-top: 1px solid rgba(51,65,85,0.5); }
+.last-update { font-size: 11px; color: var(--muted); }
 @media (max-width: 800px) { .charts, .tables, .kpi-grid { grid-template-columns: 1fr; } .stats-row { grid-template-columns: repeat(2, 1fr); } }
 </style>
 </head>
@@ -73,15 +87,29 @@ td { padding: 8px 12px; font-size: 13px; border-bottom: 1px solid rgba(51,65,85,
   <h1>カルテ分析ダッシュボード</h1>
   <span class="badge">Supabase Live</span>
   <span class="last-update" id="lastUpdate"></span>
-  <button class="refresh-btn" onclick="location.reload()">更新</button>
-  <a class="back" href="index.html">← カルテに戻る</a>
+  <a class="back" href="index.html">&larr; カルテに戻る</a>
+</div>
+
+<div class="date-filter" id="dateFilter">
+  <label>集計期間:</label>
+  <input type="date" id="dateFrom">
+  <span style="color:var(--muted)">〜</span>
+  <input type="date" id="dateTo">
+  <button class="filter-btn" id="applyFilter">適用</button>
+  <button class="reset-btn" id="resetFilter">全期間</button>
+  <span class="range-info" id="rangeInfo"></span>
 </div>
 
 <div id="app" class="loading">データ読み込み中...</div>
 
 <script>
+Chart.register(ChartDataLabels);
+
 const SB_URL = window.__SUPABASE_URL__;
 const SB_KEY = window.__SUPABASE_ANON_KEY__;
+
+let _allPatients = [], _allVisits = [], _allRx = [], _allDx = [];
+let _charts = {};
 
 if (!SB_URL || !SB_KEY) {
   document.getElementById('app').innerHTML = '<span class="error">config.js が読み込めません</span>';
@@ -98,107 +126,153 @@ async function loadDashboard(sb) {
       sb.from('prescriptions').select('id,visit_id,drug_name,quantity,days'),
       sb.from('diseases_assigned').select('id,visit_id,disease_name,disease_code')
     ]);
-
-    const patients = pRes.data || [];
-    const visits = vRes.data || [];
-    const prescriptions = rxRes.data || [];
-    const diseases = dxRes.data || [];
+    _allPatients = pRes.data || [];
+    _allVisits = vRes.data || [];
+    _allRx = rxRes.data || [];
+    _allDx = dxRes.data || [];
 
     document.getElementById('lastUpdate').textContent = '最終取得: ' + new Date().toLocaleString('ja-JP');
-    renderDashboard(patients, visits, prescriptions, diseases);
+
+    // 日付範囲の初期値を設定
+    const dates = _allVisits.map(v => v.visit_date).filter(Boolean).sort();
+    if (dates.length > 0) {
+      document.getElementById('dateFrom').value = dates[0];
+      document.getElementById('dateTo').value = dates[dates.length - 1];
+    }
+
+    renderDashboard(_allPatients, _allVisits, _allRx, _allDx);
+    setupFilterEvents();
   } catch (e) {
     document.getElementById('app').innerHTML = '<span class="error">エラー: ' + e.message + '</span>';
   }
 }
 
+function setupFilterEvents() {
+  document.getElementById('applyFilter').addEventListener('click', applyDateFilter);
+  document.getElementById('resetFilter').addEventListener('click', () => {
+    const dates = _allVisits.map(v => v.visit_date).filter(Boolean).sort();
+    if (dates.length > 0) {
+      document.getElementById('dateFrom').value = dates[0];
+      document.getElementById('dateTo').value = dates[dates.length - 1];
+    }
+    applyDateFilter();
+  });
+}
+
+function applyDateFilter() {
+  const from = document.getElementById('dateFrom').value;
+  const to = document.getElementById('dateTo').value;
+
+  let filteredVisits = _allVisits;
+  if (from) filteredVisits = filteredVisits.filter(v => v.visit_date >= from);
+  if (to) filteredVisits = filteredVisits.filter(v => v.visit_date <= to);
+
+  // 該当visit_idに紐づく処方・傷病名もフィルタ
+  const visitIds = new Set(filteredVisits.map(v => v.id));
+  const filteredRx = _allRx.filter(r => visitIds.has(r.visit_id));
+  const filteredDx = _allDx.filter(d => visitIds.has(d.visit_id));
+
+  // 該当patient_idに紐づく患者もフィルタ
+  const patientIds = new Set(filteredVisits.map(v => v.patient_id));
+  const filteredPatients = _allPatients.filter(p => patientIds.has(p.id));
+
+  const info = document.getElementById('rangeInfo');
+  info.textContent = `${from || '---'} 〜 ${to || '---'}（受診 ${filteredVisits.length}件 / 患者 ${filteredPatients.length}人）`;
+
+  // 既存チャートを破棄
+  Object.values(_charts).forEach(c => c.destroy());
+  _charts = {};
+
+  renderDashboard(filteredPatients, filteredVisits, filteredRx, filteredDx);
+}
+
+// Chart.js datalabels 共通設定
+const dlBar = {
+  display: true,
+  anchor: 'end',
+  align: 'top',
+  color: '#e2e8f0',
+  font: { size: 11, weight: 'bold' },
+  formatter: v => v
+};
+const dlLine = {
+  display: true,
+  anchor: 'end',
+  align: 'top',
+  color: '#fbbf24',
+  font: { size: 10, weight: 'bold' },
+  formatter: v => v.toLocaleString()
+};
+const dlDoughnut = {
+  display: true,
+  color: '#fff',
+  font: { size: 12, weight: 'bold' },
+  formatter: (v, ctx) => {
+    const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+    const pct = total > 0 ? Math.round(v / total * 100) : 0;
+    return v > 0 ? `${v} (${pct}%)` : '';
+  }
+};
+
 function renderDashboard(patients, visits, prescriptions, diseases) {
   const totalPatients = patients.length;
   const totalVisits = visits.length;
-  const completedVisits = visits.filter(v => v.status === 'completed').length;
   const totalPoints = visits.reduce((s, v) => s + (v.revenue_points || 0), 0);
   const totalRevenue = Math.round(totalPoints * 10);
   const totalSelfPay = visits.reduce((s, v) => s + (v.self_pay || 0), 0);
   const newVisits = visits.filter(v => v.visit_type === '新規').length;
   const revisits = visits.filter(v => v.visit_type === '再診').length;
 
-  // 性別分布
   const sexCount = { '男': 0, '女': 0 };
   patients.forEach(p => { if (p.sex) sexCount[p.sex] = (sexCount[p.sex] || 0) + 1; });
 
-  // 保険種別
   const insCount = {};
   patients.forEach(p => { const k = p.insurance_type || '不明'; insCount[k] = (insCount[k] || 0) + 1; });
 
-  // 月別受診件数
   const monthlyVisits = {};
-  visits.forEach(v => {
-    if (!v.visit_date) return;
-    const m = v.visit_date.substring(0, 7);
-    monthlyVisits[m] = (monthlyVisits[m] || 0) + 1;
-  });
+  visits.forEach(v => { if (!v.visit_date) return; const m = v.visit_date.substring(0, 7); monthlyVisits[m] = (monthlyVisits[m] || 0) + 1; });
   const monthLabels = Object.keys(monthlyVisits).sort();
   const monthData = monthLabels.map(m => monthlyVisits[m]);
 
-  // 月別収益
   const monthlyRevenue = {};
-  visits.forEach(v => {
-    if (!v.visit_date) return;
-    const m = v.visit_date.substring(0, 7);
-    monthlyRevenue[m] = (monthlyRevenue[m] || 0) + (v.revenue_points || 0) * 10;
-  });
+  visits.forEach(v => { if (!v.visit_date) return; const m = v.visit_date.substring(0, 7); monthlyRevenue[m] = (monthlyRevenue[m] || 0) + (v.revenue_points || 0) * 10; });
   const monthRevData = monthLabels.map(m => monthlyRevenue[m] || 0);
 
-  // 医師別
   const doctorCount = {};
   const doctorRevenue = {};
-  visits.forEach(v => {
-    const d = v.doctor || '不明';
-    doctorCount[d] = (doctorCount[d] || 0) + 1;
-    doctorRevenue[d] = (doctorRevenue[d] || 0) + (v.revenue_points || 0) * 10;
-  });
+  visits.forEach(v => { const d = v.doctor || '不明'; doctorCount[d] = (doctorCount[d] || 0) + 1; doctorRevenue[d] = (doctorRevenue[d] || 0) + (v.revenue_points || 0) * 10; });
   const topDoctors = Object.entries(doctorCount).sort((a, b) => b[1] - a[1]);
 
-  // 日別受診（直近30日）
   const dailyVisits = {};
-  visits.forEach(v => {
-    if (!v.visit_date) return;
-    dailyVisits[v.visit_date] = (dailyVisits[v.visit_date] || 0) + 1;
-  });
-  const dayLabels = Object.keys(dailyVisits).sort().slice(-30);
+  visits.forEach(v => { if (!v.visit_date) return; dailyVisits[v.visit_date] = (dailyVisits[v.visit_date] || 0) + 1; });
+  const dayLabels = Object.keys(dailyVisits).sort();
   const dayData = dayLabels.map(d => dailyVisits[d]);
 
-  // 新規/再診比率
-  const visitTypeData = { '新規': newVisits, '再診': revisits };
-
-  // 処方薬ランキング
   const drugCount = {};
-  prescriptions.forEach(rx => { const k = rx.drug_name; drugCount[k] = (drugCount[k] || 0) + 1; });
+  prescriptions.forEach(rx => { drugCount[rx.drug_name] = (drugCount[rx.drug_name] || 0) + 1; });
   const topDrugs = Object.entries(drugCount).sort((a, b) => b[1] - a[1]).slice(0, 10);
 
-  // 傷病名ランキング
   const dxCount = {};
-  diseases.forEach(d => { const k = d.disease_name; dxCount[k] = (dxCount[k] || 0) + 1; });
+  diseases.forEach(d => { dxCount[d.disease_name] = (dxCount[d.disease_name] || 0) + 1; });
   const topDx = Object.entries(dxCount).sort((a, b) => b[1] - a[1]).slice(0, 10);
 
-  // 平均単価
   const avgPoints = totalVisits > 0 ? Math.round(totalPoints / totalVisits) : 0;
 
-  // === HTML ===
   const app = document.getElementById('app');
   app.className = '';
   app.innerHTML = `
     <div class="stats-row">
-      <div class="stat-card"><div class="label">総患者数</div><div class="value accent">${totalPatients}</div><div class="sub">男 ${sexCount['男']} / 女 ${sexCount['女']}</div></div>
-      <div class="stat-card"><div class="label">総受診件数</div><div class="value green">${totalVisits}</div><div class="sub">新規 ${newVisits} / 再診 ${revisits}</div></div>
-      <div class="stat-card"><div class="label">概算診療報酬</div><div class="value amber">¥${totalRevenue.toLocaleString()}</div><div class="sub">${totalPoints.toLocaleString()}点</div></div>
-      <div class="stat-card"><div class="label">自費合計</div><div class="value purple">¥${totalSelfPay.toLocaleString()}</div><div class="sub">平均単価 ${avgPoints.toLocaleString()}点/件</div></div>
+      <div class="stat-card"><div class="label">対象患者数</div><div class="value accent">${totalPatients}</div><div class="sub">男 ${sexCount['男']} / 女 ${sexCount['女']}</div></div>
+      <div class="stat-card"><div class="label">受診件数</div><div class="value green">${totalVisits}</div><div class="sub">新規 ${newVisits} / 再診 ${revisits}</div></div>
+      <div class="stat-card"><div class="label">概算診療報酬</div><div class="value amber">&yen;${totalRevenue.toLocaleString()}</div><div class="sub">${totalPoints.toLocaleString()}点</div></div>
+      <div class="stat-card"><div class="label">自費合計</div><div class="value purple">&yen;${totalSelfPay.toLocaleString()}</div><div class="sub">平均 ${avgPoints.toLocaleString()}点/件</div></div>
       <div class="stat-card"><div class="label">処方件数</div><div class="value">${prescriptions.length}</div><div class="sub">${topDrugs.length > 0 ? '最多: ' + topDrugs[0][0] : 'データ蓄積中'}</div></div>
       <div class="stat-card"><div class="label">傷病名件数</div><div class="value">${diseases.length}</div><div class="sub">${topDx.length > 0 ? '最多: ' + topDx[0][0] : 'データ蓄積中'}</div></div>
     </div>
 
     <div class="charts">
       <div class="chart-card"><h3>月別受診件数・収益</h3><canvas id="chartMonthly"></canvas></div>
-      <div class="chart-card"><h3>日別受診件数（直近30日）</h3><canvas id="chartDaily"></canvas></div>
+      <div class="chart-card"><h3>日別受診件数</h3><canvas id="chartDaily"></canvas></div>
       <div class="chart-card"><h3>保険種別</h3><canvas id="chartInsurance"></canvas></div>
       <div class="chart-card"><h3>新規 / 再診 比率</h3><canvas id="chartVisitType"></canvas></div>
     </div>
@@ -207,22 +281,16 @@ function renderDashboard(patients, visits, prescriptions, diseases) {
       <div class="kpi-card">
         <h3>医師別 受診件数・収益</h3>
         ${topDoctors.map(([name, count]) => {
-          const pct = Math.round(count / totalVisits * 100);
+          const pct = totalVisits > 0 ? Math.round(count / totalVisits * 100) : 0;
           const rev = doctorRevenue[name] || 0;
-          return `<div class="kpi-row">
-            <span>${name}</span>
-            <span><span class="pill pill-blue">${count}件 (${pct}%)</span> <span class="pill pill-amber">¥${rev.toLocaleString()}</span></span>
-          </div>`;
+          return `<div class="kpi-row"><span>${name}</span><span><span class="pill pill-blue">${count}件 (${pct}%)</span> <span class="pill pill-amber">&yen;${rev.toLocaleString()}</span></span></div>`;
         }).join('')}
       </div>
       <div class="kpi-card">
         <h3>保険種別 内訳</h3>
         ${Object.entries(insCount).sort((a,b) => b[1]-a[1]).map(([type, count]) => {
-          const pct = Math.round(count / totalPatients * 100);
-          return `<div class="kpi-row">
-            <span>${type}</span>
-            <span><span class="pill pill-green">${count}人 (${pct}%)</span></span>
-          </div>`;
+          const pct = totalPatients > 0 ? Math.round(count / totalPatients * 100) : 0;
+          return `<div class="kpi-row"><span>${type}</span><span><span class="pill pill-green">${count}人 (${pct}%)</span></span></div>`;
         }).join('')}
       </div>
       <div class="kpi-card">
@@ -230,10 +298,7 @@ function renderDashboard(patients, visits, prescriptions, diseases) {
         ${monthLabels.map(m => {
           const cnt = monthlyVisits[m];
           const rev = monthlyRevenue[m] || 0;
-          return `<div class="kpi-row">
-            <span>${m}</span>
-            <span><span class="pill pill-blue">${cnt}件</span> <span class="pill pill-amber">¥${rev.toLocaleString()}</span></span>
-          </div>`;
+          return `<div class="kpi-row"><span>${m}</span><span><span class="pill pill-blue">${cnt}件</span> <span class="pill pill-amber">&yen;${rev.toLocaleString()}</span></span></div>`;
         }).join('')}
       </div>
     </div>
@@ -242,48 +307,45 @@ function renderDashboard(patients, visits, prescriptions, diseases) {
     <div class="tables">
       <div class="table-section">
         <h3>処方薬ランキング TOP10</h3>
-        <table>
-          <tr><th>#</th><th>薬品名</th><th>処方回数</th></tr>
-          ${topDrugs.map((d, i) => `<tr><td>${i + 1}</td><td>${d[0]}</td><td><span class="pill pill-blue">${d[1]}</span></td></tr>`).join('')}
-          ${topDrugs.length === 0 ? '<tr><td colspan="3" style="color:var(--muted)">データ蓄積中</td></tr>' : ''}
+        <table><tr><th>#</th><th>薬品名</th><th>処方回数</th></tr>
+        ${topDrugs.map((d, i) => `<tr><td>${i+1}</td><td>${d[0]}</td><td><span class="pill pill-blue">${d[1]}</span></td></tr>`).join('')}
+        ${topDrugs.length === 0 ? '<tr><td colspan="3" style="color:var(--muted)">データ蓄積中</td></tr>' : ''}
         </table>
       </div>
       <div class="table-section">
         <h3>傷病名ランキング TOP10</h3>
-        <table>
-          <tr><th>#</th><th>傷病名</th><th>件数</th></tr>
-          ${topDx.map((d, i) => `<tr><td>${i + 1}</td><td>${d[0]}</td><td><span class="pill pill-green">${d[1]}</span></td></tr>`).join('')}
-          ${topDx.length === 0 ? '<tr><td colspan="3" style="color:var(--muted)">データ蓄積中</td></tr>' : ''}
+        <table><tr><th>#</th><th>傷病名</th><th>件数</th></tr>
+        ${topDx.map((d, i) => `<tr><td>${i+1}</td><td>${d[0]}</td><td><span class="pill pill-green">${d[1]}</span></td></tr>`).join('')}
+        ${topDx.length === 0 ? '<tr><td colspan="3" style="color:var(--muted)">データ蓄積中</td></tr>' : ''}
         </table>
       </div>
     </div>` : ''}
 
     <div style="padding: 0 32px 32px;">
-      <div class="table-section">
-        <h3>性別比</h3>
-        <canvas id="chartSex" style="max-height:200px;"></canvas>
-      </div>
+      <div class="table-section"><h3>性別比</h3><canvas id="chartSex" style="max-height:200px;"></canvas></div>
     </div>
   `;
 
-  // === Chart.js ===
-  Chart.defaults.color = '#94a3b8';
+  // === Charts ===
   const gridColor = '#1e293b';
 
-  // 月別受診+収益（複合）
+  // 月別（複合: 棒 + 折れ線）
   if (monthLabels.length > 0) {
-    new Chart(document.getElementById('chartMonthly'), {
+    _charts.monthly = new Chart(document.getElementById('chartMonthly'), {
       type: 'bar',
       data: {
         labels: monthLabels,
         datasets: [
-          { label: '受診件数', data: monthData, backgroundColor: 'rgba(56,189,248,0.6)', borderColor: '#38bdf8', borderWidth: 1, yAxisID: 'y' },
-          { label: '収益(万円)', data: monthRevData.map(v => Math.round(v / 10000)), type: 'line', borderColor: '#fbbf24', backgroundColor: 'rgba(251,191,36,0.1)', fill: true, tension: 0.3, yAxisID: 'y1' }
+          { label: '受診件数', data: monthData, backgroundColor: 'rgba(56,189,248,0.6)', borderColor: '#38bdf8', borderWidth: 1, yAxisID: 'y',
+            datalabels: dlBar },
+          { label: '収益(万円)', data: monthRevData.map(v => Math.round(v / 10000)), type: 'line', borderColor: '#fbbf24', backgroundColor: 'rgba(251,191,36,0.1)', fill: true, tension: 0.3, yAxisID: 'y1', pointRadius: 4, pointBackgroundColor: '#fbbf24',
+            datalabels: dlLine }
         ]
       },
       options: {
         responsive: true,
-        plugins: { legend: { labels: { color: '#94a3b8' } } },
+        layout: { padding: { top: 24 } },
+        plugins: { legend: { labels: { color: '#94a3b8' } }, datalabels: {} },
         scales: {
           x: { ticks: { color: '#94a3b8' }, grid: { color: gridColor } },
           y: { position: 'left', ticks: { color: '#38bdf8' }, grid: { color: gridColor }, title: { display: true, text: '件数', color: '#38bdf8' } },
@@ -293,36 +355,43 @@ function renderDashboard(patients, visits, prescriptions, diseases) {
     });
   }
 
-  // 日別受診
+  // 日別
   if (dayLabels.length > 0) {
-    new Chart(document.getElementById('chartDaily'), {
+    _charts.daily = new Chart(document.getElementById('chartDaily'), {
       type: 'bar',
-      data: { labels: dayLabels.map(d => d.substring(5)), datasets: [{ label: '受診件数', data: dayData, backgroundColor: 'rgba(74,222,128,0.5)', borderColor: '#4ade80', borderWidth: 1 }] },
-      options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#94a3b8', maxRotation: 45 }, grid: { color: gridColor } }, y: { ticks: { color: '#94a3b8' }, grid: { color: gridColor } } } }
+      data: { labels: dayLabels.map(d => d.substring(5)), datasets: [{ label: '受診件数', data: dayData, backgroundColor: 'rgba(74,222,128,0.5)', borderColor: '#4ade80', borderWidth: 1,
+        datalabels: { display: true, anchor: 'end', align: 'top', color: '#e2e8f0', font: { size: 10, weight: 'bold' }, formatter: v => v }
+      }] },
+      options: {
+        responsive: true,
+        layout: { padding: { top: 20 } },
+        plugins: { legend: { display: false }, datalabels: {} },
+        scales: { x: { ticks: { color: '#94a3b8', maxRotation: 60, font: { size: 10 } }, grid: { color: gridColor } }, y: { ticks: { color: '#94a3b8' }, grid: { color: gridColor } } }
+      }
     });
   }
 
   // 保険種別
   const insLabels = Object.keys(insCount);
   const insData = insLabels.map(k => insCount[k]);
-  new Chart(document.getElementById('chartInsurance'), {
+  _charts.insurance = new Chart(document.getElementById('chartInsurance'), {
     type: 'doughnut',
-    data: { labels: insLabels, datasets: [{ data: insData, backgroundColor: ['#38bdf8', '#4ade80', '#fbbf24', '#fb7185', '#a78bfa'] }] },
-    options: { responsive: true, plugins: { legend: { labels: { color: '#94a3b8' } } } }
+    data: { labels: insLabels, datasets: [{ data: insData, backgroundColor: ['#38bdf8', '#4ade80', '#fbbf24', '#fb7185', '#a78bfa'], datalabels: dlDoughnut }] },
+    options: { responsive: true, plugins: { legend: { labels: { color: '#94a3b8' } }, datalabels: {} } }
   });
 
   // 新規/再診
-  new Chart(document.getElementById('chartVisitType'), {
+  _charts.visitType = new Chart(document.getElementById('chartVisitType'), {
     type: 'doughnut',
-    data: { labels: ['新規', '再診'], datasets: [{ data: [newVisits, revisits], backgroundColor: ['#38bdf8', '#a78bfa'] }] },
-    options: { responsive: true, plugins: { legend: { labels: { color: '#94a3b8' } } } }
+    data: { labels: ['新規', '再診'], datasets: [{ data: [newVisits, revisits], backgroundColor: ['#38bdf8', '#a78bfa'], datalabels: dlDoughnut }] },
+    options: { responsive: true, plugins: { legend: { labels: { color: '#94a3b8' } }, datalabels: {} } }
   });
 
   // 性別比
-  new Chart(document.getElementById('chartSex'), {
+  _charts.sex = new Chart(document.getElementById('chartSex'), {
     type: 'doughnut',
-    data: { labels: ['男性', '女性'], datasets: [{ data: [sexCount['男'], sexCount['女']], backgroundColor: ['#38bdf8', '#fb7185'] }] },
-    options: { responsive: true, plugins: { legend: { labels: { color: '#94a3b8' } } } }
+    data: { labels: ['男性', '女性'], datasets: [{ data: [sexCount['男'], sexCount['女']], backgroundColor: ['#38bdf8', '#fb7185'], datalabels: dlDoughnut }] },
+    options: { responsive: true, plugins: { legend: { labels: { color: '#94a3b8' } }, datalabels: {} } }
   });
 }
 </script>
