@@ -126,8 +126,8 @@ async function loadDashboard() {
       try {
         const sb = window.supabase.createClient(SB_URL, SB_KEY);
         const [pRes, vRes, rxRes, dxRes] = await Promise.all([
-          sb.from('patients').select('id,patient_no,name,sex,insurance_type,age,created_at').eq('clinic_id', 'nishiharu'),
-          sb.from('visits').select('id,patient_id,visit_date,visit_type,status,revenue_points,self_pay,doctor,department').eq('clinic_id', 'nishiharu'),
+          sb.from('patients').select('id,patient_no,name,sex,insurance_type,age,address,created_at').eq('clinic_id', 'nishiharu'),
+          sb.from('visits').select('id,patient_id,visit_date,visit_type,status,revenue_points,self_pay,doctor,department,route,covid_positive,flu_positive,strep_positive').eq('clinic_id', 'nishiharu'),
           sb.from('prescriptions').select('id,visit_id,drug_name,quantity,days'),
           sb.from('diseases_assigned').select('id,visit_id,disease_name,disease_code')
         ]);
@@ -231,6 +231,7 @@ function convertGasData(data) {
         sex: (p.sex || '').replace(/性$/, '') || '不明',
         age: parseAge(p.age),
         insurance_type: p.insurance || '不明',
+        address: p.area || null,
         created_at: null
       };
     }
@@ -247,7 +248,11 @@ function convertGasData(data) {
     revenue_points: p.revenuePoints || 0,
     self_pay: p.selfPay || 0,
     doctor: p.doctor || '不明',
-    department: '内科'
+    department: '内科',
+    route: p.route || null,
+    covid_positive: p.covid === '陽性',
+    flu_positive: p.flu === '陽性',
+    strep_positive: p.strep === '陽性'
   }));
 
   // 処方レコード変換
@@ -412,6 +417,77 @@ function renderDashboard(patients, visits, prescriptions, diseases, shifts) {
 
   const avgPoints = totalVisits > 0 ? Math.round(totalPoints / totalVisits) : 0;
 
+  // --- 追加集計 ---
+
+  // エリア別ランキング
+  const areaCount = {};
+  patients.forEach(p => { const a = p.address || '不明'; areaCount[a] = (areaCount[a] || 0) + 1; });
+  const topAreas = Object.entries(areaCount).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+  // 経路別ランキング
+  const routeCount = {};
+  visits.forEach(v => { const r = v.route || '不明'; routeCount[r] = (routeCount[r] || 0) + 1; });
+  const topRoutes = Object.entries(routeCount).sort((a, b) => b[1] - a[1]);
+
+  // 年齢層別分布
+  const ageGroups = { '0-9': 0, '10-19': 0, '20-29': 0, '30-39': 0, '40-49': 0, '50-59': 0, '60-69': 0, '70-79': 0, '80+': 0 };
+  patients.forEach(p => {
+    const age = p.age || 0;
+    if (age < 10) ageGroups['0-9']++;
+    else if (age < 20) ageGroups['10-19']++;
+    else if (age < 30) ageGroups['20-29']++;
+    else if (age < 40) ageGroups['30-39']++;
+    else if (age < 50) ageGroups['40-49']++;
+    else if (age < 60) ageGroups['50-59']++;
+    else if (age < 70) ageGroups['60-69']++;
+    else if (age < 80) ageGroups['70-79']++;
+    else ageGroups['80+']++;
+  });
+
+  // 曜日別受診件数
+  const dowNames = ['日', '月', '火', '水', '木', '金', '土'];
+  const dowCount = [0, 0, 0, 0, 0, 0, 0];
+  visits.forEach(v => {
+    if (!v.visit_date) return;
+    const d = new Date(v.visit_date + 'T00:00:00');
+    dowCount[d.getDay()]++;
+  });
+
+  // 感染症陽性件数（visits から直接、または diseases から）
+  let covidCount = 0, fluCount = 0, strepCount = 0;
+  visits.forEach(v => {
+    if (v.covid_positive) covidCount++;
+    if (v.flu_positive) fluCount++;
+    if (v.strep_positive) strepCount++;
+  });
+  // diseases からもカウント（GAS DBフォールバック時用）
+  if (covidCount === 0 && fluCount === 0 && strepCount === 0) {
+    diseases.forEach(d => {
+      if (d.disease_name === 'COVID-19') covidCount++;
+      else if (d.disease_name === 'インフルエンザ') fluCount++;
+      else if (d.disease_name === '溶連菌感染症') strepCount++;
+    });
+  }
+  const totalInfection = covidCount + fluCount + strepCount;
+  const infectionRate = totalVisits > 0 ? Math.round(totalInfection / totalVisits * 100) : 0;
+
+  // リピーター分析
+  const visitCountPerPatient = {};
+  visits.forEach(v => { visitCountPerPatient[v.patient_id] = (visitCountPerPatient[v.patient_id] || 0) + 1; });
+  const repeaters = Object.values(visitCountPerPatient).filter(c => c >= 2).length;
+  const singleVisitors = Object.values(visitCountPerPatient).filter(c => c === 1).length;
+  const repeaterRate = totalPatients > 0 ? Math.round(repeaters / totalPatients * 100) : 0;
+  const maxVisitCount = Math.max(0, ...Object.values(visitCountPerPatient));
+  const topRepeater = Object.entries(visitCountPerPatient).sort((a, b) => b[1] - a[1])[0];
+
+  // 医師別平均点数
+  const doctorAvgPoints = {};
+  topDoctors.forEach(([name]) => {
+    const cnt = doctorCount[name] || 0;
+    const rev = doctorRevenue[name] || 0;
+    doctorAvgPoints[name] = cnt > 0 ? Math.round(rev / cnt / 10) : 0; // 点数
+  });
+
   const app = document.getElementById('app');
   app.className = '';
   app.innerHTML = `
@@ -429,6 +505,8 @@ function renderDashboard(patients, visits, prescriptions, diseases, shifts) {
       <div class="chart-card"><h3>日別受診件数</h3><canvas id="chartDaily"></canvas></div>
       <div class="chart-card"><h3>保険種別</h3><canvas id="chartInsurance"></canvas></div>
       <div class="chart-card"><h3>新規 / 再診 比率</h3><canvas id="chartVisitType"></canvas></div>
+      <div class="chart-card"><h3>年齢層別 患者分布</h3><canvas id="chartAge"></canvas></div>
+      <div class="chart-card"><h3>曜日別 受診件数</h3><canvas id="chartDow"></canvas></div>
     </div>
 
     <div class="kpi-grid">
@@ -467,6 +545,44 @@ function renderDashboard(patients, visits, prescriptions, diseases, shifts) {
           const cnt = monthlyVisits[m];
           const rev = monthlyRevenue[m] || 0;
           return `<div class="kpi-row"><span>${m}</span><span><span class="pill pill-blue">${cnt}件</span> <span class="pill pill-amber">&yen;${rev.toLocaleString()}</span></span></div>`;
+        }).join('')}
+      </div>
+      <div class="kpi-card">
+        <h3>エリア別 患者数 TOP10</h3>
+        ${topAreas.map(([area, count]) => {
+          const pct = totalPatients > 0 ? Math.round(count / totalPatients * 100) : 0;
+          return `<div class="kpi-row"><span>${area}</span><span><span class="pill pill-blue">${count}人 (${pct}%)</span></span></div>`;
+        }).join('') || '<div style="color:var(--muted);font-size:12px;">データなし</div>'}
+      </div>
+      <div class="kpi-card">
+        <h3>来院経路別 受診件数</h3>
+        ${topRoutes.map(([route, count]) => {
+          const pct = totalVisits > 0 ? Math.round(count / totalVisits * 100) : 0;
+          return `<div class="kpi-row"><span>${route}</span><span><span class="pill pill-green">${count}件 (${pct}%)</span></span></div>`;
+        }).join('') || '<div style="color:var(--muted);font-size:12px;">データなし</div>'}
+      </div>
+      <div class="kpi-card">
+        <h3>感染症 陽性件数</h3>
+        <div class="kpi-row"><span>COVID-19</span><span><span class="pill pill-amber">${covidCount}件</span></span></div>
+        <div class="kpi-row"><span>インフルエンザ</span><span><span class="pill pill-amber">${fluCount}件</span></span></div>
+        <div class="kpi-row"><span>溶連菌感染症</span><span><span class="pill pill-amber">${strepCount}件</span></span></div>
+        <div class="kpi-row" style="border-top:2px solid var(--border);margin-top:4px;padding-top:8px;">
+          <span>陽性合計 / 全受診</span>
+          <span><span class="pill pill-purple">${totalInfection}件 / ${totalVisits}件 (${infectionRate}%)</span></span>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <h3>リピーター分析</h3>
+        <div class="kpi-row"><span>初回のみ</span><span><span class="pill pill-blue">${singleVisitors}人</span></span></div>
+        <div class="kpi-row"><span>2回以上来院</span><span><span class="pill pill-green">${repeaters}人</span></span></div>
+        <div class="kpi-row"><span>リピーター率</span><span><span class="pill pill-purple">${repeaterRate}%</span></span></div>
+        ${topRepeater ? `<div class="kpi-row"><span>最多来院</span><span><span class="pill pill-amber">${topRepeater[1]}回</span></span></div>` : ''}
+      </div>
+      <div class="kpi-card">
+        <h3>医師別 平均点数/件</h3>
+        ${topDoctors.map(([name]) => {
+          const avg = doctorAvgPoints[name] || 0;
+          return `<div class="kpi-row"><span>${name}</span><span><span class="pill pill-blue">${avg.toLocaleString()}点</span></span></div>`;
         }).join('')}
       </div>
     </div>
@@ -553,6 +669,35 @@ function renderDashboard(patients, visits, prescriptions, diseases, shifts) {
     type: 'doughnut',
     data: { labels: ['新規', '再診'], datasets: [{ data: [newVisits, revisits], backgroundColor: ['#38bdf8', '#a78bfa'], datalabels: dlDoughnut }] },
     options: { responsive: true, plugins: { legend: { labels: { color: '#94a3b8' } }, datalabels: {} } }
+  });
+
+  // 年齢層別
+  const ageLabels = Object.keys(ageGroups);
+  const ageData = ageLabels.map(k => ageGroups[k]);
+  _charts.age = new Chart(document.getElementById('chartAge'), {
+    type: 'bar',
+    data: { labels: ageLabels, datasets: [{ label: '患者数', data: ageData, backgroundColor: 'rgba(167,139,250,0.6)', borderColor: '#a78bfa', borderWidth: 1,
+      datalabels: dlBar }] },
+    options: {
+      responsive: true,
+      layout: { padding: { top: 20 } },
+      plugins: { legend: { display: false }, datalabels: {} },
+      scales: { x: { ticks: { color: '#94a3b8' }, grid: { color: gridColor } }, y: { ticks: { color: '#94a3b8' }, grid: { color: gridColor } } }
+    }
+  });
+
+  // 曜日別
+  const dowColors = ['#fb7185', '#38bdf8', '#38bdf8', '#38bdf8', '#38bdf8', '#38bdf8', '#fbbf24'];
+  _charts.dow = new Chart(document.getElementById('chartDow'), {
+    type: 'bar',
+    data: { labels: dowNames, datasets: [{ label: '受診件数', data: dowCount, backgroundColor: dowColors.map(c => c + '99'), borderColor: dowColors, borderWidth: 1,
+      datalabels: dlBar }] },
+    options: {
+      responsive: true,
+      layout: { padding: { top: 20 } },
+      plugins: { legend: { display: false }, datalabels: {} },
+      scales: { x: { ticks: { color: '#94a3b8' }, grid: { color: gridColor } }, y: { ticks: { color: '#94a3b8' }, grid: { color: gridColor } } }
+    }
   });
 
   // 性別比
