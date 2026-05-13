@@ -85,7 +85,7 @@ td { padding: 8px 12px; font-size: 13px; border-bottom: 1px solid rgba(51,65,85,
 
 <div class="header">
   <h1>カルテ分析ダッシュボード</h1>
-  <span class="badge">Supabase Live</span>
+  <span class="badge" id="sourceBadge">読込中...</span>
   <span class="last-update" id="lastUpdate"></span>
   <a class="back" href="index.html">&larr; カルテに戻る</a>
 </div>
@@ -107,31 +107,63 @@ Chart.register(ChartDataLabels);
 
 const SB_URL = window.__SUPABASE_URL__;
 const SB_KEY = window.__SUPABASE_ANON_KEY__;
+const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwWCL1aVy4RcCZsr2Wzrpy5JE8LU8pGWa2u_CY7qo7OGMgXrB0OZGir6rGJZiiV6hRd/exec';
 
 let _allPatients = [], _allVisits = [], _allRx = [], _allDx = [];
+let _dataSource = '';
 let _charts = {};
 
-if (!SB_URL || !SB_KEY) {
-  document.getElementById('app').innerHTML = '<span class="error">config.js が読み込めません</span>';
-} else {
-  const sb = window.supabase.createClient(SB_URL, SB_KEY);
-  loadDashboard(sb);
-}
+loadDashboard();
 
-async function loadDashboard(sb) {
+async function loadDashboard() {
   try {
-    const [pRes, vRes, rxRes, dxRes] = await Promise.all([
-      sb.from('patients').select('id,patient_no,name,sex,insurance_type,age,created_at').eq('clinic_id', 'nishiharu'),
-      sb.from('visits').select('id,patient_id,visit_date,visit_type,status,revenue_points,self_pay,doctor,department').eq('clinic_id', 'nishiharu'),
-      sb.from('prescriptions').select('id,visit_id,drug_name,quantity,days'),
-      sb.from('diseases_assigned').select('id,visit_id,disease_name,disease_code')
-    ]);
-    _allPatients = pRes.data || [];
-    _allVisits = vRes.data || [];
-    _allRx = rxRes.data || [];
-    _allDx = dxRes.data || [];
+    let sbOk = false;
 
-    document.getElementById('lastUpdate').textContent = '最終取得: ' + new Date().toLocaleString('ja-JP');
+    // 1. Supabaseからデータ取得を試みる
+    if (SB_URL && SB_KEY) {
+      try {
+        const sb = window.supabase.createClient(SB_URL, SB_KEY);
+        const [pRes, vRes, rxRes, dxRes] = await Promise.all([
+          sb.from('patients').select('id,patient_no,name,sex,insurance_type,age,created_at').eq('clinic_id', 'nishiharu'),
+          sb.from('visits').select('id,patient_id,visit_date,visit_type,status,revenue_points,self_pay,doctor,department').eq('clinic_id', 'nishiharu'),
+          sb.from('prescriptions').select('id,visit_id,drug_name,quantity,days'),
+          sb.from('diseases_assigned').select('id,visit_id,disease_name,disease_code')
+        ]);
+        const sbPatients = pRes.data || [];
+        const sbVisits = vRes.data || [];
+        // visitsが1件以上あればSupabaseデータを使う
+        if (sbVisits.length > 0) {
+          _allPatients = sbPatients;
+          _allVisits = sbVisits;
+          _allRx = rxRes.data || [];
+          _allDx = dxRes.data || [];
+          _dataSource = 'Supabase';
+          sbOk = true;
+        }
+      } catch (sbErr) {
+        console.warn('[Supabase] 取得失敗、GAS APIにフォールバック:', sbErr);
+      }
+    }
+
+    // 2. Supabaseにvisitsがなければ GAS API からデータ取得
+    if (!sbOk) {
+      const res = await fetch(GAS_API_URL + '?action=all');
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'GAS API error');
+
+      const gasResult = convertGasData(data);
+      _allPatients = gasResult.patients;
+      _allVisits = gasResult.visits;
+      _allRx = gasResult.prescriptions;
+      _allDx = gasResult.diseases;
+      _dataSource = 'GAS DB';
+    }
+
+    document.getElementById('lastUpdate').textContent =
+      '最終取得: ' + new Date().toLocaleString('ja-JP') + '（' + _dataSource + '）';
+    const badge = document.getElementById('sourceBadge');
+    badge.textContent = _dataSource === 'Supabase' ? 'Supabase Live' : 'GAS DB';
+    if (_dataSource !== 'Supabase') badge.style.background = '#4ade80';
 
     // 日付範囲の初期値を設定
     const dates = _allVisits.map(v => v.visit_date).filter(Boolean).sort();
@@ -145,6 +177,104 @@ async function loadDashboard(sb) {
   } catch (e) {
     document.getElementById('app').innerHTML = '<span class="error">エラー: ' + e.message + '</span>';
   }
+}
+
+// GAS APIレスポンスをanalytics用の形式に変換
+function convertGasData(data) {
+  const gasPats = data.patients || [];
+  const gasRx = data.prescriptions || [];
+
+  // M/D形式 → ISO日付変換（年度跨ぎ対応: 1-3月は翌年扱い）
+  const now = new Date();
+  const baseYear = now.getFullYear();
+  function mdToIso(md) {
+    if (!md) return '';
+    if (md.includes('-')) return md; // 既にISO形式
+    const parts = String(md).split('/');
+    if (parts.length !== 2) return '';
+    const m = parseInt(parts[0]);
+    const d = parseInt(parts[1]);
+    if (isNaN(m) || isNaN(d)) return '';
+    // 4月始まり年度: 月が1-3なら翌年の可能性。現在月と比較
+    let year = baseYear;
+    if (m >= 10 && now.getMonth() + 1 <= 3) year = baseYear - 1;
+    return year + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+  }
+
+  // 年齢パース: "3~5" → 4, "19~29" → 24, "30代" → 35, 数字→そのまま
+  function parseAge(ageStr) {
+    const s = String(ageStr || '');
+    if (/^\d+$/.test(s)) return parseInt(s);
+    const range = s.match(/(\d+)~(\d+)/);
+    if (range) return Math.round((parseInt(range[1]) + parseInt(range[2])) / 2);
+    const decade = s.match(/(\d+)代/);
+    if (decade) return parseInt(decade[1]) + 5;
+    return 0;
+  }
+
+  // 陽性判定: "陽性"のみtrue
+  function isPositive(val) { return val === '陽性'; }
+
+  // 患者をユニーク名でグループ化
+  const patientMap = {};
+  gasPats.forEach(p => {
+    const name = (p.name || '').replace(/\s+/g, '');
+    if (!patientMap[name]) {
+      patientMap[name] = {
+        id: name,
+        name: name,
+        sex: (p.sex || '').replace(/性$/, '') || '不明',
+        age: parseAge(p.age),
+        insurance_type: p.insurance || '不明',
+        created_at: null
+      };
+    }
+  });
+  const patients = Object.values(patientMap);
+
+  // 来院レコードをvisits形式に変換
+  const visits = gasPats.map((p, i) => ({
+    id: 'gas-v-' + i,
+    patient_id: (p.name || '').replace(/\s+/g, ''),
+    visit_date: mdToIso(p.date),
+    visit_type: p.type || null,
+    status: 'done',
+    revenue_points: p.revenuePoints || 0,
+    self_pay: p.selfPay || 0,
+    doctor: p.doctor || '不明',
+    department: '内科'
+  }));
+
+  // 処方レコード変換
+  const prescriptions = [];
+  gasRx.forEach((rec, ri) => {
+    if (!rec.rx || !rec.rx.length) return;
+    const normName = (rec.name || '').replace(/\s+/g, '');
+    const matchVisit = visits.find(v => v.patient_id === normName);
+    const visitId = matchVisit ? matchVisit.id : 'gas-v-unknown-' + ri;
+    rec.rx.forEach((r, j) => {
+      const drugName = typeof r === 'object' ? (r.drug || '') : String(r);
+      if (!drugName) return;
+      prescriptions.push({
+        id: 'gas-rx-' + ri + '-' + j,
+        visit_id: visitId,
+        drug_name: drugName,
+        quantity: typeof r === 'object' ? (r.qty || 0) : 0,
+        days: 0
+      });
+    });
+  });
+
+  // 傷病名（COVID/flu/strep 陽性のみ）
+  const diseases = [];
+  gasPats.forEach((p, i) => {
+    const visitId = 'gas-v-' + i;
+    if (isPositive(p.covid)) diseases.push({ id: 'gas-dx-' + i + '-c', visit_id: visitId, disease_name: 'COVID-19', disease_code: '' });
+    if (isPositive(p.flu)) diseases.push({ id: 'gas-dx-' + i + '-f', visit_id: visitId, disease_name: 'インフルエンザ', disease_code: '' });
+    if (isPositive(p.strep)) diseases.push({ id: 'gas-dx-' + i + '-s', visit_id: visitId, disease_name: '溶連菌感染症', disease_code: '' });
+  });
+
+  return { patients, visits, prescriptions, diseases };
 }
 
 function setupFilterEvents() {
