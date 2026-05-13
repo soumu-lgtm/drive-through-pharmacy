@@ -111,7 +111,7 @@ const SB_URL = window.__SUPABASE_URL__;
 const SB_KEY = window.__SUPABASE_ANON_KEY__;
 const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwWCL1aVy4RcCZsr2Wzrpy5JE8LU8pGWa2u_CY7qo7OGMgXrB0OZGir6rGJZiiV6hRd/exec';
 
-let _allPatients = [], _allVisits = [], _allRx = [], _allDx = [];
+let _allPatients = [], _allVisits = [], _allRx = [], _allDx = [], _allShifts = [];
 let _dataSource = '';
 let _charts = {};
 
@@ -142,6 +142,9 @@ async function loadDashboard() {
           _dataSource = 'Supabase';
           sbOk = true;
         }
+        // シフトデータも取得（visitsの有無に関わらず）
+        const shiftRes = await sb.from('doctor_shifts').select('*').eq('clinic_id', 'nishiharu');
+        _allShifts = shiftRes.data || [];
       } catch (sbErr) {
         console.warn('[Supabase] 取得失敗、GAS APIにフォールバック:', sbErr);
       }
@@ -174,7 +177,7 @@ async function loadDashboard() {
       document.getElementById('dateTo').value = new Date().toISOString().split('T')[0];
     }
 
-    renderDashboard(_allPatients, _allVisits, _allRx, _allDx);
+    renderDashboard(_allPatients, _allVisits, _allRx, _allDx, _allShifts);
     setupFilterEvents();
   } catch (e) {
     document.getElementById('app').innerHTML = '<span class="error">エラー: ' + e.message + '</span>';
@@ -315,7 +318,12 @@ function applyDateFilter() {
   Object.values(_charts).forEach(c => c.destroy());
   _charts = {};
 
-  renderDashboard(filteredPatients, filteredVisits, filteredRx, filteredDx);
+  // シフトデータも期間フィルタ
+  let filteredShifts = _allShifts;
+  if (from) filteredShifts = filteredShifts.filter(s => s.shift_date >= from);
+  if (to) filteredShifts = filteredShifts.filter(s => s.shift_date <= to);
+
+  renderDashboard(filteredPatients, filteredVisits, filteredRx, filteredDx, filteredShifts);
 }
 
 // Chart.js datalabels 共通設定
@@ -346,7 +354,8 @@ const dlDoughnut = {
   }
 };
 
-function renderDashboard(patients, visits, prescriptions, diseases) {
+function renderDashboard(patients, visits, prescriptions, diseases, shifts) {
+  shifts = shifts || [];
   const totalPatients = patients.length;
   const totalVisits = visits.length;
   const totalPoints = visits.reduce((s, v) => s + (v.revenue_points || 0), 0);
@@ -374,6 +383,19 @@ function renderDashboard(patients, visits, prescriptions, diseases) {
   const doctorRevenue = {};
   visits.forEach(v => { const d = v.doctor || '不明'; doctorCount[d] = (doctorCount[d] || 0) + 1; doctorRevenue[d] = (doctorRevenue[d] || 0) + (v.revenue_points || 0) * 10; });
   const topDoctors = Object.entries(doctorCount).sort((a, b) => b[1] - a[1]);
+
+  // シフト集計（医師別: 出勤日数・平日/土曜/日祝・給与）
+  const doctorShiftStats = {};
+  shifts.forEach(s => {
+    const d = s.doctor_name || '不明';
+    if (!doctorShiftStats[d]) doctorShiftStats[d] = { total: 0, weekday: 0, saturday: 0, holiday: 0, pay: 0 };
+    const ds = doctorShiftStats[d];
+    ds.total++;
+    if (s.day_type === '平日') ds.weekday++;
+    else if (s.day_type === '土曜') ds.saturday++;
+    else if (s.day_type === '日祝') ds.holiday++;
+    ds.pay += (s.daily_pay || 0);
+  });
 
   const dailyVisits = {};
   visits.forEach(v => { if (!v.visit_date) return; dailyVisits[v.visit_date] = (dailyVisits[v.visit_date] || 0) + 1; });
@@ -411,12 +433,26 @@ function renderDashboard(patients, visits, prescriptions, diseases) {
 
     <div class="kpi-grid">
       <div class="kpi-card">
-        <h3>医師別 受診件数・収益</h3>
-        ${topDoctors.map(([name, count]) => {
-          const pct = totalVisits > 0 ? Math.round(count / totalVisits * 100) : 0;
-          const rev = doctorRevenue[name] || 0;
-          return `<div class="kpi-row"><span>${name}</span><span><span class="pill pill-blue">${count}件 (${pct}%)</span> <span class="pill pill-amber">&yen;${rev.toLocaleString()}</span></span></div>`;
-        }).join('')}
+        <h3>医師別 受診件数・収益・出勤</h3>
+        ${(() => {
+          // 受診データとシフトデータの医師名を統合
+          const allDoctorNames = [...new Set([...topDoctors.map(d => d[0]), ...Object.keys(doctorShiftStats)])];
+          return allDoctorNames.map(name => {
+            const count = doctorCount[name] || 0;
+            const pct = totalVisits > 0 ? Math.round(count / totalVisits * 100) : 0;
+            const rev = doctorRevenue[name] || 0;
+            const ss = doctorShiftStats[name];
+            const shiftHtml = ss
+              ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;">出勤 ${ss.total}日（平日${ss.weekday} / 土${ss.saturday} / 日祝${ss.holiday}）&ensp;給与 <span style="color:var(--green);">&yen;${ss.pay.toLocaleString()}</span></div>`
+              : '';
+            return `<div class="kpi-row" style="flex-direction:column;align-items:flex-start;gap:2px;">
+              <div style="display:flex;justify-content:space-between;width:100%;align-items:center;">
+                <span>${name}</span>
+                <span>${count > 0 ? `<span class="pill pill-blue">${count}件 (${pct}%)</span> <span class="pill pill-amber">&yen;${rev.toLocaleString()}</span>` : '<span style="color:var(--muted);font-size:11px;">受診データなし</span>'}</span>
+              </div>${shiftHtml}
+            </div>`;
+          }).join('');
+        })()}
       </div>
       <div class="kpi-card">
         <h3>保険種別 内訳</h3>
@@ -692,14 +728,91 @@ async function runSync() {
       }
     }
 
-    // 6. 結果表示
-    const msg = newVisitCount === 0 && newPatCount === 0
+    // 6. シフトデータ同期（Google Sheets月別タブCSV → doctor_shifts）
+    let newShiftCount = 0;
+    try {
+      syncStatus('シフトデータ同期中...', false);
+      const SHEET_ID = '12ylHWZhQO2ABfT6xhMM3z8jfD31kH7lRbaGY-Br4Y-k';
+      const now = new Date();
+      // 当月と前月のタブを同期
+      const monthTabs = [];
+      for (let offset = 0; offset <= 1; offset++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+        monthTabs.push(d.getFullYear() + '年' + (d.getMonth() + 1) + '月');
+      }
+
+      for (const tabName of monthTabs) {
+        try {
+          const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tabName)}`;
+          const csvRes = await fetch(csvUrl);
+          if (!csvRes.ok) continue;
+          const csvText = await csvRes.text();
+          const rows = csvText.split('\n').slice(1).filter(r => r.trim()); // ヘッダー除外
+
+          const shiftRows = [];
+          for (const row of rows) {
+            // CSV解析（ダブルクォート対応）
+            const cols = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+            if (!cols || cols.length < 3) continue;
+            const clean = s => (s || '').replace(/^"|"$/g, '').trim();
+            const dateStr = clean(cols[0]);
+            const dow = clean(cols[1]);
+            const doctorName = clean(cols[2]);
+            const payStr = clean(cols[3] || '');
+
+            if (!dateStr || !doctorName) continue;
+
+            // M/D → ISO日付
+            const parts = dateStr.split('/');
+            if (parts.length !== 2) continue;
+            const m = parseInt(parts[0]), d = parseInt(parts[1]);
+            if (isNaN(m) || isNaN(d)) continue;
+            // タブ名から年を取得
+            const yearMatch = tabName.match(/(\d{4})年/);
+            const year = yearMatch ? parseInt(yearMatch[1]) : now.getFullYear();
+            const isoDate = year + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+
+            // 曜日→day_type判定
+            let dayType = '平日';
+            if (dow === '土') dayType = '土曜';
+            else if (dow === '日' || dow === '祝') dayType = '日祝';
+
+            // 給与パース: "¥80,000" → 80000
+            const pay = parseInt(payStr.replace(/[¥￥,]/g, '')) || 0;
+
+            shiftRows.push({
+              clinic_id: 'nishiharu',
+              shift_date: isoDate,
+              day_of_week: dow,
+              day_type: dayType,
+              doctor_name: doctorName,
+              daily_pay: pay,
+              year_month: year + '-' + String(m).padStart(2, '0')
+            });
+          }
+
+          // upsert（shift_date + clinic_id のUNIQUEで重複回避）
+          for (let i = 0; i < shiftRows.length; i += 50) {
+            const batch = shiftRows.slice(i, i + 50);
+            const { data, error } = await sb.from('doctor_shifts').upsert(batch, { onConflict: 'clinic_id,shift_date' }).select('id');
+            if (!error && data) newShiftCount += data.length;
+          }
+        } catch (tabErr) {
+          console.warn('[Shift sync] タブ取得失敗:', tabName, tabErr);
+        }
+      }
+    } catch (shiftErr) {
+      console.warn('[Shift sync] エラー:', shiftErr);
+    }
+
+    // 7. 結果表示
+    const msg = newVisitCount === 0 && newPatCount === 0 && newShiftCount === 0
       ? '最新です（差分なし）'
-      : `同期完了: 患者+${newPatCount} 受診+${newVisitCount} 処方+${newRxCount} 傷病名+${newDxCount}`;
+      : `同期完了: 患者+${newPatCount} 受診+${newVisitCount} 処方+${newRxCount} 傷病名+${newDxCount} シフト+${newShiftCount}`;
     syncStatus(msg, false);
 
     // 差分があればダッシュボード再描画
-    if (newVisitCount > 0 || newPatCount > 0) {
+    if (newVisitCount > 0 || newPatCount > 0 || newShiftCount > 0) {
       setTimeout(() => location.reload(), 1500);
     }
 
