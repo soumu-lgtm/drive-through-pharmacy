@@ -87,6 +87,8 @@ td { padding: 8px 12px; font-size: 13px; border-bottom: 1px solid rgba(51,65,85,
   <h1>カルテ分析ダッシュボード</h1>
   <span class="badge" id="sourceBadge">読込中...</span>
   <span class="last-update" id="lastUpdate"></span>
+  <button class="filter-btn" id="syncBtn" style="margin-left:8px;background:#4ade80;font-size:11px;padding:5px 14px;" onclick="runSync()">GAS→Supabase同期</button>
+  <span class="last-update" id="syncStatus"></span>
   <a class="back" href="index.html">&larr; カルテに戻る</a>
 </div>
 
@@ -523,6 +525,191 @@ function renderDashboard(patients, visits, prescriptions, diseases) {
     data: { labels: ['男性', '女性'], datasets: [{ data: [sexCount['男'], sexCount['女']], backgroundColor: ['#38bdf8', '#fb7185'], datalabels: dlDoughnut }] },
     options: { responsive: true, plugins: { legend: { labels: { color: '#94a3b8' } }, datalabels: {} } }
   });
+}
+
+// ===== GAS → Supabase 差分同期 =====
+
+const SYNC_GAS_URL = GAS_API_URL;
+
+function syncStatus(msg, isError) {
+  const el = document.getElementById('syncStatus');
+  el.textContent = msg;
+  el.style.color = isError ? 'var(--rose)' : 'var(--green)';
+}
+
+function mdToIso(md) {
+  if (!md) return null;
+  if (md.includes('-')) return md;
+  const parts = String(md).split('/');
+  if (parts.length !== 2) return null;
+  const m = parseInt(parts[0]), d = parseInt(parts[1]);
+  if (isNaN(m) || isNaN(d)) return null;
+  const now = new Date();
+  let year = now.getFullYear();
+  if (m >= 10 && now.getMonth() + 1 <= 3) year--;
+  return year + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+}
+
+function parseAge(s) {
+  s = String(s || '');
+  if (/^\d+$/.test(s)) return parseInt(s);
+  const r = s.match(/(\d+)~(\d+)/);
+  if (r) return Math.round((parseInt(r[1]) + parseInt(r[2])) / 2);
+  const d = s.match(/(\d+)代/);
+  if (d) return parseInt(d[1]) + 5;
+  return null;
+}
+
+async function runSync() {
+  const btn = document.getElementById('syncBtn');
+  btn.disabled = true;
+  btn.textContent = '同期中...';
+  syncStatus('GAS API取得中...', false);
+
+  try {
+    if (!SB_URL || !SB_KEY) throw new Error('Supabase未設定');
+    const sb = window.supabase.createClient(SB_URL, SB_KEY);
+
+    // 1. GAS APIからデータ取得
+    const res = await fetch(SYNC_GAS_URL + '?action=all');
+    const gasData = await res.json();
+    if (!gasData.success) throw new Error('GAS API: ' + (gasData.error || 'unknown'));
+    const gasPats = gasData.patients || [];
+    const gasRx = gasData.prescriptions || [];
+    syncStatus('GAS: ' + gasPats.length + '件取得', false);
+
+    // 2. Supabase既存データ取得
+    const { data: sbPatients } = await sb.from('patients').select('id,name,patient_no').eq('clinic_id', 'nishiharu');
+    const { data: sbVisits } = await sb.from('visits').select('id,patient_id,visit_date').eq('clinic_id', 'nishiharu');
+
+    // 名前→UUID, 既存visit判定用Set
+    const nameToId = {};
+    sbPatients.forEach(p => { nameToId[p.name.replace(/\s+/g, '')] = p.id; });
+    const existingVisitKeys = new Set(sbVisits.map(v => v.patient_id + '|' + v.visit_date));
+
+    // 3. 新規患者を作成
+    let newPatCount = 0;
+    const newPatNames = [];
+    for (const gp of gasPats) {
+      const norm = (gp.name || '').replace(/\s+/g, '');
+      if (!norm || nameToId[norm]) continue;
+      newPatNames.push(norm);
+    }
+    const uniqueNewPats = [...new Set(newPatNames)];
+    for (const norm of uniqueNewPats) {
+      const gp = gasPats.find(p => (p.name || '').replace(/\s+/g, '') === norm);
+      const { data, error } = await sb.from('patients').insert({
+        clinic_id: 'nishiharu',
+        name: norm,
+        sex: (gp.sex || '').replace(/性$/, '') || '不明',
+        age: parseAge(gp.age),
+        insurance_type: gp.insurance || '不明',
+        address: gp.area || null
+      }).select('id').single();
+      if (!error && data) { nameToId[norm] = data.id; newPatCount++; }
+    }
+
+    // 4. 新規visitsを差分投入
+    const newVisitRows = [];
+    gasPats.forEach(gp => {
+      const norm = (gp.name || '').replace(/\s+/g, '');
+      const patId = nameToId[norm];
+      if (!patId) return;
+      const vd = mdToIso(gp.date);
+      if (!vd) return;
+      const key = patId + '|' + vd;
+      if (existingVisitKeys.has(key)) return;
+      existingVisitKeys.add(key); // 同バッチ内重複防止
+      newVisitRows.push({
+        clinic_id: 'nishiharu', patient_id: patId, visit_date: vd,
+        visit_type: gp.type === '新規' ? '新規' : '再診',
+        status: 'done', revenue_points: gp.revenuePoints || 0,
+        self_pay: gp.selfPay || 0, doctor: gp.doctor || null,
+        department: '内科',
+        covid_positive: gp.covid === '陽性', flu_positive: gp.flu === '陽性',
+        strep_positive: gp.strep === '陽性', route: gp.route || null
+      });
+    });
+
+    let newVisitCount = 0;
+    for (let i = 0; i < newVisitRows.length; i += 50) {
+      const batch = newVisitRows.slice(i, i + 50);
+      const { data, error } = await sb.from('visits').insert(batch).select('id');
+      if (!error && data) newVisitCount += data.length;
+    }
+
+    // 5. 新規visitsに紐づく処方・傷病名を投入
+    let newRxCount = 0, newDxCount = 0;
+    if (newVisitCount > 0) {
+      // 最新のvisitを再取得（UUIDが必要）
+      const { data: allVisitsNow } = await sb.from('visits').select('id,patient_id,visit_date').eq('clinic_id', 'nishiharu');
+      const visitMap = {};
+      allVisitsNow.forEach(v => { visitMap[v.patient_id + '|' + v.visit_date] = v.id; });
+
+      // 処方
+      const rxRows = [];
+      gasRx.forEach(rec => {
+        if (!rec.rx || !rec.rx.length) return;
+        const norm = (rec.name || '').replace(/\s+/g, '');
+        const patId = nameToId[norm];
+        if (!patId) return;
+        const gp = gasPats.find(p => (p.name || '').replace(/\s+/g, '') === norm);
+        const vd = gp ? mdToIso(gp.date) : null;
+        const visitId = vd ? visitMap[patId + '|' + vd] : null;
+        if (!visitId) return;
+        // 新規visitのみ
+        if (!newVisitRows.some(nv => nv.patient_id === patId && nv.visit_date === vd)) return;
+        rec.rx.forEach((r, j) => {
+          const drugName = typeof r === 'object' ? (r.drug || '') : String(r);
+          if (!drugName) return;
+          rxRows.push({ visit_id: visitId, drug_name: drugName, quantity: typeof r === 'object' ? parseFloat(r.qty) || 0 : 0, unit: 'T', sort_order: j });
+        });
+      });
+      for (let i = 0; i < rxRows.length; i += 50) {
+        const batch = rxRows.slice(i, i + 50);
+        const { data } = await sb.from('prescriptions').insert(batch).select('id');
+        if (data) newRxCount += data.length;
+      }
+
+      // 傷病名
+      const dxRows = [];
+      gasPats.forEach(gp => {
+        const norm = (gp.name || '').replace(/\s+/g, '');
+        const patId = nameToId[norm];
+        if (!patId) return;
+        const vd = mdToIso(gp.date);
+        if (!vd) return;
+        if (!newVisitRows.some(nv => nv.patient_id === patId && nv.visit_date === vd)) return;
+        const visitId = visitMap[patId + '|' + vd];
+        if (!visitId) return;
+        if (gp.covid === '陽性') dxRows.push({ visit_id: visitId, disease_name: 'COVID-19', disease_code: 'U07.1' });
+        if (gp.flu === '陽性') dxRows.push({ visit_id: visitId, disease_name: 'インフルエンザ', disease_code: 'J11' });
+        if (gp.strep === '陽性') dxRows.push({ visit_id: visitId, disease_name: '溶連菌感染症', disease_code: 'A49.1' });
+      });
+      if (dxRows.length > 0) {
+        const { data } = await sb.from('diseases_assigned').insert(dxRows).select('id');
+        if (data) newDxCount = data.length;
+      }
+    }
+
+    // 6. 結果表示
+    const msg = newVisitCount === 0 && newPatCount === 0
+      ? '最新です（差分なし）'
+      : `同期完了: 患者+${newPatCount} 受診+${newVisitCount} 処方+${newRxCount} 傷病名+${newDxCount}`;
+    syncStatus(msg, false);
+
+    // 差分があればダッシュボード再描画
+    if (newVisitCount > 0 || newPatCount > 0) {
+      setTimeout(() => location.reload(), 1500);
+    }
+
+  } catch (e) {
+    syncStatus('同期エラー: ' + e.message, true);
+    console.error('[Sync]', e);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'GAS→Supabase同期';
+  }
 }
 </script>
 </body>
