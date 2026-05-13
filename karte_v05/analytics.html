@@ -137,7 +137,7 @@ async function loadDashboard(sb) {
     const dates = _allVisits.map(v => v.visit_date).filter(Boolean).sort();
     if (dates.length > 0) {
       document.getElementById('dateFrom').value = dates[0];
-      document.getElementById('dateTo').value = dates[dates.length - 1];
+      document.getElementById('dateTo').value = new Date().toISOString().split('T')[0];
     }
 
     renderDashboard(_allPatients, _allVisits, _allRx, _allDx);
@@ -153,7 +153,7 @@ function setupFilterEvents() {
     const dates = _allVisits.map(v => v.visit_date).filter(Boolean).sort();
     if (dates.length > 0) {
       document.getElementById('dateFrom').value = dates[0];
-      document.getElementById('dateTo').value = dates[dates.length - 1];
+      document.getElementById('dateTo').value = new Date().toISOString().split('T')[0];
     }
     applyDateFilter();
   });
