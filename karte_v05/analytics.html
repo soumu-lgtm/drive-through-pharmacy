@@ -356,7 +356,7 @@ function renderDashboard(patients, visits, prescriptions, diseases) {
   const revisits = visits.filter(v => v.visit_type === '再診').length;
 
   const sexCount = { '男': 0, '女': 0 };
-  patients.forEach(p => { if (p.sex) sexCount[p.sex] = (sexCount[p.sex] || 0) + 1; });
+  patients.forEach(p => { if (p.sex) { const s = p.sex.replace(/性$/, ''); if (s === '男' || s === '女') sexCount[s]++; } });
 
   const insCount = {};
   patients.forEach(p => { const k = p.insurance_type || '不明'; insCount[k] = (insCount[k] || 0) + 1; });
