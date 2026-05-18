@@ -110,6 +110,7 @@ Chart.register(ChartDataLabels);
 const SB_URL = window.__SUPABASE_URL__;
 const SB_KEY = window.__SUPABASE_ANON_KEY__;
 const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwWCL1aVy4RcCZsr2Wzrpy5JE8LU8pGWa2u_CY7qo7OGMgXrB0OZGir6rGJZiiV6hRd/exec';
+const SYNC_GAS_URL = GAS_API_URL;
 
 let _allPatients = [], _allVisits = [], _allRx = [], _allDx = [], _allShifts = [];
 let _dataSource = '';
@@ -720,8 +721,6 @@ function renderDashboard(patients, visits, prescriptions, diseases, shifts) {
 }
 
 // ===== GAS → Supabase 差分同期 =====
-
-const SYNC_GAS_URL = GAS_API_URL;
 
 function syncStatus(msg, isError) {
   const el = document.getElementById('syncStatus');
