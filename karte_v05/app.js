@@ -2640,41 +2640,38 @@ function getSbClient() {
   return _sbClient;
 }
 
-function syncToSupabase(karteId, patientId, karteObj, status) {
+async function syncToSupabase(karteId, patientId, karteObj, status) {
   const sb = getSbClient();
   if (!sb) return;
   const p = patients.find(x => x.id === patientId);
   if (!p) return;
   const surchargeInfo = getTimeSurcharge(examStartTime);
 
-  // 1. Upsert patient
-  sb.from('patients').upsert({
-    clinic_id: 'nishiharu',
-    patient_no: patientId,
-    name: p.name,
-    name_kana: p.nameKana || null,
-    age: p.age || null,
-    sex: p.sex === '男' || p.sex === '男性' ? '男' : p.sex === '女' || p.sex === '女性' ? '女' : '不明',
-    phone: p.phone || null,
-    address: p.address || null,
-    allergies: p.allergies || [],
-    medical_history: p.history || [],
-    insurance_type: p.insurance || null,
-    copay_rate: p.ratio || null,
-    insurer_number: p.insurerNumber || null,
-    kouhi_number: p.kouhiNumber || null,
-    income_level: p.incomeLevel || null,
-    memo: p.memo || null
-  }, { onConflict: 'patient_no,clinic_id' }).then(function(res) {
-    if (res.error) console.warn('SB patient upsert error:', res.error.message);
-  });
+  try {
+    // 1. Upsert patient → UUIDを取得
+    const { data: patData, error: patErr } = await sb.from('patients').upsert({
+      clinic_id: 'nishiharu',
+      patient_no: patientId,
+      name: p.name,
+      name_kana: p.nameKana || null,
+      age: p.age || null,
+      sex: p.sex === '男' || p.sex === '男性' ? '男' : p.sex === '女' || p.sex === '女性' ? '女' : '不明',
+      phone: p.phone || null,
+      address: p.address || null,
+      allergies: p.allergies || [],
+      medical_history: p.history || [],
+      insurance_type: p.insurance || null,
+      copay_rate: p.ratio || null,
+      insurer_number: p.insurerNumber || null,
+      kouhi_number: p.kouhiNumber || null,
+      income_level: p.incomeLevel || null,
+      memo: p.memo || null
+    }, { onConflict: 'patient_no,clinic_id' }).select('id').single();
+    if (patErr || !patData) { console.warn('[SB] patient upsert failed:', patErr?.message); return; }
+    const sbPatientId = patData.id;
 
-  // 2. Upsert visit
-  sb.from('patients').select('id').eq('patient_no', patientId).eq('clinic_id', 'nishiharu').single().then(function(pRes) {
-    if (pRes.error || !pRes.data) return;
-    const sbPatientId = pRes.data.id;
-
-    sb.from('visits').upsert({
+    // 2. Upsert visit → UUIDを取得
+    const { data: visitData, error: visitErr } = await sb.from('visits').upsert({
       clinic_id: 'nishiharu',
       patient_id: sbPatientId,
       visit_date: selectedDate,
@@ -2684,66 +2681,62 @@ function syncToSupabase(karteId, patientId, karteObj, status) {
       status: status === '確定' ? 'completed' : 'in_progress',
       self_pay: parseInt(document.getElementById('billBurden')?.textContent?.replace(/[^0-9]/g,'')) || 0,
       revenue_points: parseInt(document.getElementById('billTotal')?.textContent) || 0,
-      exam_start: examStartTime || null
-    }, { onConflict: 'patient_id,visit_date,clinic_id' }).select('id').single().then(function(vRes) {
-      if (vRes.error || !vRes.data) return;
-      const sbVisitId = vRes.data.id;
+      exam_start: examStartTime ? examStartTime.toISOString() : null
+    }, { onConflict: 'patient_id,visit_date,clinic_id' }).select('id').single();
+    if (visitErr || !visitData) { console.warn('[SB] visit upsert failed:', visitErr?.message); return; }
+    const sbVisitId = visitData.id;
 
-      // 3. Upsert karte
-      sb.from('kartes').upsert({
-        visit_id: sbVisitId,
-        chief_complaint: karteObj.chiefComplaint || null,
-        findings_html: getEditorPlainText() || null,
-        vitals_temp: parseFloat(karteObj.vitals.t) || null,
-        vitals_bp_sys: parseInt(karteObj.vitals.bps) || null,
-        vitals_bp_dia: parseInt(karteObj.vitals.bpd) || null,
-        vitals_pulse: parseInt(karteObj.vitals.pulse) || null,
-        vitals_spo2: parseInt(karteObj.vitals.spo2) || null,
-        rx_days: karteObj.rxDays || 7,
-        is_first_visit: karteObj.isFirstVisit || false,
-        time_surcharge: surchargeInfo ? surchargeInfo.type : null
-      }, { onConflict: 'visit_id' }).then(function(kRes) {
-        if (kRes.error) console.warn('SB karte upsert error:', kRes.error.message);
+    // 3. Upsert karte
+    const { error: karteErr } = await sb.from('kartes').upsert({
+      visit_id: sbVisitId,
+      chief_complaint: karteObj.chiefComplaint || null,
+      findings_html: getEditorPlainText() || null,
+      vitals_temp: parseFloat(karteObj.vitals.t) || null,
+      vitals_bp_sys: parseInt(karteObj.vitals.bps) || null,
+      vitals_bp_dia: parseInt(karteObj.vitals.bpd) || null,
+      vitals_pulse: parseInt(karteObj.vitals.pulse) || null,
+      vitals_spo2: parseInt(karteObj.vitals.spo2) || null,
+      rx_days: karteObj.rxDays || 7,
+      is_first_visit: karteObj.isFirstVisit || false,
+      time_surcharge: surchargeInfo ? surchargeInfo.type : null
+    }, { onConflict: 'visit_id' });
+    if (karteErr) console.warn('[SB] karte upsert failed:', karteErr.message);
+
+    // 4. Prescriptions (delete + re-insert)
+    if (karteObj.prescriptions && karteObj.prescriptions.length > 0) {
+      await sb.from('prescriptions').delete().eq('visit_id', sbVisitId);
+      const rxRows = karteObj.prescriptions.map(function(rx, i) {
+        return { visit_id: sbVisitId, drug_name: rx.drug.name, quantity: rx.qty, unit: rx.drug.unit || 'T', days: karteObj.rxDays, sort_order: i };
       });
+      const { error: rxErr } = await sb.from('prescriptions').insert(rxRows);
+      if (rxErr) console.warn('[SB] rx insert failed:', rxErr.message);
+    }
 
-      // 4. Prescriptions (delete + re-insert)
-      if (karteObj.prescriptions && karteObj.prescriptions.length > 0) {
-        sb.from('prescriptions').delete().eq('visit_id', sbVisitId).then(function() {
-          const rxRows = karteObj.prescriptions.map(function(rx, i) {
-            return { visit_id: sbVisitId, drug_name: rx.drug.name, quantity: rx.qty, unit: rx.drug.unit || 'T', days: karteObj.rxDays, sort_order: i };
-          });
-          sb.from('prescriptions').insert(rxRows).then(function(rxRes) {
-            if (rxRes.error) console.warn('SB rx insert error:', rxRes.error.message);
-          });
-        });
-      }
+    // 5. Diseases (delete + re-insert)
+    if (karteObj.selectedDiseases && karteObj.selectedDiseases.length > 0) {
+      await sb.from('diseases_assigned').delete().eq('visit_id', sbVisitId);
+      const dRows = karteObj.selectedDiseases.map(function(d) {
+        return { visit_id: sbVisitId, disease_code: d.code || null, disease_name: d.name };
+      });
+      const { error: dErr } = await sb.from('diseases_assigned').insert(dRows);
+      if (dErr) console.warn('[SB] disease insert failed:', dErr.message);
+    }
 
-      // 5. Diseases (delete + re-insert)
-      if (karteObj.selectedDiseases && karteObj.selectedDiseases.length > 0) {
-        sb.from('diseases_assigned').delete().eq('visit_id', sbVisitId).then(function() {
-          const dRows = karteObj.selectedDiseases.map(function(d) {
-            return { visit_id: sbVisitId, disease_code: d.code || null, disease_name: d.name };
-          });
-          sb.from('diseases_assigned').insert(dRows).then(function(dRes) {
-            if (dRes.error) console.warn('SB disease insert error:', dRes.error.message);
-          });
-        });
-      }
+    // 6. Exams (delete + re-insert)
+    if (karteObj.selectedExams && karteObj.selectedExams.length > 0) {
+      await sb.from('exams_ordered').delete().eq('visit_id', sbVisitId);
+      const eRows = karteObj.selectedExams.map(function(exId) {
+        const exInfo = examItems.find(function(e) { return e.id === exId; });
+        return { visit_id: sbVisitId, exam_code: exId, exam_name: exInfo ? exInfo.name : exId };
+      });
+      const { error: eErr } = await sb.from('exams_ordered').insert(eRows);
+      if (eErr) console.warn('[SB] exam insert failed:', eErr.message);
+    }
 
-      // 6. Exams (delete + re-insert)
-      if (karteObj.selectedExams && karteObj.selectedExams.length > 0) {
-        sb.from('exams_ordered').delete().eq('visit_id', sbVisitId).then(function() {
-          const eRows = karteObj.selectedExams.map(function(exId) {
-            const exInfo = examItems.find(function(e) { return e.id === exId; });
-            return { visit_id: sbVisitId, exam_code: exId, exam_name: exInfo ? exInfo.name : exId };
-          });
-          sb.from('exams_ordered').insert(eRows).then(function(eRes) {
-            if (eRes.error) console.warn('SB exam insert error:', eRes.error.message);
-          });
-        });
-      }
-    });
-  });
+    console.log('[SB] sync OK: patient=' + sbPatientId + ' visit=' + sbVisitId);
+  } catch (e) {
+    console.error('[SB] sync error:', e);
+  }
 }
 
 // ===== Init =====

@@ -115,7 +115,18 @@ let _allPatients = [], _allVisits = [], _allRx = [], _allDx = [], _allShifts = [
 let _dataSource = '';
 let _charts = {};
 
-loadDashboard();
+// ページロード時: まずGAS→Supabase自動同期してからダッシュボード表示
+autoSyncThenLoad();
+
+async function autoSyncThenLoad() {
+  try {
+    document.getElementById('app').textContent = 'GAS→Supabase同期中...';
+    await runSync(true); // silent=true: 自動同期（ボタン操作なし）
+  } catch (e) {
+    console.warn('[AutoSync] スキップ:', e.message);
+  }
+  loadDashboard();
+}
 
 async function loadDashboard() {
   try {
@@ -741,10 +752,12 @@ function parseAge(s) {
   return null;
 }
 
-async function runSync() {
+async function runSync(silent) {
   const btn = document.getElementById('syncBtn');
-  btn.disabled = true;
-  btn.textContent = '同期中...';
+  if (!silent) {
+    btn.disabled = true;
+    btn.textContent = '同期中...';
+  }
   syncStatus('GAS API取得中...', false);
 
   try {
@@ -956,8 +969,8 @@ async function runSync() {
       : `同期完了: 患者+${newPatCount} 受診+${newVisitCount} 処方+${newRxCount} 傷病名+${newDxCount} シフト+${newShiftCount}`;
     syncStatus(msg, false);
 
-    // 差分があればダッシュボード再描画
-    if (newVisitCount > 0 || newPatCount > 0 || newShiftCount > 0) {
+    // 差分があればダッシュボード再描画（手動同期時のみreload）
+    if (!silent && (newVisitCount > 0 || newPatCount > 0 || newShiftCount > 0)) {
       setTimeout(() => location.reload(), 1500);
     }
 
@@ -965,8 +978,10 @@ async function runSync() {
     syncStatus('同期エラー: ' + e.message, true);
     console.error('[Sync]', e);
   } finally {
-    btn.disabled = false;
-    btn.textContent = 'GAS→Supabase同期';
+    if (!silent) {
+      btn.disabled = false;
+      btn.textContent = 'GAS→Supabase同期';
+    }
   }
 }
 </script>
