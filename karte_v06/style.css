@@ -850,17 +850,20 @@ body.resizing img {
   font-size: 14px;
 }
 .whisper-upload-btn {
-  padding: 4px 10px;
+  display: inline-block;
+  padding: 6px 14px;
   border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  background: rgba(255,255,255,0.2);
-  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  background: #fff;
+  color: #059669;
   cursor: pointer;
-  border: 1px solid rgba(255,255,255,0.3);
-  transition: background 0.15s;
+  border: 2px solid #fff;
+  transition: background 0.15s, transform 0.1s;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
-.whisper-upload-btn:hover { background: rgba(255,255,255,0.3); }
+.whisper-upload-btn:hover { background: #ecfdf5; transform: translateY(-1px); }
+.whisper-upload-btn:active { transform: translateY(0); }
 .whisper-file-name {
   font-size: 11px;
   color: rgba(255,255,255,0.8);
