@@ -521,7 +521,7 @@ function renderKPI(d,o,g,s){
         </table>
       </div>
       <div class="card"><h3>📱 SNSパフォーマンス</h3>
-        ${['instagram','tiktok','line'].map(p=>{const d=s.filter(x=>x.platform===p);if(!d.length)return'';const l=d[0];return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0"><span style="font-size:16px">${{instagram:'📷',tiktok:'🎵',line:'💬'}[p]}</span><div style="flex:1;font-size:12px;font-weight:600">${{instagram:'Instagram',tiktok:'TikTok',line:'LINE'}[p]}</div><div style="font-size:12px">${fmt(l.followers)} followers</div></div>`}).join('')}
+        ${['instagram','tiktok','line'].map(p=>{const d=s.filter(x=>x.platform===p);if(!d.length)return'';const l=d[0];return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0"><span style="font-size:16px">${{instagram:'📷',tiktok:'🎵',line:'💬'}[p]}</span><div style="flex:1;font-size:12px;font-weight:600">${{instagram:'Instagram',tiktok:'TikTok',line:'LINE'}[p]}</div><div style="font-size:12px">${fmt(snsVal(l,'followers'))} followers</div></div>`}).join('')}
       </div>
     </div>`;
 
@@ -571,6 +571,31 @@ function renderInv(inv){
 let snsSubTab='summary';
 function switchSns(tab){snsSubTab=tab;renderSNS(S)}
 
+// SNSデータをextra_jsonからfallback取得
+function snsVal(row, key){
+  if(row[key] && row[key]>0) return row[key];
+  try{
+    const ej=JSON.parse(row.extra_json||'{}');
+    // 直接キー
+    if(ej[key]>0) return ej[key];
+    // account_metrics内（Instagram旧形式）
+    const am=ej.account_metrics||{};
+    if(am[key]>0) return am[key];
+    // LINE: friends.target_reach → followers
+    if(key==='followers'){
+      if(ej.friends&&ej.friends.target_reach>0) return ej.friends.target_reach;
+    }
+    // reach_30d, views_30d, interactions_30d
+    if(key==='reach') return ej.reach_30d||am.reach_30d||0;
+    if(key==='impressions') return ej.views_30d||ej.video_views_7d||am.views_90d||0;
+    if(key==='likes') return ej.interactions_30d||ej.likes_7d||0;
+    if(key==='comments') return ej.comments_7d||0;
+    if(key==='shares') return ej.shares_7d||0;
+    if(key==='posts') return am.posts||0;
+  }catch(e){}
+  return row[key]||0;
+}
+
 function renderSNS(sns){
   const latest={};
   ['instagram','tiktok','line'].forEach(p=>{const d=sns.filter(x=>x.platform===p);if(d.length)latest[p]=d[0]});
@@ -579,7 +604,7 @@ function renderSNS(sns){
   const pC={instagram:'#e4405f',tiktok:'#00f2ea',line:'#06c755'};
 
   // KPI cards
-  let kpis=['instagram','tiktok','line'].map(p=>{const d=latest[p];if(!d)return'';return`<div class="card"><h2>${pI[p]} ${pN[p]}</h2><div class="metric" style="color:${pC[p]}">${fmt(d.followers)}</div><div class="metric-sub">${d.date} | ${fmt(d.posts)} posts | ${fmt(d.likes)} likes</div></div>`}).join('');
+  let kpis=['instagram','tiktok','line'].map(p=>{const d=latest[p];if(!d)return'';return`<div class="card"><h2>${pI[p]} ${pN[p]}</h2><div class="metric" style="color:${pC[p]}">${fmt(snsVal(d,'followers'))}</div><div class="metric-sub">${d.date} | ${fmt(snsVal(d,'posts'))} posts | ${fmt(snsVal(d,'likes'))} likes</div></div>`}).join('');
 
   // Sub tabs
   let subBtns=['summary','instagram','tiktok','line'].map(t=>
@@ -595,13 +620,13 @@ function renderSNS(sns){
       <div class="card" style="margin-bottom:16px"><h3>フォロワー推移</h3><div class="chart-box"><canvas id="cSnsFollow"></canvas></div></div>
       <div class="card"><h3>プラットフォーム比較</h3>
         <table><thead><tr><th>日付</th><th class="num">IG Followers</th><th class="num">IG Likes</th><th class="num">TT Followers</th><th class="num">TT Likes</th><th class="num">LINE Friends</th></tr></thead>
-        <tbody>${Object.keys(byDate).sort().reverse().slice(0,20).map(d=>{const ig=byDate[d].instagram||{};const tt=byDate[d].tiktok||{};const ln=byDate[d].line||{};return`<tr><td>${d}</td><td class="num">${fmt(ig.followers)}</td><td class="num">${fmt(ig.likes)}</td><td class="num">${fmt(tt.followers)}</td><td class="num">${fmt(tt.likes)}</td><td class="num">${fmt(ln.followers)}</td></tr>`}).join('')}</tbody></table>
+        <tbody>${Object.keys(byDate).sort().reverse().slice(0,20).map(d=>{const ig=byDate[d].instagram||{};const tt=byDate[d].tiktok||{};const ln=byDate[d].line||{};return`<tr><td>${d}</td><td class="num">${fmt(snsVal(ig,'followers'))}</td><td class="num">${fmt(snsVal(ig,'likes'))}</td><td class="num">${fmt(snsVal(tt,'followers'))}</td><td class="num">${fmt(snsVal(tt,'likes'))}</td><td class="num">${fmt(snsVal(ln,'followers'))}</td></tr>`}).join('')}</tbody></table>
       </div>`;
     setTimeout(()=>{
       destroyC('cSnsFollow');
-      const igF=dates.map(d=>(byDate[d]?.instagram||{}).followers||null);
-      const ttF=dates.map(d=>(byDate[d]?.tiktok||{}).followers||null);
-      const lnF=dates.map(d=>(byDate[d]?.line||{}).followers||null);
+      const igF=dates.map(d=>{const r=byDate[d]?.instagram;return r?snsVal(r,'followers'):null});
+      const ttF=dates.map(d=>{const r=byDate[d]?.tiktok;return r?snsVal(r,'followers'):null});
+      const lnF=dates.map(d=>{const r=byDate[d]?.line;return r?snsVal(r,'followers'):null});
       charts.cSnsFollow=new Chart(document.getElementById('cSnsFollow'),{type:'line',data:{labels:dates,datasets:[
         {label:'Instagram',data:igF,borderColor:'#e4405f',tension:.3,pointRadius:1,fill:false,spanGaps:true},
         {label:'TikTok',data:ttF,borderColor:'#00f2ea',tension:.3,pointRadius:1,fill:false,spanGaps:true},
@@ -626,12 +651,12 @@ function renderSNS(sns){
         </div>
         <div class="card" style="margin-top:16px"><h3>日別データ</h3>
           <table><thead><tr><th>日付</th><th class="num">Followers</th><th class="num">Posts</th><th class="num">Likes</th><th class="num">Comments</th><th class="num">Impressions</th><th class="num">Reach</th></tr></thead>
-          <tbody>${pData.slice().reverse().slice(0,30).map(x=>`<tr><td>${x.date}</td><td class="num">${fmt(x.followers)}</td><td class="num">${fmt(x.posts)}</td><td class="num">${fmt(x.likes)}</td><td class="num">${fmt(x.comments)}</td><td class="num">${fmt(x.impressions)}</td><td class="num">${fmt(x.reach)}</td></tr>`).join('')}</tbody></table>
+          <tbody>${pData.slice().reverse().slice(0,30).map(x=>`<tr><td>${x.date}</td><td class="num">${fmt(snsVal(x,'followers'))}</td><td class="num">${fmt(snsVal(x,'posts'))}</td><td class="num">${fmt(snsVal(x,'likes'))}</td><td class="num">${fmt(snsVal(x,'comments'))}</td><td class="num">${fmt(snsVal(x,'impressions'))}</td><td class="num">${fmt(snsVal(x,'reach'))}</td></tr>`).join('')}</tbody></table>
         </div>${extraInfo}`;
       setTimeout(()=>{
         destroyC('cSnsP1');destroyC('cSnsP2');
-        charts.cSnsP1=new Chart(document.getElementById('cSnsP1'),{type:'line',data:{labels:dates,datasets:[{label:'Followers',data:pData.map(x=>x.followers||0),borderColor:pC[p],tension:.3,pointRadius:1,fill:true,backgroundColor:pC[p]+'20'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{datalabels:{display:false}},scales:{x:{ticks:{maxTicksLimit:10,font:{size:10}},grid:{display:false}},y:{grid:{color:'rgba(0,0,0,.05)'}}}}});
-        charts.cSnsP2=new Chart(document.getElementById('cSnsP2'),{type:'line',data:{labels:dates,datasets:[{label:'Likes',data:pData.map(x=>x.likes||0),borderColor:'#f59e0b',tension:.3,pointRadius:1},{label:'Comments',data:pData.map(x=>x.comments||0),borderColor:'#a78bfa',tension:.3,pointRadius:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{datalabels:{display:false}},scales:{x:{ticks:{maxTicksLimit:10,font:{size:10}},grid:{display:false}},y:{grid:{color:'rgba(0,0,0,.05)'}}}}});
+        charts.cSnsP1=new Chart(document.getElementById('cSnsP1'),{type:'line',data:{labels:dates,datasets:[{label:'Followers',data:pData.map(x=>snsVal(x,'followers')),borderColor:pC[p],tension:.3,pointRadius:1,fill:true,backgroundColor:pC[p]+'20'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{datalabels:{display:false}},scales:{x:{ticks:{maxTicksLimit:10,font:{size:10}},grid:{display:false}},y:{grid:{color:'rgba(0,0,0,.05)'}}}}});
+        charts.cSnsP2=new Chart(document.getElementById('cSnsP2'),{type:'line',data:{labels:dates,datasets:[{label:'Likes',data:pData.map(x=>snsVal(x,'likes')),borderColor:'#f59e0b',tension:.3,pointRadius:1},{label:'Comments',data:pData.map(x=>snsVal(x,'comments')),borderColor:'#a78bfa',tension:.3,pointRadius:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{datalabels:{display:false}},scales:{x:{ticks:{maxTicksLimit:10,font:{size:10}},grid:{display:false}},y:{grid:{color:'rgba(0,0,0,.05)'}}}}});
       },50);
     }
   }
