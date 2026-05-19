@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EC KPI Dashboard - HUNDRED DOCTOR</title>
+<style>
+:root {
+  --d-bg: #0f1117;
+  --d-surface: #1a1d27;
+  --d-elevated: #242836;
+  --d-line: #2f3442;
+  --d-text: #e4e7ed;
+  --d-sub: #8b92a5;
+  --d-dim: #5a6178;
+  --d-cyan: #00d4aa;
+  --d-blue: #5b8def;
+  --d-orange: #ff9f43;
+  --d-pink: #ff6b81;
+  --d-purple: #a78bfa;
+  --font: "SF Mono", "Cascadia Code", "Consolas", monospace;
+  --font-ui: "Inter", "Segoe UI", "Noto Sans JP", sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-ui); color: var(--d-text); background: var(--d-bg); line-height: 1.6; }
+
+.dash-header {
+  padding: 20px 24px 12px;
+  border-bottom: 1px solid var(--d-line);
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+}
+.dash-header h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; }
+.dash-header .meta { font-size: 12px; color: var(--d-dim); }
+.sync-info { font-size: 11px; color: var(--d-dim); }
+.sync-info .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+.sync-ok { background: var(--d-cyan); }
+.sync-ng { background: var(--d-pink); }
+
+.tabs {
+  display: flex; border-bottom: 1px solid var(--d-line); padding: 0 20px;
+}
+.tab {
+  padding: 10px 16px; font-size: 13px; color: var(--d-sub); cursor: pointer;
+  border-bottom: 2px solid transparent; transition: all 0.2s;
+}
+.tab:hover { color: var(--d-text); }
+.tab.active { color: var(--d-cyan); border-bottom-color: var(--d-cyan); }
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px; padding: 18px 20px;
+  max-width: 1440px; margin: 0 auto;
+}
+.grid-wide { grid-template-columns: 1fr; }
+.grid-2col { grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); }
+
+.panel {
+  background: var(--d-surface); border: 1px solid var(--d-line);
+  border-radius: 8px; padding: 14px 18px;
+}
+.panel-title {
+  font-size: 11px; font-weight: 600; color: var(--d-sub);
+  text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px;
+}
+.kpi { font-family: var(--font); font-size: 32px; font-weight: 700; color: var(--d-cyan); line-height: 1; }
+.kpi-sm { font-size: 22px; }
+.kpi-unit { font-size: 13px; color: var(--d-sub); margin-left: 3px; }
+.kpi-sub { font-size: 12px; color: var(--d-dim); margin-top: 4px; }
+.kpi-blue { color: var(--d-blue); }
+.kpi-orange { color: var(--d-orange); }
+.kpi-pink { color: var(--d-pink); }
+.kpi-purple { color: var(--d-purple); }
+
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th { text-align: left; padding: 6px 8px; color: var(--d-dim); font-weight: 500; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--d-line); }
+td { padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+tr:hover td { background: rgba(255,255,255,0.02); }
+.num { text-align: right; font-family: var(--font); }
+
+.bar-chart { display: flex; flex-direction: column; gap: 6px; }
+.bar-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.bar-label { width: 80px; text-align: right; color: var(--d-sub); flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-track { flex: 1; height: 18px; background: var(--d-elevated); border-radius: 3px; overflow: hidden; position: relative; }
+.bar-fill { height: 100%; border-radius: 3px; min-width: 2px; }
+.bar-val { width: 70px; text-align: right; font-family: var(--font); font-size: 11px; color: var(--d-sub); flex-shrink: 0; }
+
+.alert-row { background: rgba(255,107,129,0.08); border-left: 3px solid var(--d-pink); }
+
+.loading { text-align: center; padding: 40px; color: var(--d-dim); font-size: 14px; }
+
+@media (max-width: 768px) {
+  .grid { grid-template-columns: 1fr; padding: 12px; gap: 10px; }
+  .grid-2col { grid-template-columns: 1fr; }
+  .kpi { font-size: 26px; }
+  .dash-header { padding: 14px 16px 10px; }
+}
+</style>
+</head>
+<body>
+
+<div class="dash-header">
+  <div>
+    <h1>EC KPI Dashboard</h1>
+    <div class="meta">HUNDRED DOCTOR</div>
+  </div>
+  <div class="sync-info" id="syncInfo">読み込み中...</div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="overview">売上概要</div>
+  <div class="tab" data-tab="orders">注文詳細</div>
+  <div class="tab" data-tab="ga4">GA4</div>
+  <div class="tab" data-tab="sns">SNS</div>
+  <div class="tab" data-tab="inventory">在庫</div>
+</div>
+
+<!-- 売上概要 -->
+<div class="tab-content active" id="tab-overview">
+  <div class="grid" id="overviewKpis"></div>
+  <div class="grid grid-2col" id="overviewCharts"></div>
+</div>
+
+<!-- 注文詳細 -->
+<div class="tab-content" id="tab-orders">
+  <div class="grid grid-wide" id="ordersTable"></div>
+</div>
+
+<!-- GA4 -->
+<div class="tab-content" id="tab-ga4">
+  <div class="grid" id="ga4Kpis"></div>
+  <div class="grid grid-2col" id="ga4Charts"></div>
+</div>
+
+<!-- SNS -->
+<div class="tab-content" id="tab-sns">
+  <div class="grid" id="snsKpis"></div>
+  <div class="grid grid-2col" id="snsCharts"></div>
+</div>
+
+<!-- 在庫 -->
+<div class="tab-content" id="tab-inventory">
+  <div class="grid grid-wide" id="inventoryTable"></div>
+</div>
+
+<script>
+const SB_URL = 'https://dyjhxkqzxibcpgoefbiv.supabase.co';
+const SB_KEY = 'sb_publishable_bOK3qqLHkM1fFOojh3slpg_glKQoP3g';
+const H = { 'apikey': SB_KEY };
+
+async function sbGet(table, query = '') {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}?${query}`, { headers: H });
+  if (!r.ok) throw new Error(`${table}: ${r.status}`);
+  return r.json();
+}
+
+function fmt(n) { return n != null ? Number(n).toLocaleString('ja-JP') : '-'; }
+function fmtYen(n) { return n != null ? '¥' + Number(n).toLocaleString('ja-JP') : '-'; }
+function pct(a, b) { return b > 0 ? ((a / b) * 100).toFixed(1) + '%' : '-'; }
+
+// Tab switching
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+  });
+});
+
+async function loadDashboard() {
+  try {
+    const [daily, orders, ga4, sns, inv, sync] = await Promise.all([
+      sbGet('kpi_daily_summary', 'select=*&order=date.desc&limit=400'),
+      sbGet('kpi_orders', 'select=*&order=order_date.desc&limit=500'),
+      sbGet('kpi_ga4_metrics', 'select=*&order=date.desc&limit=200'),
+      sbGet('kpi_sns_metrics', 'select=*&order=date.desc&limit=100'),
+      sbGet('kpi_inventory', 'select=*&order=snapshot_date.desc&limit=50'),
+      sbGet('kpi_sync_status', 'select=*'),
+    ]);
+
+    renderSyncInfo(sync);
+    renderOverview(daily, orders);
+    renderOrders(orders);
+    renderGA4(ga4);
+    renderSNS(sns);
+    renderInventory(inv);
+  } catch (e) {
+    document.getElementById('syncInfo').innerHTML =
+      `<span class="dot sync-ng"></span>読み込みエラー: ${e.message}`;
+  }
+}
+
+function renderSyncInfo(sync) {
+  const shopify = sync.find(s => s.sync_type === 'shopify');
+  const lastSync = shopify?.last_sync ? new Date(shopify.last_sync).toLocaleString('ja-JP') : '未同期';
+  const allOk = sync.filter(s => s.status === 'ok').length;
+  document.getElementById('syncInfo').innerHTML =
+    `<span class="dot ${allOk > 0 ? 'sync-ok' : 'sync-ng'}"></span>` +
+    `最終同期: ${lastSync} (${allOk}/${sync.length} OK)`;
+}
+
+function renderOverview(daily, orders) {
+  // 今月のデータ
+  const now = new Date();
+  const thisMonth = now.toISOString().slice(0, 7);
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 7);
+
+  const thisM = daily.filter(d => d.date.startsWith(thisMonth));
+  const lastM = daily.filter(d => d.date.startsWith(lastMonth));
+
+  const thisRev = thisM.reduce((s, d) => s + Number(d.revenue || 0), 0);
+  const lastRev = lastM.reduce((s, d) => s + Number(d.revenue || 0), 0);
+  const thisOrders = thisM.reduce((s, d) => s + (d.order_count || 0), 0);
+  const lastOrders = lastM.reduce((s, d) => s + (d.order_count || 0), 0);
+
+  // 今日
+  const today = now.toISOString().slice(0, 10);
+  const todayData = daily.filter(d => d.date === today);
+  const todayRev = todayData.reduce((s, d) => s + Number(d.revenue || 0), 0);
+  const todayOrders = todayData.reduce((s, d) => s + (d.order_count || 0), 0);
+
+  // 7日間
+  const d7 = new Date(now); d7.setDate(d7.getDate() - 7);
+  const d7str = d7.toISOString().slice(0, 10);
+  const week = daily.filter(d => d.date >= d7str);
+  const weekRev = week.reduce((s, d) => s + Number(d.revenue || 0), 0);
+  const weekOrders = week.reduce((s, d) => s + (d.order_count || 0), 0);
+
+  // AOV
+  const thisAOV = thisOrders > 0 ? thisRev / thisOrders : 0;
+
+  // チャネル別
+  const channels = {};
+  thisM.forEach(d => {
+    if (!channels[d.channel]) channels[d.channel] = { revenue: 0, orders: 0 };
+    channels[d.channel].revenue += Number(d.revenue || 0);
+    channels[d.channel].orders += (d.order_count || 0);
+  });
+
+  document.getElementById('overviewKpis').innerHTML = `
+    <div class="panel">
+      <div class="panel-title">今月売上</div>
+      <div class="kpi">${fmtYen(thisRev)}</div>
+      <div class="kpi-sub">前月: ${fmtYen(lastRev)}</div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">今月注文数</div>
+      <div class="kpi kpi-blue kpi-sm">${fmt(thisOrders)}<span class="kpi-unit">件</span></div>
+      <div class="kpi-sub">前月: ${fmt(lastOrders)}件</div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">平均注文額 (AOV)</div>
+      <div class="kpi kpi-purple kpi-sm">${fmtYen(Math.round(thisAOV))}</div>
+      <div class="kpi-sub">今月の注文から算出</div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">本日</div>
+      <div class="kpi kpi-orange kpi-sm">${fmtYen(todayRev)}</div>
+      <div class="kpi-sub">${fmt(todayOrders)}件</div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">直近7日</div>
+      <div class="kpi kpi-sm">${fmtYen(weekRev)}</div>
+      <div class="kpi-sub">${fmt(weekOrders)}件</div>
+    </div>
+  `;
+
+  // チャネル別バーチャート + 日別推移テーブル
+  const chNames = { shopify: 'Shopify', employee: '社割', wholesale: '卸売', amazon: 'Amazon', qoo10: 'Qoo10' };
+  const chArr = Object.entries(channels).sort((a, b) => b[1].revenue - a[1].revenue);
+  const maxRev = chArr.length > 0 ? chArr[0][1].revenue : 1;
+  const colors = ['var(--d-cyan)', 'var(--d-blue)', 'var(--d-orange)', 'var(--d-pink)', 'var(--d-purple)'];
+
+  let chBars = chArr.map(([ch, v], i) => `
+    <div class="bar-row">
+      <div class="bar-label">${chNames[ch] || ch}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(v.revenue/maxRev*100).toFixed(1)}%;background:${colors[i%colors.length]}"></div></div>
+      <div class="bar-val">${fmtYen(v.revenue)}</div>
+    </div>
+  `).join('');
+
+  // 日別推移（直近14日）
+  const d14 = new Date(now); d14.setDate(d14.getDate() - 14);
+  const d14str = d14.toISOString().slice(0, 10);
+  const recent = daily.filter(d => d.date >= d14str);
+  const byDate = {};
+  recent.forEach(d => {
+    if (!byDate[d.date]) byDate[d.date] = { revenue: 0, orders: 0 };
+    byDate[d.date].revenue += Number(d.revenue || 0);
+    byDate[d.date].orders += (d.order_count || 0);
+  });
+  const dateKeys = Object.keys(byDate).sort().reverse();
+  let dailyRows = dateKeys.map(d => `
+    <tr>
+      <td>${d}</td>
+      <td class="num">${fmtYen(byDate[d].revenue)}</td>
+      <td class="num">${fmt(byDate[d].orders)}</td>
+    </tr>
+  `).join('');
+
+  document.getElementById('overviewCharts').innerHTML = `
+    <div class="panel">
+      <div class="panel-title">チャネル別売上（今月）</div>
+      <div class="bar-chart">${chBars || '<div style="color:var(--d-dim)">データなし</div>'}</div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">日別推移（直近14日）</div>
+      <table>
+        <thead><tr><th>日付</th><th class="num">売上</th><th class="num">件数</th></tr></thead>
+        <tbody>${dailyRows || '<tr><td colspan="3">データなし</td></tr>'}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderOrders(orders) {
+  const rows = orders.slice(0, 100).map(o => `
+    <tr>
+      <td>${o.order_date || '-'}</td>
+      <td>${o.order_id}</td>
+      <td>${o.channel}</td>
+      <td>${(o.product_name || '').substring(0, 30)}</td>
+      <td>${o.sku || '-'}</td>
+      <td class="num">${o.quantity}</td>
+      <td class="num">${fmtYen(o.total)}</td>
+      <td>${o.is_subscription ? '定期' : '-'}</td>
+    </tr>
+  `).join('');
+
+  document.getElementById('ordersTable').innerHTML = `
+    <div class="panel">
+      <div class="panel-title">直近注文一覧（最新100件）</div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr>
+            <th>日付</th><th>注文ID</th><th>チャネル</th><th>商品名</th>
+            <th>SKU</th><th class="num">数量</th><th class="num">合計</th><th>定期</th>
+          </tr></thead>
+          <tbody>${rows || '<tr><td colspan="8">データなし</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function renderGA4(ga4) {
+  const dailyMetrics = ga4.filter(g => g.metric_type === 'daily');
+  const devices = ga4.filter(g => g.metric_type === 'device');
+  const sources = ga4.filter(g => g.metric_type === 'source');
+
+  // 直近7日合計
+  const now = new Date();
+  const d7 = new Date(now); d7.setDate(d7.getDate() - 7);
+  const d7str = d7.toISOString().slice(0, 10);
+  const week = dailyMetrics.filter(d => d.date >= d7str);
+  const wSessions = week.reduce((s, d) => s + (d.sessions || 0), 0);
+  const wUsers = week.reduce((s, d) => s + (d.users || 0), 0);
+  const wPV = week.reduce((s, d) => s + (d.pageviews || 0), 0);
+  const wCV = week.reduce((s, d) => s + (d.conversions || 0), 0);
+
+  document.getElementById('ga4Kpis').innerHTML = `
+    <div class="panel">
+      <div class="panel-title">セッション（7日）</div>
+      <div class="kpi kpi-sm">${fmt(wSessions)}</div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">ユーザー（7日）</div>
+      <div class="kpi kpi-blue kpi-sm">${fmt(wUsers)}</div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">PV（7日）</div>
+      <div class="kpi kpi-purple kpi-sm">${fmt(wPV)}</div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">CV（7日）</div>
+      <div class="kpi kpi-orange kpi-sm">${fmt(wCV)}</div>
+      <div class="kpi-sub">CVR: ${pct(wCV, wSessions)}</div>
+    </div>
+  `;
+
+  // デバイス別
+  const maxDev = devices.length > 0 ? Math.max(...devices.map(d => d.sessions || 0)) : 1;
+  const devBars = devices.map((d, i) => `
+    <div class="bar-row">
+      <div class="bar-label">${d.dimension}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${((d.sessions||0)/maxDev*100).toFixed(1)}%;background:var(--d-blue)"></div></div>
+      <div class="bar-val">${fmt(d.sessions)}</div>
+    </div>
+  `).join('');
+
+  // 流入元
+  const maxSrc = sources.length > 0 ? Math.max(...sources.map(s => s.sessions || 0)) : 1;
+  const srcBars = sources.slice(0, 10).map((s, i) => `
+    <div class="bar-row">
+      <div class="bar-label">${s.dimension}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${((s.sessions||0)/maxSrc*100).toFixed(1)}%;background:var(--d-cyan)"></div></div>
+      <div class="bar-val">${fmt(s.sessions)}</div>
+    </div>
+  `).join('');
+
+  // 日別テーブル
+  const dailyRows = dailyMetrics.slice(0, 14).map(d => `
+    <tr><td>${d.date}</td><td class="num">${fmt(d.sessions)}</td><td class="num">${fmt(d.users)}</td><td class="num">${fmt(d.pageviews)}</td></tr>
+  `).join('');
+
+  document.getElementById('ga4Charts').innerHTML = `
+    <div class="panel">
+      <div class="panel-title">デバイス別セッション</div>
+      <div class="bar-chart">${devBars || '<div style="color:var(--d-dim)">データなし</div>'}</div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">流入元別セッション（上位10）</div>
+      <div class="bar-chart">${srcBars || '<div style="color:var(--d-dim)">データなし</div>'}</div>
+    </div>
+    <div class="panel" style="grid-column: 1/-1">
+      <div class="panel-title">日別GA4メトリクス（直近14日）</div>
+      <table>
+        <thead><tr><th>日付</th><th class="num">Sessions</th><th class="num">Users</th><th class="num">PV</th></tr></thead>
+        <tbody>${dailyRows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderSNS(sns) {
+  const platforms = ['instagram', 'tiktok', 'line'];
+  const latest = {};
+  platforms.forEach(p => {
+    const d = sns.filter(s => s.platform === p);
+    if (d.length > 0) latest[p] = d[0];
+  });
+
+  const pNames = { instagram: 'Instagram', tiktok: 'TikTok', line: 'LINE' };
+  const pColors = { instagram: 'var(--d-pink)', tiktok: 'var(--d-cyan)', line: 'var(--d-cyan)' };
+
+  let kpis = platforms.map(p => {
+    const d = latest[p];
+    if (!d) return '';
+    return `
+      <div class="panel">
+        <div class="panel-title">${pNames[p]} Followers</div>
+        <div class="kpi kpi-sm" style="color:${pColors[p]}">${fmt(d.followers)}</div>
+        <div class="kpi-sub">${d.date} | ${fmt(d.posts)} posts</div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('snsKpis').innerHTML = kpis;
+
+  // フォロワー推移テーブル
+  let rows = {};
+  sns.forEach(s => {
+    if (!rows[s.date]) rows[s.date] = {};
+    rows[s.date][s.platform] = s.followers || 0;
+  });
+  const dates = Object.keys(rows).sort().reverse().slice(0, 20);
+  let trs = dates.map(d => `
+    <tr>
+      <td>${d}</td>
+      <td class="num">${fmt(rows[d].instagram)}</td>
+      <td class="num">${fmt(rows[d].tiktok)}</td>
+      <td class="num">${fmt(rows[d].line)}</td>
+    </tr>
+  `).join('');
+
+  document.getElementById('snsCharts').innerHTML = `
+    <div class="panel" style="grid-column:1/-1">
+      <div class="panel-title">フォロワー推移</div>
+      <table>
+        <thead><tr><th>日付</th><th class="num">Instagram</th><th class="num">TikTok</th><th class="num">LINE</th></tr></thead>
+        <tbody>${trs}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderInventory(inv) {
+  // 最新日のスナップショット
+  const latestDate = inv.length > 0 ? inv[0].snapshot_date : null;
+  const latest = inv.filter(i => i.snapshot_date === latestDate);
+
+  const rows = latest.map(i => `
+    <tr class="${i.is_alert ? 'alert-row' : ''}">
+      <td>${i.sku}</td>
+      <td>${i.product_name || '-'}</td>
+      <td class="num">${fmt(i.quantity)}</td>
+      <td class="num">${fmt(i.threshold)}</td>
+      <td>${i.is_alert ? '<span style="color:var(--d-pink)">要補充</span>' : '<span style="color:var(--d-cyan)">OK</span>'}</td>
+    </tr>
+  `).join('');
+
+  const alertCount = latest.filter(i => i.is_alert).length;
+
+  document.getElementById('inventoryTable').innerHTML = `
+    <div class="panel">
+      <div class="panel-title">在庫状況（${latestDate || '-'}時点）
+        ${alertCount > 0 ? `<span style="color:var(--d-pink);margin-left:12px">要補充: ${alertCount}件</span>` : ''}
+      </div>
+      <table>
+        <thead><tr><th>SKU</th><th>商品名</th><th class="num">在庫数</th><th class="num">閾値</th><th>状態</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="5">データなし</td></tr>'}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+loadDashboard();
+</script>
+</body>
+</html>
