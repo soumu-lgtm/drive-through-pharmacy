@@ -173,6 +173,12 @@
                 <span class="rec-dot"></span> 録音
               </button>
               <span class="whisper-time" id="whisperTime">00:00</span>
+              <span class="whisper-separator">|</span>
+              <label class="whisper-upload-btn" id="whisperUploadLabel">
+                &#128193; ファイル読込
+                <input type="file" id="whisperFileInput" accept="audio/*,video/*,.m4a,.mp3,.wav,.webm,.ogg,.mp4" style="display:none" onchange="whisperUploadFile(this)">
+              </label>
+              <span id="whisperFileName" class="whisper-file-name"></span>
               <select id="whisperPromptSelect" class="whisper-prompt-select">
                 <option value="karte">カルテ</option>
               </select>

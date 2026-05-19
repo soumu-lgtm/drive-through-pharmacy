@@ -295,6 +295,54 @@ function whisperSetStatus(msg, type) {
   if (type) el.classList.add('whisper-status-' + type);
 }
 
+// ========================================
+// 音声ファイルアップロード → 文字起こし
+// ========================================
+async function whisperUploadFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  // ファイル名表示
+  const nameEl = document.getElementById('whisperFileName');
+  if (nameEl) nameEl.textContent = file.name;
+
+  // UI準備
+  document.getElementById('whisperBody').style.display = '';
+  document.getElementById('whisperTranscript').value = '';
+  document.getElementById('whisperKarte').value = '';
+  document.getElementById('whisperGenBtn').disabled = true;
+  document.getElementById('whisperApplyBtn').disabled = true;
+  whisperSetStatus('ファイル読込中...', 'processing');
+
+  const formData = new FormData();
+  formData.append('audio', file, file.name);
+
+  try {
+    const t0 = performance.now();
+    const res = await fetch(`${WHISPER_API}/transcribe`, {
+      method: 'POST',
+      body: formData,
+    });
+    const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+
+    if (!res.ok) {
+      const err = await res.json();
+      whisperSetStatus(`文字起こしエラー: ${err.error}`, 'error');
+      return;
+    }
+
+    const data = await res.json();
+    document.getElementById('whisperTranscript').value = data.transcript;
+    document.getElementById('whisperGenBtn').disabled = false;
+    whisperSetStatus(`ファイル文字起こし完了 (${elapsed}秒) — ${file.name}`, 'success');
+  } catch (e) {
+    whisperSetStatus('API通信エラー: ' + e.message, 'error');
+  }
+
+  // inputをリセット（同じファイルの再選択を可能に）
+  input.value = '';
+}
+
 function whisperCopy(elementId) {
   const el = document.getElementById(elementId);
   if (!el) return;

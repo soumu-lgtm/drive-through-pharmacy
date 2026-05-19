@@ -844,3 +844,28 @@ body.resizing img {
 .whisper-status-error { color: var(--danger); }
 .whisper-status-recording { color: var(--danger); font-weight: 600; }
 .whisper-status-processing { color: var(--warning); }
+.whisper-separator {
+  color: rgba(255,255,255,0.4);
+  margin: 0 4px;
+  font-size: 14px;
+}
+.whisper-upload-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.3);
+  transition: background 0.15s;
+}
+.whisper-upload-btn:hover { background: rgba(255,255,255,0.3); }
+.whisper-file-name {
+  font-size: 11px;
+  color: rgba(255,255,255,0.8);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
