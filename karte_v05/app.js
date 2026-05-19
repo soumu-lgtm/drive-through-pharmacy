@@ -2649,24 +2649,25 @@ async function syncToSupabase(karteId, patientId, karteObj, status) {
 
   try {
     // 1. Upsert patient → UUIDを取得
-    const { data: patData, error: patErr } = await sb.from('patients').upsert({
-      clinic_id: 'nishiharu',
-      patient_no: patientId,
-      name: p.name,
-      name_kana: p.nameKana || null,
-      age: p.age || null,
-      sex: p.sex === '男' || p.sex === '男性' ? '男' : p.sex === '女' || p.sex === '女性' ? '女' : '不明',
-      phone: p.phone || null,
-      address: p.address || null,
-      allergies: p.allergies || [],
-      medical_history: p.history || [],
-      insurance_type: p.insurance || null,
-      copay_rate: p.ratio || null,
-      insurer_number: p.insurerNumber || null,
-      kouhi_number: p.kouhiNumber || null,
-      income_level: p.incomeLevel || null,
-      memo: p.memo || null
-    }, { onConflict: 'patient_no,clinic_id' }).select('id').single();
+    // 値がない項目はupsertに含めない（既存値をnullで上書きしない）
+    const patRow = { clinic_id: 'nishiharu', patient_no: patientId, name: p.name };
+    if (p.nameKana) patRow.name_kana = p.nameKana;
+    if (p.age) patRow.age = p.age;
+    const sexNorm = p.sex === '男' || p.sex === '男性' ? '男' : p.sex === '女' || p.sex === '女性' ? '女' : null;
+    if (sexNorm) patRow.sex = sexNorm;
+    if (p.phone) patRow.phone = p.phone;
+    if (p.address) patRow.address = p.address;
+    if (p.allergies && p.allergies.length) patRow.allergies = p.allergies;
+    if (p.history && p.history.length) patRow.medical_history = p.history;
+    if (p.insurance) patRow.insurance_type = p.insurance;
+    if (p.ratio) patRow.copay_rate = p.ratio;
+    if (p.insurerNumber) patRow.insurer_number = p.insurerNumber;
+    if (p.kouhiNumber) patRow.kouhi_number = p.kouhiNumber;
+    if (p.incomeLevel) patRow.income_level = p.incomeLevel;
+    if (p.memo) patRow.memo = p.memo;
+    const { data: patData, error: patErr } = await sb.from('patients').upsert(
+      patRow, { onConflict: 'patient_no,clinic_id' }
+    ).select('id').single();
     if (patErr || !patData) { console.warn('[SB] patient upsert failed:', patErr?.message); return; }
     const sbPatientId = patData.id;
 

@@ -802,6 +802,23 @@ async function runSync(silent) {
       if (!error && data) { nameToId[norm] = data.id; newPatCount++; }
     }
 
+    // 3b. 既存患者の保険種別がnullなら修復
+    const { data: nullInsPats } = await sb.from('patients').select('id,name').eq('clinic_id', 'nishiharu').is('insurance_type', null);
+    let fixedInsCount = 0;
+    if (nullInsPats && nullInsPats.length > 0) {
+      for (const sp of nullInsPats) {
+        const spName = (sp.name || '').replace(/\s+/g, '');
+        const gp = gasPats.find(g => (g.name || '').replace(/\s+/g, '') === spName);
+        if (gp && gp.insurance) {
+          const upd = { insurance_type: gp.insurance };
+          if (gp.sex) upd.sex = (gp.sex || '').replace(/性$/, '') || '不明';
+          if (gp.age) upd.age = parseAge(gp.age);
+          await sb.from('patients').update(upd).eq('id', sp.id);
+          fixedInsCount++;
+        }
+      }
+    }
+
     // 4. 新規visitsを差分投入
     const newVisitRows = [];
     gasPats.forEach(gp => {
@@ -963,13 +980,18 @@ async function runSync(silent) {
     }
 
     // 7. 結果表示
-    const msg = newVisitCount === 0 && newPatCount === 0 && newShiftCount === 0
-      ? '最新です（差分なし）'
-      : `同期完了: 患者+${newPatCount} 受診+${newVisitCount} 処方+${newRxCount} 傷病名+${newDxCount} シフト+${newShiftCount}`;
+    const parts = [];
+    if (newPatCount) parts.push('患者+' + newPatCount);
+    if (fixedInsCount) parts.push('保険修復' + fixedInsCount);
+    if (newVisitCount) parts.push('受診+' + newVisitCount);
+    if (newRxCount) parts.push('処方+' + newRxCount);
+    if (newDxCount) parts.push('傷病名+' + newDxCount);
+    if (newShiftCount) parts.push('シフト+' + newShiftCount);
+    const msg = parts.length === 0 ? '最新です（差分なし）' : '同期完了: ' + parts.join(' ');
     syncStatus(msg, false);
 
     // 差分があればダッシュボード再描画（手動同期時のみreload）
-    if (!silent && (newVisitCount > 0 || newPatCount > 0 || newShiftCount > 0)) {
+    if (!silent && (newVisitCount > 0 || newPatCount > 0 || newShiftCount > 0 || fixedInsCount > 0)) {
       setTimeout(() => location.reload(), 1500);
     }
 
