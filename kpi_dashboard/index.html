@@ -568,6 +568,25 @@ function renderInv(inv){
   }
 }
 
+// SNSデータをextra_jsonからfallback取得 (ダッシュボード概要タブ等で使用)
+function snsVal(row, key){
+  if(!row) return 0;
+  if(row[key] && row[key]>0) return row[key];
+  try{
+    const ej=JSON.parse(row.extra_json||'{}');
+    if(ej[key]>0) return ej[key];
+    const am=ej.account_metrics||{};
+    if(am[key]>0) return am[key];
+    if(key==='followers'){
+      if(ej.friends&&ej.friends.target_reach>0) return ej.friends.target_reach;
+    }
+    if(key==='reach') return ej.reach_30d||am.reach_30d||0;
+    if(key==='impressions') return ej.views_30d||ej.video_views_7d||0;
+    if(key==='likes') return ej.interactions_30d||ej.likes_7d||0;
+  }catch(e){}
+  return row[key]||0;
+}
+
 // ===== 9. SNS分析 (v008移植版) =====
 let snsSubTab='summary';
 function switchSns(tab){snsSubTab=tab;renderSNS(S)}
