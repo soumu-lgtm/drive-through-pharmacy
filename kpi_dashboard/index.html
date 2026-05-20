@@ -568,110 +568,406 @@ function renderInv(inv){
   }
 }
 
-// ===== 9. SNS分析 =====
+// ===== 9. SNS分析 (v008移植版) =====
 let snsSubTab='summary';
 function switchSns(tab){snsSubTab=tab;renderSNS(S)}
 
-// SNSデータをextra_jsonからfallback取得
-function snsVal(row, key){
-  if(row[key] && row[key]>0) return row[key];
-  try{
-    const ej=JSON.parse(row.extra_json||'{}');
-    // 直接キー
-    if(ej[key]>0) return ej[key];
-    // account_metrics内（Instagram旧形式）
-    const am=ej.account_metrics||{};
-    if(am[key]>0) return am[key];
-    // LINE: friends.target_reach → followers
-    if(key==='followers'){
-      if(ej.friends&&ej.friends.target_reach>0) return ej.friends.target_reach;
+// extra_jsonをパースして account_metrics 相当のオブジェクトを返す
+function parseSnsExtra(row){
+  try{ return JSON.parse(row.extra_json||'{}'); }catch(e){ return {}; }
+}
+
+// SNSデータを platform + account_metrics 形式に正規化
+function normalizeSnsRows(sns, platform){
+  return sns.filter(x=>x.platform===platform).sort((a,b)=>a.date.localeCompare(b.date)).map(row=>{
+    const ej=parseSnsExtra(row);
+    const result={date:row.date, is_dummy:ej.collection_method==='sample'};
+    if(platform==='instagram'){
+      result.account_metrics={
+        followers:ej.followers||row.followers||0,
+        reach_30d:ej.reach_30d||0,
+        interactions_30d:ej.interactions_30d||0,
+        profile_access:ej.profile_views||ej.profile_access||0,
+        external_link_taps:ej.link_taps||ej.external_link_taps||0,
+        views_30d:ej.views_30d||0,
+        content_engagement_rate:ej.content_engagement_rate||0
+      };
+      if(ej.top_posts_30d) result.top_posts_30d=ej.top_posts_30d;
+      if(ej.content_view_ratio) result.content_view_ratio=ej.content_view_ratio;
+    } else if(platform==='tiktok'){
+      result.account_metrics={
+        followers_total:ej.followers||row.followers||0,
+        followers_change_7d:ej.followers_change_7d||0,
+        video_views_7d:ej.video_views_7d||0,
+        likes_7d:ej.likes_7d||0,
+        comments_7d:ej.comments_7d||0,
+        shares_7d:ej.shares_7d||0,
+        profile_views_7d:ej.profile_views_7d||0
+      };
+      if(ej.demographics) result.demographics=ej.demographics;
+      if(ej.traffic_sources) result.traffic_sources=ej.traffic_sources;
+      if(ej.top_posts_7d) result.top_posts_7d=ej.top_posts_7d;
+    } else if(platform==='line'){
+      // LINE: extra_json をそのままマージ
+      Object.assign(result, ej);
+      result.friends=ej.friends||{};
+      result.messages=ej.messages||{};
+      result.chat=ej.chat||{};
+      result.rich_menu=ej.rich_menu||{};
+      result.voom=ej.voom||{};
+      result.demographics=ej.demographics||{};
+      result.broadcasts=ej.broadcasts||[];
     }
-    // reach_30d, views_30d, interactions_30d
-    if(key==='reach') return ej.reach_30d||am.reach_30d||0;
-    if(key==='impressions') return ej.views_30d||ej.video_views_7d||am.views_90d||0;
-    if(key==='likes') return ej.interactions_30d||ej.likes_7d||0;
-    if(key==='comments') return ej.comments_7d||0;
-    if(key==='shares') return ej.shares_7d||0;
-    if(key==='posts') return am.posts||0;
-  }catch(e){}
-  return row[key]||0;
+    return result;
+  });
+}
+
+// 日付間を線形補間で埋める (v008移植)
+function interpolateDailyMap(sparseMap){
+  const dates=Object.keys(sparseMap).sort();
+  if(dates.length<2) return sparseMap;
+  const d0=new Date(dates[0]),d1=new Date(dates[dates.length-1]);
+  const allD=[];
+  for(let d=new Date(d0);d<=d1;d.setDate(d.getDate()+1)) allD.push(d.toISOString().slice(0,10));
+  const filled={};
+  allD.forEach(d=>{filled[d]=sparseMap[d]!==undefined?sparseMap[d]:null});
+  let prevIdx=null;
+  for(let i=0;i<allD.length;i++){
+    if(filled[allD[i]]!==null){
+      if(prevIdx!==null&&i-prevIdx>1){
+        const v0=filled[allD[prevIdx]],v1=filled[allD[i]];
+        for(let j=prevIdx+1;j<i;j++){
+          const ratio=(j-prevIdx)/(i-prevIdx);
+          filled[allD[j]]=Math.round(v0+(v1-v0)*ratio);
+        }
+      }
+      prevIdx=i;
+    }
+  }
+  return filled;
+}
+
+// SNSチャート作成ヘルパー
+const snsChartInstances={};
+function snsCreateChart(canvasId,config){
+  if(snsChartInstances[canvasId]){snsChartInstances[canvasId].destroy();delete snsChartInstances[canvasId]}
+  const el=document.getElementById(canvasId);if(!el)return;
+  snsChartInstances[canvasId]=new Chart(el,config);
+}
+
+// TikTok推定フォロワー計算
+function ttEstimatedFollowers(ttData, targetMetrics){
+  if(ttData.length===0) return 0;
+  const base=(ttData[0].account_metrics||{}).followers_total||1300;
+  const firstChange=(ttData[0].account_metrics||{}).followers_change_7d||0;
+  return base+((targetMetrics.followers_change_7d||0)-firstChange);
 }
 
 function renderSNS(sns){
-  const latest={};
-  ['instagram','tiktok','line'].forEach(p=>{const d=sns.filter(x=>x.platform===p);if(d.length)latest[p]=d[0]});
+  // データを正規化
+  const ig=normalizeSnsRows(sns,'instagram');
+  const tt=normalizeSnsRows(sns,'tiktok');
+  const ln=normalizeSnsRows(sns,'line');
+
   const pN={instagram:'Instagram',tiktok:'TikTok',line:'LINE'};
   const pI={instagram:'📷',tiktok:'🎵',line:'💬'};
-  const pC={instagram:'#e4405f',tiktok:'#00f2ea',line:'#06c755'};
+  const pC={instagram:'#e4405f',tiktok:'#000',line:'#06c755'};
 
-  // KPI cards
-  let kpis=['instagram','tiktok','line'].map(p=>{const d=latest[p];if(!d)return'';return`<div class="card"><h2>${pI[p]} ${pN[p]}</h2><div class="metric" style="color:${pC[p]}">${fmt(snsVal(d,'followers'))}</div><div class="metric-sub">${d.date} | ${fmt(snsVal(d,'posts'))} posts | ${fmt(snsVal(d,'likes'))} likes</div></div>`}).join('');
+  // KPIカード
+  const igLast=ig.length>0?(ig[ig.length-1].account_metrics||{}):{};
+  const ttLast=tt.length>0?(tt[tt.length-1].account_metrics||{}):{};
+  const lnLast=ln.length>0?(ln[ln.length-1].friends||{}):{};
+  const ttEstFw=tt.length>0?ttEstimatedFollowers(tt,ttLast):0;
 
-  // Sub tabs
+  let kpis=`
+    <div class="card"><h2>📷 Instagram</h2><div class="metric" style="color:#e4405f">${(igLast.followers||0).toLocaleString()}</div><div class="metric-sub">フォロワー | リーチ30d: ${(igLast.reach_30d||0).toLocaleString()}</div></div>
+    <div class="card"><h2>🎵 TikTok</h2><div class="metric">≈${ttEstFw.toLocaleString()}</div><div class="metric-sub">推定フォロワー | 視聴7d: ${(ttLast.video_views_7d||0).toLocaleString()}</div></div>
+    <div class="card"><h2>💬 LINE</h2><div class="metric" style="color:#06c755">${(lnLast.target_reach||0).toLocaleString()}</div><div class="metric-sub">ターゲットリーチ</div></div>`;
+
+  // サブタブ
   let subBtns=['summary','instagram','tiktok','line'].map(t=>
     `<button class="sns-sub-btn ${snsSubTab===t?'active':''}" onclick="switchSns('${t}')">${t==='summary'?'📊 サマリー':pI[t]+' '+pN[t]}</button>`
   ).join('');
 
   let content='';
-  if(snsSubTab==='summary'){
-    // Follower trend
-    const byDate={};sns.forEach(x=>{if(!byDate[x.date])byDate[x.date]={};byDate[x.date][x.platform]=x});
-    const dates=Object.keys(byDate).sort().slice(-60);
-    content=`
-      <div class="grid grid-3" style="margin-bottom:16px">
-        <div class="card"><h3 style="color:#e4405f">📷 Instagram フォロワー</h3><div class="chart-box"><canvas id="cSnsIG"></canvas></div></div>
-        <div class="card"><h3 style="color:#00f2ea">🎵 TikTok フォロワー</h3><div class="chart-box"><canvas id="cSnsTT"></canvas></div></div>
-        <div class="card"><h3 style="color:#06c755">💬 LINE 友だち</h3><div class="chart-box"><canvas id="cSnsLN"></canvas></div></div>
-      </div>
-      <div class="card"><h3>プラットフォーム比較</h3>
-        <table><thead><tr><th>日付</th><th class="num">IG Followers</th><th class="num">IG Likes</th><th class="num">TT Followers</th><th class="num">TT Likes</th><th class="num">LINE Friends</th></tr></thead>
-        <tbody>${Object.keys(byDate).sort().reverse().slice(0,20).map(d=>{const ig=byDate[d].instagram||{};const tt=byDate[d].tiktok||{};const ln=byDate[d].line||{};return`<tr><td>${d}</td><td class="num">${fmt(snsVal(ig,'followers'))}</td><td class="num">${fmt(snsVal(ig,'likes'))}</td><td class="num">${fmt(snsVal(tt,'followers'))}</td><td class="num">${fmt(snsVal(tt,'likes'))}</td><td class="num">${fmt(snsVal(ln,'followers'))}</td></tr>`}).join('')}</tbody></table>
-      </div>`;
-    setTimeout(()=>{
-      destroyC('cSnsFollow');destroyC('cSnsIG');destroyC('cSnsTT');destroyC('cSnsLN');
-      const igF=dates.map(d=>{const r=byDate[d]?.instagram;return r?snsVal(r,'followers'):null});
-      const ttF=dates.map(d=>{const r=byDate[d]?.tiktok;return r?snsVal(r,'followers'):null});
-      const lnF=dates.map(d=>{const r=byDate[d]?.line;return r?snsVal(r,'followers'):null});
-      const mkOpt=(label,data,color,canvasId)=>{
-        const el=document.getElementById(canvasId);if(!el)return;
-        charts[canvasId]=new Chart(el,{type:'line',data:{labels:dates,datasets:[{label,data,borderColor:color,backgroundColor:color+'20',tension:.3,pointRadius:1,fill:true,spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{datalabels:{display:false},legend:{display:false}},scales:{x:{ticks:{maxTicksLimit:10,font:{size:9}},grid:{display:false}},y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{font:{size:9}}}}}});
-      };
-      mkOpt('Instagram',igF,'#e4405f','cSnsIG');
-      mkOpt('TikTok',ttF,'#00f2ea','cSnsTT');
-      mkOpt('LINE',lnF,'#06c755','cSnsLN');
-    },50);
-  } else {
-    const p=snsSubTab;const pData=sns.filter(x=>x.platform===p).sort((a,b)=>a.date.localeCompare(b.date));
-    if(!pData.length){content='<div class="card">データなし</div>';} else {
-      const dates=pData.map(x=>x.date);
-      // Parse extra_json for detailed data
-      let extraInfo='';
-      try{const ej=JSON.parse(pData[pData.length-1].extra_json||'{}');
-        const keys=Object.keys(ej).filter(k=>!['followers','posts','likes','comments','shares','impressions','reach','post_count','total_likes'].includes(k));
-        if(keys.length){extraInfo=`<div class="card" style="margin-top:16px"><h3>詳細データ（extra_json）</h3><table>${keys.map(k=>`<tr><td>${k}</td><td class="num">${typeof ej[k]==='object'?JSON.stringify(ej[k]):ej[k]}</td></tr>`).join('')}</table></div>`}
-      }catch(e){}
 
-      content=`
-        <div class="grid grid-2">
-          <div class="card"><h3>フォロワー推移</h3><div class="chart-box"><canvas id="cSnsP1"></canvas></div></div>
-          <div class="card"><h3>エンゲージメント推移</h3><div class="chart-box"><canvas id="cSnsP2"></canvas></div></div>
-        </div>
-        <div class="card" style="margin-top:16px"><h3>日別データ</h3>
-          <table><thead><tr><th>日付</th><th class="num">Followers</th><th class="num">Posts</th><th class="num">Likes</th><th class="num">Comments</th><th class="num">Impressions</th><th class="num">Reach</th></tr></thead>
-          <tbody>${pData.slice().reverse().slice(0,30).map(x=>`<tr><td>${x.date}</td><td class="num">${fmt(snsVal(x,'followers'))}</td><td class="num">${fmt(snsVal(x,'posts'))}</td><td class="num">${fmt(snsVal(x,'likes'))}</td><td class="num">${fmt(snsVal(x,'comments'))}</td><td class="num">${fmt(snsVal(x,'impressions'))}</td><td class="num">${fmt(snsVal(x,'reach'))}</td></tr>`).join('')}</tbody></table>
-        </div>${extraInfo}`;
-      setTimeout(()=>{
-        destroyC('cSnsP1');destroyC('cSnsP2');
-        charts.cSnsP1=new Chart(document.getElementById('cSnsP1'),{type:'line',data:{labels:dates,datasets:[{label:'Followers',data:pData.map(x=>snsVal(x,'followers')),borderColor:pC[p],tension:.3,pointRadius:1,fill:true,backgroundColor:pC[p]+'20'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{datalabels:{display:false}},scales:{x:{ticks:{maxTicksLimit:10,font:{size:10}},grid:{display:false}},y:{grid:{color:'rgba(0,0,0,.05)'}}}}});
-        charts.cSnsP2=new Chart(document.getElementById('cSnsP2'),{type:'line',data:{labels:dates,datasets:[{label:'Likes',data:pData.map(x=>snsVal(x,'likes')),borderColor:'#f59e0b',tension:.3,pointRadius:1},{label:'Comments',data:pData.map(x=>snsVal(x,'comments')),borderColor:'#a78bfa',tension:.3,pointRadius:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{datalabels:{display:false}},scales:{x:{ticks:{maxTicksLimit:10,font:{size:10}},grid:{display:false}},y:{grid:{color:'rgba(0,0,0,.05)'}}}}});
-      },50);
-    }
+  if(snsSubTab==='summary'){
+    content=renderSnsSummaryContent(ig,tt,ln);
+  } else if(snsSubTab==='instagram'){
+    content=renderSnsInstagramContent(ig);
+  } else if(snsSubTab==='tiktok'){
+    content=renderSnsTikTokContent(tt);
+  } else if(snsSubTab==='line'){
+    content=renderSnsLineContent(ln);
   }
 
   document.getElementById('tab-sns').innerHTML=`
     <div class="grid grid-3">${kpis}</div>
     <div class="sns-sub-tabs">${subBtns}</div>
     ${content}`;
+
+  // チャート描画はDOM挿入後に遅延実行
+  setTimeout(()=>{
+    if(snsSubTab==='summary') renderSnsSummaryCharts(ig,tt,ln);
+    else if(snsSubTab==='instagram') renderSnsInstagramCharts(ig);
+    else if(snsSubTab==='tiktok') renderSnsTikTokCharts(tt);
+    else if(snsSubTab==='line') renderSnsLineCharts(ln);
+  },50);
+}
+
+// ========== サマリー ==========
+function renderSnsSummaryContent(ig,tt,ln){
+  const igL=ig.length>0?(ig[ig.length-1].account_metrics||{}):{};
+  const ttL=tt.length>0?(tt[tt.length-1].account_metrics||{}):{};
+  const lnL=ln.length>0?ln[ln.length-1]:{};
+  const lnFr=lnL.friends||{};const lnRm=lnL.rich_menu||{};const lnMsg=lnL.messages||{};
+  const ttEstFw=tt.length>0?ttEstimatedFollowers(tt,ttL):'---';
+  const igER=igL.reach_30d>0?((igL.interactions_30d||0)/igL.reach_30d*100).toFixed(2)+'%':'---';
+  const ttER=ttL.video_views_7d>0?((ttL.likes_7d||0)/ttL.video_views_7d*100).toFixed(2)+'%':'---';
+
+  const compRows=[
+    ['フォロワー/リーチ',(igL.followers||0).toLocaleString(),'≈'+(typeof ttEstFw==='number'?ttEstFw.toLocaleString():ttEstFw),(lnFr.target_reach||0).toLocaleString()],
+    ['リーチ/視聴/配信',(igL.reach_30d||0).toLocaleString()+' (30d)',(ttL.video_views_7d||0).toLocaleString()+' (7d)',(lnMsg.total_30d||0).toLocaleString()+'通 (30d)'],
+    ['インタラクション',(igL.interactions_30d||0).toLocaleString()+' (30d)',(ttL.likes_7d||0).toLocaleString()+' (7d)',(lnRm.total_clicks||0).toLocaleString()+' RMクリック'],
+    ['ER/CTR',igER,ttER,(lnRm.overall_click_rate_pct||0).toFixed(1)+'% CTR'],
+    ['プロフ/ブロック率',(igL.profile_access||0).toLocaleString(),(ttL.profile_views_7d||0).toLocaleString(),lnFr.total_added>0?(lnFr.blocked/lnFr.total_added*100).toFixed(1)+'%':'---']
+  ];
+  let compTbody=compRows.map(r=>`<tr style="border-bottom:1px solid var(--border)"><td style="padding:10px">${r[0]}</td><td class="num" style="color:#E1306C;padding:10px">${r[1]}</td><td class="num" style="padding:10px">${r[2]}</td><td class="num" style="color:#06C755;padding:10px">${r[3]}</td></tr>`).join('');
+
+  return `
+    <div class="grid grid-2" style="margin-bottom:16px">
+      <div class="card"><h3>フォロワー推移（IG vs TT）</h3><div class="chart-box"><canvas id="cSnsFwOverlay"></canvas></div></div>
+      <div class="card"><h3>閲覧数推移（IG リーチ vs TT 視聴）</h3><div class="chart-box"><canvas id="cSnsViewsOverlay"></canvas></div></div>
+    </div>
+    <div class="card"><h3>プラットフォーム比較</h3>
+      <table><thead><tr><th>指標</th><th class="num" style="color:#E1306C">Instagram</th><th class="num">TikTok</th><th class="num" style="color:#06C755">LINE</th></tr></thead>
+      <tbody>${compTbody}</tbody></table>
+    </div>`;
+}
+function renderSnsSummaryCharts(ig,tt,ln){
+  // フォロワー推移オーバーレイ (補間付き)
+  const igFwRaw={};ig.forEach(d=>{igFwRaw[d.date]=(d.account_metrics||{}).followers||0});
+  const ttFwRaw={};
+  if(tt.length>0){
+    const base=(tt[0].account_metrics||{}).followers_total||1300;
+    const fc=(tt[0].account_metrics||{}).followers_change_7d||0;
+    tt.forEach(d=>{const c7=(d.account_metrics||{}).followers_change_7d||0;ttFwRaw[d.date]=base+(c7-fc)});
+  }
+  const igFwMap=interpolateDailyMap(igFwRaw);const ttFwMap=interpolateDailyMap(ttFwRaw);
+  const allDates=[...new Set([...Object.keys(igFwMap),...Object.keys(ttFwMap)])].sort();
+  snsCreateChart('cSnsFwOverlay',{type:'line',data:{labels:allDates,datasets:[
+    {label:'IG フォロワー',data:allDates.map(d=>igFwMap[d]||null),borderColor:'#E1306C',backgroundColor:'#E1306C22',tension:.3,yAxisID:'y',pointRadius:2},
+    {label:'TT 推定フォロワー',data:allDates.map(d=>ttFwMap[d]!=null?ttFwMap[d]:null),borderColor:'#000',backgroundColor:'#00000022',tension:.3,yAxisID:'y1',pointRadius:2}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{datalabels:{display:false}},scales:{
+    y:{position:'left',title:{display:true,text:'Instagram'},ticks:{color:'#E1306C'}},
+    y1:{position:'right',title:{display:true,text:'TT 推定フォロワー'},grid:{drawOnChartArea:false},ticks:{color:'#000'}}
+  }}});
+
+  // 閲覧数推移オーバーレイ
+  const igReachRaw={};ig.forEach(d=>{igReachRaw[d.date]=(d.account_metrics||{}).reach_30d||0});
+  const ttViewsRaw={};tt.forEach(d=>{ttViewsRaw[d.date]=(d.account_metrics||{}).video_views_7d||0});
+  const igReachMap=interpolateDailyMap(igReachRaw);const ttViewsMap=interpolateDailyMap(ttViewsRaw);
+  const allDatesV=[...new Set([...Object.keys(igReachMap),...Object.keys(ttViewsMap)])].sort();
+  snsCreateChart('cSnsViewsOverlay',{type:'line',data:{labels:allDatesV,datasets:[
+    {label:'IG リーチ30d',data:allDatesV.map(d=>igReachMap[d]||null),borderColor:'#E1306C',backgroundColor:'#E1306C22',tension:.3,yAxisID:'y',pointRadius:2},
+    {label:'TT 視聴数7d',data:allDatesV.map(d=>ttViewsMap[d]||null),borderColor:'#000',backgroundColor:'#00000022',tension:.3,yAxisID:'y1',pointRadius:2}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{datalabels:{display:false}},scales:{
+    y:{position:'left',title:{display:true,text:'IG リーチ'},ticks:{color:'#E1306C'}},
+    y1:{position:'right',title:{display:true,text:'TT 視聴'},grid:{drawOnChartArea:false},ticks:{color:'#000'}}
+  }}});
+}
+
+// ========== Instagram詳細 ==========
+function renderSnsInstagramContent(ig){
+  if(ig.length===0) return '<div class="card">Instagramデータなし</div>';
+  const m=(ig[ig.length-1].account_metrics||{});
+  const er=m.reach_30d>0?((m.interactions_30d||0)/m.reach_30d*100).toFixed(2)+'%':'---';
+
+  // トップ投稿 (最新の top_posts_30d を後方スキャンで取得)
+  let topPosts=[];
+  for(let i=ig.length-1;i>=0;i--){if(ig[i].top_posts_30d&&ig[i].top_posts_30d.length>0){topPosts=ig[i].top_posts_30d;break;}}
+  let tpRows=topPosts.slice(0,15).map(p=>{
+    const cap=(p.caption||'').substring(0,40)+((p.caption||'').length>40?'...':'');
+    const wt=p.avg_watch_time_sec?p.avg_watch_time_sec.toFixed(1)+'s':'---';
+    const cr=p.completion_rate_pct?p.completion_rate_pct.toFixed(1)+'%':'---';
+    return `<tr><td>${p.rank||''}</td><td>${p.type||'---'}</td><td class="num">${(p.views||0).toLocaleString()}</td><td title="${(p.caption||'').replace(/"/g,'&quot;')}">${cap}</td><td>${wt}</td><td>${cr}</td></tr>`;
+  }).join('')||'<tr><td colspan="6">投稿データなし</td></tr>';
+
+  // コンテンツ種別比率
+  let cvr={};
+  for(let i=ig.length-1;i>=0;i--){if(ig[i].content_view_ratio&&Object.keys(ig[i].content_view_ratio).length>0){cvr=ig[i].content_view_ratio;break;}}
+
+  return `
+    <div class="grid grid-3" style="margin-bottom:16px">
+      <div class="card"><h3>フォロワー</h3><div class="metric" style="color:#E1306C">${(m.followers||0).toLocaleString()}</div></div>
+      <div class="card"><h3>リーチ30d</h3><div class="metric">${(m.reach_30d||0).toLocaleString()}</div></div>
+      <div class="card"><h3>ER</h3><div class="metric">${er}</div></div>
+    </div>
+    <div class="grid grid-2" style="margin-bottom:16px">
+      <div class="card"><h3>フォロワー推移</h3><div class="chart-box"><canvas id="cSnsIgFw"></canvas></div></div>
+      <div class="card"><h3>エンゲージメント推移</h3><div class="chart-box"><canvas id="cSnsIgEng"></canvas></div></div>
+    </div>
+    <div class="grid grid-2" style="margin-bottom:16px">
+      <div class="card"><h3>投稿ビュー分布</h3><div class="chart-box"><canvas id="cSnsIgViews"></canvas></div></div>
+      <div class="card"><h3>コンテンツ種別比率</h3><div class="chart-box"><canvas id="cSnsIgRatio"></canvas></div></div>
+    </div>
+    <div class="card" style="margin-bottom:16px"><h3>トップ投稿 (30d)</h3>
+      <table><thead><tr><th>#</th><th>種別</th><th class="num">ビュー</th><th>キャプション</th><th>視聴時間</th><th>完了率</th></tr></thead>
+      <tbody>${tpRows}</tbody></table>
+    </div>`;
+}
+function renderSnsInstagramCharts(ig){
+  if(ig.length===0) return;
+  // 補間
+  const fwRaw={};ig.forEach(d=>{fwRaw[d.date]=(d.account_metrics||{}).followers||0});
+  const fwMap=interpolateDailyMap(fwRaw);const dates=Object.keys(fwMap).sort();
+  const reachRaw={};ig.forEach(d=>{reachRaw[d.date]=(d.account_metrics||{}).reach_30d||0});
+  const reachMap=interpolateDailyMap(reachRaw);
+  const interRaw={};ig.forEach(d=>{interRaw[d.date]=(d.account_metrics||{}).interactions_30d||0});
+  const interMap=interpolateDailyMap(interRaw);
+
+  snsCreateChart('cSnsIgFw',{type:'line',data:{labels:dates,datasets:[{label:'フォロワー',data:dates.map(d=>fwMap[d]),borderColor:'#E1306C',backgroundColor:'#E1306C33',fill:true,tension:.3,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{datalabels:{display:false}}}});
+  snsCreateChart('cSnsIgEng',{type:'line',data:{labels:dates,datasets:[
+    {label:'リーチ',data:dates.map(d=>reachMap[d]),borderColor:'#E1306C',tension:.3,pointRadius:2},
+    {label:'インタラクション',data:dates.map(d=>interMap[d]),borderColor:'#667eea',tension:.3,pointRadius:2}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{datalabels:{display:false}}}});
+
+  // 投稿ビュー分布
+  let topPosts=[];
+  for(let i=ig.length-1;i>=0;i--){if(ig[i].top_posts_30d&&ig[i].top_posts_30d.length>0){topPosts=ig[i].top_posts_30d;break;}}
+  if(topPosts.length>0){
+    const sorted=[...topPosts].sort((a,b)=>(b.views||0)-(a.views||0)).slice(0,30);
+    const typeLabel={Reel:'リール',Post:'投稿',Story:'ストーリー'};
+    snsCreateChart('cSnsIgViews',{type:'bar',data:{
+      labels:sorted.map(p=>{const d=p.date?p.date.replace(/^\d{4}-/,'').replace('-','/'):('');const t=typeLabel[p.type]||p.type||'';return d?d+' '+t:'#'+(p.rank||'')}),
+      datasets:[{label:'ビュー数',data:sorted.map(p=>p.views||0),backgroundColor:sorted.map(p=>p.type&&p.type.includes('Reel')?'#667eea':'#E1306C')}]
+    },options:{responsive:true,maintainAspectRatio:false,scales:{x:{ticks:{font:{size:10},maxRotation:45}}},plugins:{
+      datalabels:{display:true,anchor:'end',align:'top',font:{size:10,weight:'bold'},formatter:v=>v.toLocaleString(),color:'#333'},
+      legend:{display:true,labels:{generateLabels:()=>[{text:'リール',fillStyle:'#667eea',strokeStyle:'#667eea'},{text:'投稿',fillStyle:'#E1306C',strokeStyle:'#E1306C'}]}}
+    }}});
+  }
+
+  // コンテンツ種別比率
+  let cvr={};
+  for(let i=ig.length-1;i>=0;i--){if(ig[i].content_view_ratio&&Object.keys(ig[i].content_view_ratio).length>0){cvr=ig[i].content_view_ratio;break;}}
+  if(Object.keys(cvr).length>0){
+    const nameMap={reels:'リール動画',stories:'ストーリーズ',posts:'投稿'};
+    const keys=Object.keys(cvr);
+    snsCreateChart('cSnsIgRatio',{type:'doughnut',data:{
+      labels:keys.map(k=>(nameMap[k]||k)+' '+(cvr[k]||0).toFixed(1)+'%'),
+      datasets:[{data:Object.values(cvr),backgroundColor:['#E1306C','#f09433','#667eea','#4ade80']}]
+    },options:{responsive:true,maintainAspectRatio:false,plugins:{
+      datalabels:{display:true,formatter:v=>v.toFixed(1)+'%',color:'#fff',font:{size:13,weight:'bold'}},
+      legend:{position:'right',labels:{font:{size:12},padding:12}}
+    }}});
+  }
+}
+
+// ========== TikTok詳細 ==========
+function renderSnsTikTokContent(tt){
+  if(tt.length===0) return '<div class="card">TikTokデータなし</div>';
+  const m=(tt[tt.length-1].account_metrics||{});
+  const estFw=ttEstimatedFollowers(tt,m);
+  const traffic=tt[tt.length-1].traffic_sources||{};
+  const demo=tt[tt.length-1].demographics||{};
+
+  return `
+    <div class="grid grid-3" style="margin-bottom:16px">
+      <div class="card"><h3>推定フォロワー</h3><div class="metric">≈${estFw.toLocaleString()}</div><div class="metric-sub">純増7d: ${(m.followers_change_7d||0).toLocaleString()}</div></div>
+      <div class="card"><h3>視聴数 7d</h3><div class="metric">${(m.video_views_7d||0).toLocaleString()}</div></div>
+      <div class="card"><h3>いいね 7d</h3><div class="metric">${(m.likes_7d||0).toLocaleString()}</div></div>
+    </div>
+    <div class="grid grid-2" style="margin-bottom:16px">
+      <div class="card"><h3>推定フォロワー推移</h3><div class="chart-box"><canvas id="cSnsTtFw"></canvas></div></div>
+      <div class="card"><h3>エンゲージメント推移</h3><div class="chart-box"><canvas id="cSnsTtEng"></canvas></div></div>
+    </div>
+    <div class="grid grid-2" style="margin-bottom:16px">
+      <div class="card"><h3>年齢分布</h3><div class="chart-box"><canvas id="cSnsTtAge"></canvas></div></div>
+      <div class="card"><h3>トラフィックソース</h3><div class="chart-box"><canvas id="cSnsTtTraffic"></canvas></div></div>
+    </div>`;
+}
+function renderSnsTikTokCharts(tt){
+  if(tt.length===0) return;
+  // 推定フォロワー補間
+  const base=(tt[0].account_metrics||{}).followers_total||1300;
+  const fc=(tt[0].account_metrics||{}).followers_change_7d||0;
+  const fwRaw={};tt.forEach(d=>{const c7=(d.account_metrics||{}).followers_change_7d||0;fwRaw[d.date]=base+(c7-fc)});
+  const fwMap=interpolateDailyMap(fwRaw);const dates=Object.keys(fwMap).sort();
+  const viewsRaw={};tt.forEach(d=>{viewsRaw[d.date]=(d.account_metrics||{}).video_views_7d||0});
+  const viewsMap=interpolateDailyMap(viewsRaw);
+  const likesRaw={};tt.forEach(d=>{likesRaw[d.date]=(d.account_metrics||{}).likes_7d||0});
+  const likesMap=interpolateDailyMap(likesRaw);
+
+  snsCreateChart('cSnsTtFw',{type:'line',data:{labels:dates,datasets:[{label:'推定フォロワー',data:dates.map(d=>fwMap[d]),borderColor:'#000',backgroundColor:'#00000022',fill:true,tension:.3,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{datalabels:{display:false}}}});
+  snsCreateChart('cSnsTtEng',{type:'line',data:{labels:dates,datasets:[
+    {label:'視聴数',data:dates.map(d=>viewsMap[d]),borderColor:'#000',tension:.3,pointRadius:2},
+    {label:'いいね',data:dates.map(d=>likesMap[d]),borderColor:'#667eea',tension:.3,pointRadius:2}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{datalabels:{display:false}}}});
+
+  // 年齢分布
+  const demo=tt[tt.length-1].demographics||{};const age=demo.age||{};
+  if(Object.keys(age).length>0){
+    snsCreateChart('cSnsTtAge',{type:'bar',data:{labels:Object.keys(age),datasets:[{label:'割合(%)',data:Object.values(age),backgroundColor:['#60a5fa','#4ade80','#fbbf24','#f87171','#a78bfa']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{datalabels:{display:true,formatter:v=>v.toFixed(1)+'%',color:'#333',font:{size:11}},legend:{display:false}},scales:{y:{beginAtZero:true,title:{display:true,text:'%'}}}}});
+  }
+
+  // トラフィックソース
+  const traffic=tt[tt.length-1].traffic_sources||{};
+  if(Object.keys(traffic).length>0){
+    const tLabels={recommend:'おすすめ',search:'検索',profile:'プロフ',following:'フォロー中',music:'音源'};
+    snsCreateChart('cSnsTtTraffic',{type:'doughnut',data:{labels:Object.keys(traffic).map(k=>tLabels[k]||k),datasets:[{data:Object.values(traffic),backgroundColor:['#000','#4361ee','#E1306C','#4ade80','#fbbf24']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{datalabels:{display:true,formatter:v=>v.toFixed(1)+'%',color:'#fff',font:{weight:'bold'}}}}});
+  }
+}
+
+// ========== LINE詳細 ==========
+function renderSnsLineContent(ln){
+  if(ln.length===0) return '<div class="card">LINEデータなし</div>';
+  const latest=ln[ln.length-1];
+  const fr=latest.friends||{};const msg=latest.messages||{};const rm=latest.rich_menu||{};const voom=latest.voom||{};const chat=latest.chat||{};
+
+  let bcRows=(latest.broadcasts||[]).map(b=>{
+    const openC=b.open_rate_pct>=45?'color:#16a34a':b.open_rate_pct>=30?'':'color:#ef4444';
+    return `<tr><td>${b.date}</td><td class="num">${(b.delivered||0).toLocaleString()}</td><td class="num">${(b.opened||0).toLocaleString()}</td><td class="num" style="${openC}">${(b.open_rate_pct||0).toFixed(1)}%</td><td class="num">${(b.clicked||0).toLocaleString()}</td><td class="num">${(b.click_rate_pct||0).toFixed(1)}%</td></tr>`;
+  }).join('')||'<tr><td colspan="6">配信データなし</td></tr>';
+
+  const areas=rm.areas||{};
+  let rmRows='';let totalClicks=0;
+  Object.entries(areas).forEach(([key,area])=>{totalClicks+=(area.clicks||0);rmRows+=`<tr><td style="font-weight:600">${key}</td><td>${area.label||''}</td><td class="num">${(area.clicks||0).toLocaleString()}</td><td class="num">${(area.click_rate_pct||0).toFixed(1)}%</td></tr>`});
+  rmRows+=`<tr style="border-top:2px solid var(--border);font-weight:700"><td>合計</td><td>—</td><td class="num">${totalClicks.toLocaleString()}</td><td class="num">${(rm.overall_click_rate_pct||0).toFixed(1)}%</td></tr>`;
+
+  return `
+    <div class="grid grid-3" style="margin-bottom:16px">
+      <div class="card"><h3>ターゲットリーチ</h3><div class="metric" style="color:#06c755">${(fr.target_reach||0).toLocaleString()}</div><div class="metric-sub">${(fr.target_reach_change_7d||0)>=0?'+':''}${fr.target_reach_change_7d||0} (7日間)</div></div>
+      <div class="card"><h3>ブロック</h3><div class="metric">${(fr.blocked||0).toLocaleString()}</div><div class="metric-sub">率 ${fr.total_added>0?(fr.blocked/fr.total_added*100).toFixed(1)+'%':'---'}</div></div>
+      <div class="card"><h3>リッチメニュー CTR</h3><div class="metric">${(rm.overall_click_rate_pct||0).toFixed(1)}%</div></div>
+    </div>
+    <div class="grid grid-2" style="margin-bottom:16px">
+      <div class="card"><h3>ターゲットリーチ推移</h3><div class="chart-box"><canvas id="cSnsLnReach"></canvas></div></div>
+      <div class="card"><h3>性別/年齢分布</h3><div class="grid grid-2"><div class="chart-box"><canvas id="cSnsLnGender"></canvas></div><div class="chart-box"><canvas id="cSnsLnAge"></canvas></div></div></div>
+    </div>
+    <div class="card" style="margin-bottom:16px"><h3>配信履歴</h3>
+      <table><thead><tr><th>日付</th><th class="num">配信数</th><th class="num">開封数</th><th class="num">開封率</th><th class="num">クリック数</th><th class="num">クリック率</th></tr></thead>
+      <tbody>${bcRows}</tbody></table>
+    </div>
+    <div class="card"><h3>リッチメニュー</h3>
+      <table><thead><tr><th>エリア</th><th>ラベル</th><th class="num">クリック数</th><th class="num">CTR</th></tr></thead>
+      <tbody>${rmRows}</tbody></table>
+    </div>`;
+}
+function renderSnsLineCharts(ln){
+  if(ln.length===0) return;
+  // ターゲットリーチ推移
+  snsCreateChart('cSnsLnReach',{type:'line',data:{labels:ln.map(d=>d.date),datasets:[{label:'ターゲットリーチ',data:ln.map(d=>(d.friends||{}).target_reach||0),borderColor:'#06C755',backgroundColor:'rgba(6,199,85,0.1)',fill:true,tension:.3,pointRadius:ln.map(d=>d.is_dummy?2:5),pointBackgroundColor:ln.map(d=>d.is_dummy?'#06C755':'#ff6600')}]},options:{responsive:true,maintainAspectRatio:false,plugins:{datalabels:{display:false}}}});
+
+  const demo=ln[ln.length-1].demographics||{};
+  const gender=demo.gender||{};
+  if(Object.keys(gender).length>0){
+    const gLabels={female:'女性',male:'男性',unknown:'不明'};
+    snsCreateChart('cSnsLnGender',{type:'doughnut',data:{labels:Object.keys(gender).map(k=>gLabels[k]||k),datasets:[{data:Object.values(gender),backgroundColor:['#E1306C','#4285f4','#ccc']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{datalabels:{display:true,formatter:v=>v.toFixed(1)+'%',color:'#fff',font:{weight:'bold'}}}}});
+  }
+  const age=demo.age||{};
+  if(Object.keys(age).length>0){
+    snsCreateChart('cSnsLnAge',{type:'bar',data:{labels:Object.keys(age),datasets:[{label:'%',data:Object.values(age),backgroundColor:'rgba(6,199,85,0.7)'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{datalabels:{display:true,formatter:v=>v.toFixed(1)+'%',color:'#333',font:{size:11}},legend:{display:false}},scales:{y:{beginAtZero:true,title:{display:true,text:'%'}}}}});
+  }
 }
 
 init();
