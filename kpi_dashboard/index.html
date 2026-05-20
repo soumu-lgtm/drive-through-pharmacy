@@ -169,9 +169,11 @@ async function init(){
       el('endDate').value=maxD;el('endDate').min=ds[0];el('endDate').max=maxD;
       el('dateRangeInfo').textContent=`データ範囲: ${ds[0]} ~ ${maxD}`;
     }
-    const sh=SY.find(s=>s.sync_type==='shopify');
-    const lt=sh?.last_sync?new Date(sh.last_sync).toLocaleString('ja-JP'):'未同期';
-    document.getElementById('syncTs').textContent=`最終更新: ${lt}`;
+    const allSyncs=SY.filter(s=>s.last_sync).map(s=>new Date(s.last_sync).getTime());
+    const latestSync=allSyncs.length?new Date(Math.max(...allSyncs)):null;
+    const lt=latestSync?latestSync.toLocaleString('ja-JP'):'未同期';
+    const nextSync=latestSync?new Date(latestSync.getTime()+60*60*1000).toLocaleString('ja-JP',{hour:'2-digit',minute:'2-digit'}):'---';
+    document.getElementById('syncTs').textContent=`最終更新: ${lt}（自動同期: 1時間毎 / 次回予定: ${nextSync}頃）`;
     renderAll();
   }catch(e){document.getElementById('syncTs').textContent='読み込みエラー: '+e.message}
 }
