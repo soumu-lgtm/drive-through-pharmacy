@@ -212,7 +212,7 @@ function renderDash(d,o){
     subRows+=`<tr><td>　${c}回目</td><td class="num">${fmt(v.cnt)}件 / ${yen(v.rev)}</td></tr>`;
   });
 
-  // Customer
+  // Customer - ユニーク注文はorders明細から（Amazon/Qoo10含む）、注文件数はdaily_summaryから
   const uniqOrders=new Set(o.map(x=>x.order_id)).size;
 
   document.getElementById('tab-dashboard').innerHTML=`
@@ -220,7 +220,7 @@ function renderDash(d,o){
       <div class="card"><h2>売上合計</h2><div class="metric">${yen(rev)}</div><div class="metric-sub">フィルター期間内</div></div>
       <div class="card"><h2>注文件数</h2><div class="metric" style="color:var(--blue)">${fmt(ords)}</div><div class="metric-sub">平均単価: ${yen(Math.round(aov))}</div></div>
       <div class="card"><h2>商品販売数</h2><div class="metric" style="color:var(--purple)">${fmt(qty)}<span style="font-size:14px;color:var(--sub)">個</span></div></div>
-      <div class="card"><h2>ユニーク注文</h2><div class="metric" style="color:var(--employee)">${fmt(uniqOrders)}</div></div>
+      <div class="card"><h2>注文明細数</h2><div class="metric" style="color:var(--employee)">${fmt(o.length)}<span style="font-size:12px;color:var(--sub)"> 行</span></div><div class="metric-sub">ユニーク注文: ${fmt(uniqOrders)}</div></div>
     </div>
     <div class="grid grid-2">
       <div class="card"><h2>チャネル別売上</h2>
@@ -234,10 +234,12 @@ function renderDash(d,o){
       <div class="card"><h2>定期購入分析</h2><table>${subRows}</table></div>
       <div class="card"><h2>顧客分析</h2>
         <table>
-          <tr><td>ユニーク注文数</td><td class="num"><strong>${fmt(uniqOrders)}</strong></td></tr>
+          <tr><td>注文件数（全チャネル）</td><td class="num"><strong>${fmt(ords)}</strong></td></tr>
+          <tr><td>注文明細（Shopify/社割/卸売）</td><td class="num">${fmt(uniqOrders)}件</td></tr>
           <tr><td>平均注文額(AOV)</td><td class="num">${yen(Math.round(aov))}</td></tr>
           <tr><td>総販売数量</td><td class="num">${fmt(qty)}個</td></tr>
         </table>
+        <div style="font-size:11px;color:var(--sub);margin-top:8px">※注文明細はShopify/社割/卸売のみ。Amazon/Qoo10はサマリー集計のみ対応。</div>
       </div>
     </div>`;
 }
