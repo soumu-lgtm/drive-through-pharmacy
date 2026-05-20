@@ -164,8 +164,9 @@ async function init(){
     const ds=D.map(d=>d.date).sort();
     if(ds.length){
       const el=id=>document.getElementById(id);
-      el('startDate').value=ds[0];el('startDate').min=ds[0];el('startDate').max=ds[ds.length-1];
-      el('endDate').value=ds[ds.length-1];el('endDate').min=ds[0];el('endDate').max=ds[ds.length-1];
+      const today=new Date().toISOString().slice(0,10);const maxD=ds[ds.length-1]>today?ds[ds.length-1]:today;
+      el('startDate').value=ds[0];el('startDate').min=ds[0];el('startDate').max=maxD;
+      el('endDate').value=ds[ds.length-1];el('endDate').min=ds[0];el('endDate').max=maxD;
       el('dateRangeInfo').textContent=`データ範囲: ${ds[0]} ~ ${ds[ds.length-1]}`;
     }
     const sh=SY.find(s=>s.sync_type==='shopify');
