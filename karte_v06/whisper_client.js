@@ -18,28 +18,29 @@ let whisperStream = null;
 // 初期化
 // ========================================
 async function whisperInit() {
-  // マイク一覧を取得
+  // マイク権限を取得してからデバイス列挙（権限なしだとdeviceId/labelが空になる）
   try {
+    const tempStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    tempStream.getTracks().forEach(t => t.stop()); // 即解放
+
     const devices = await navigator.mediaDevices.enumerateDevices();
     const mics = devices.filter(d => d.kind === 'audioinput');
     const select = document.getElementById('whisperMicSelect');
-    select.innerHTML = '<option value="">マイク選択...</option>';
+    select.innerHTML = '<option value="__default__">既定のマイク</option>';
     mics.forEach(mic => {
       const opt = document.createElement('option');
-      opt.value = mic.deviceId;
+      opt.value = mic.deviceId || '__default__';
       opt.textContent = mic.label || `マイク ${select.options.length}`;
       select.appendChild(opt);
     });
-    select.onchange = () => {
-      document.getElementById('whisperRecBtn').disabled = !select.value;
-    };
-    // 最初のマイクを自動選択
-    if (mics.length > 0) {
-      select.value = mics[0].deviceId;
-      document.getElementById('whisperRecBtn').disabled = false;
-    }
+    // 常に録音可能（既定のマイクがある）
+    document.getElementById('whisperRecBtn').disabled = false;
   } catch (e) {
     console.warn('マイク列挙失敗:', e);
+    // 権限拒否でも既定マイクで録音を試みられるようにする
+    const select = document.getElementById('whisperMicSelect');
+    select.innerHTML = '<option value="__default__">既定のマイク</option>';
+    document.getElementById('whisperRecBtn').disabled = false;
   }
 
   // プロンプト一覧を取得
@@ -77,11 +78,13 @@ async function whisperToggleRecord() {
 
 async function whisperStartRecord() {
   const micId = document.getElementById('whisperMicSelect').value;
-  if (!micId) return;
 
   try {
+    const audioConstraints = (micId && micId !== '__default__')
+      ? { deviceId: { exact: micId } }
+      : true;
     whisperStream = await navigator.mediaDevices.getUserMedia({
-      audio: { deviceId: { exact: micId } }
+      audio: audioConstraints
     });
     whisperMediaRecorder = new MediaRecorder(whisperStream, {
       mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
