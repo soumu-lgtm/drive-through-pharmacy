@@ -166,8 +166,8 @@ async function init(){
       const el=id=>document.getElementById(id);
       const today=new Date().toISOString().slice(0,10);const maxD=ds[ds.length-1]>today?ds[ds.length-1]:today;
       el('startDate').value=ds[0];el('startDate').min=ds[0];el('startDate').max=maxD;
-      el('endDate').value=ds[ds.length-1];el('endDate').min=ds[0];el('endDate').max=maxD;
-      el('dateRangeInfo').textContent=`データ範囲: ${ds[0]} ~ ${ds[ds.length-1]}`;
+      el('endDate').value=maxD;el('endDate').min=ds[0];el('endDate').max=maxD;
+      el('dateRangeInfo').textContent=`データ範囲: ${ds[0]} ~ ${maxD}`;
     }
     const sh=SY.find(s=>s.sync_type==='shopify');
     const lt=sh?.last_sync?new Date(sh.last_sync).toLocaleString('ja-JP'):'未同期';
@@ -522,7 +522,7 @@ function renderKPI(d,o,g,s){
         </table>
       </div>
       <div class="card"><h3>📱 SNSパフォーマンス</h3>
-        ${['instagram','tiktok','line'].map(p=>{const d=s.filter(x=>x.platform===p);if(!d.length)return'';const l=d[0];return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0"><span style="font-size:16px">${{instagram:'📷',tiktok:'🎵',line:'💬'}[p]}</span><div style="flex:1;font-size:12px;font-weight:600">${{instagram:'Instagram',tiktok:'TikTok',line:'LINE'}[p]}</div><div style="font-size:12px">${fmt(snsVal(l,'followers'))} followers</div></div>`}).join('')}
+        ${['instagram','tiktok','line'].map(p=>{const d=s.filter(x=>x.platform===p).sort((a,b)=>b.date.localeCompare(a.date));if(!d.length)return'';const l=d[0];const prev=d.length>7?d[7]:d[d.length-1];const fNow=snsVal(l,'followers');const fPrev=snsVal(prev,'followers');const diff=fNow-fPrev;const diffStr=diff>0?`<span style="color:var(--green)">+${fmt(diff)}</span>`:diff<0?`<span style="color:var(--red)">${fmt(diff)}</span>`:'±0';return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0"><span style="font-size:16px">${{instagram:'📷',tiktok:'🎵',line:'💬'}[p]}</span><div style="flex:1"><div style="font-size:12px;font-weight:600">${{instagram:'Instagram',tiktok:'TikTok',line:'LINE'}[p]}</div><div style="font-size:10px;color:var(--sub)">7日比: ${diffStr}</div></div><div style="font-size:16px;font-weight:700">${fmt(fNow)}</div></div>`}).join('')}
       </div>
     </div>`;
 
@@ -618,21 +618,27 @@ function renderSNS(sns){
     const byDate={};sns.forEach(x=>{if(!byDate[x.date])byDate[x.date]={};byDate[x.date][x.platform]=x});
     const dates=Object.keys(byDate).sort().slice(-60);
     content=`
-      <div class="card" style="margin-bottom:16px"><h3>フォロワー推移</h3><div class="chart-box"><canvas id="cSnsFollow"></canvas></div></div>
+      <div class="grid grid-3" style="margin-bottom:16px">
+        <div class="card"><h3 style="color:#e4405f">📷 Instagram フォロワー</h3><div class="chart-box"><canvas id="cSnsIG"></canvas></div></div>
+        <div class="card"><h3 style="color:#00f2ea">🎵 TikTok フォロワー</h3><div class="chart-box"><canvas id="cSnsTT"></canvas></div></div>
+        <div class="card"><h3 style="color:#06c755">💬 LINE 友だち</h3><div class="chart-box"><canvas id="cSnsLN"></canvas></div></div>
+      </div>
       <div class="card"><h3>プラットフォーム比較</h3>
         <table><thead><tr><th>日付</th><th class="num">IG Followers</th><th class="num">IG Likes</th><th class="num">TT Followers</th><th class="num">TT Likes</th><th class="num">LINE Friends</th></tr></thead>
         <tbody>${Object.keys(byDate).sort().reverse().slice(0,20).map(d=>{const ig=byDate[d].instagram||{};const tt=byDate[d].tiktok||{};const ln=byDate[d].line||{};return`<tr><td>${d}</td><td class="num">${fmt(snsVal(ig,'followers'))}</td><td class="num">${fmt(snsVal(ig,'likes'))}</td><td class="num">${fmt(snsVal(tt,'followers'))}</td><td class="num">${fmt(snsVal(tt,'likes'))}</td><td class="num">${fmt(snsVal(ln,'followers'))}</td></tr>`}).join('')}</tbody></table>
       </div>`;
     setTimeout(()=>{
-      destroyC('cSnsFollow');
+      destroyC('cSnsFollow');destroyC('cSnsIG');destroyC('cSnsTT');destroyC('cSnsLN');
       const igF=dates.map(d=>{const r=byDate[d]?.instagram;return r?snsVal(r,'followers'):null});
       const ttF=dates.map(d=>{const r=byDate[d]?.tiktok;return r?snsVal(r,'followers'):null});
       const lnF=dates.map(d=>{const r=byDate[d]?.line;return r?snsVal(r,'followers'):null});
-      charts.cSnsFollow=new Chart(document.getElementById('cSnsFollow'),{type:'line',data:{labels:dates,datasets:[
-        {label:'Instagram',data:igF,borderColor:'#e4405f',tension:.3,pointRadius:1,fill:false,spanGaps:true},
-        {label:'TikTok',data:ttF,borderColor:'#00f2ea',tension:.3,pointRadius:1,fill:false,spanGaps:true},
-        {label:'LINE',data:lnF,borderColor:'#06c755',tension:.3,pointRadius:1,fill:false,spanGaps:true},
-      ]},options:{responsive:true,maintainAspectRatio:false,plugins:{datalabels:{display:false},legend:{labels:{font:{size:11}}}},scales:{x:{ticks:{maxTicksLimit:12,font:{size:10}},grid:{display:false}},y:{grid:{color:'rgba(0,0,0,.05)'}}}}});
+      const mkOpt=(label,data,color,canvasId)=>{
+        const el=document.getElementById(canvasId);if(!el)return;
+        charts[canvasId]=new Chart(el,{type:'line',data:{labels:dates,datasets:[{label,data,borderColor:color,backgroundColor:color+'20',tension:.3,pointRadius:1,fill:true,spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{datalabels:{display:false},legend:{display:false}},scales:{x:{ticks:{maxTicksLimit:10,font:{size:9}},grid:{display:false}},y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{font:{size:9}}}}}});
+      };
+      mkOpt('Instagram',igF,'#e4405f','cSnsIG');
+      mkOpt('TikTok',ttF,'#00f2ea','cSnsTT');
+      mkOpt('LINE',lnF,'#06c755','cSnsLN');
     },50);
   } else {
     const p=snsSubTab;const pData=sns.filter(x=>x.platform===p).sort((a,b)=>a.date.localeCompare(b.date));
