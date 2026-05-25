@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>EC売上ダッシュボード</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
@@ -130,7 +133,7 @@ const SB='https://dyjhxkqzxibcpgoefbiv.supabase.co',SK='sb_publishable_bOK3qqLHk
 let D=[],O=[],G=[],S=[],I=[],SY=[];
 let dS=null,dE=null,charts={};
 
-async function sbGet(t,q=''){const r=await fetch(`${SB}/rest/v1/${t}?${q}`,{headers:H});if(!r.ok)throw new Error(`${t}:${r.status}`);return r.json();}
+async function sbGet(t,q=''){const r=await fetch(`${SB}/rest/v1/${t}?${q}`,{headers:H,cache:'no-store'});if(!r.ok)throw new Error(`${t}:${r.status}`);return r.json();}
 function fmt(n){return n!=null?Number(n).toLocaleString('ja-JP'):'-'}
 function yen(n){return n!=null?'¥'+Number(n).toLocaleString('ja-JP'):'-'}
 function pct(a,b){return b>0?((a/b)*100).toFixed(1)+'%':'-'}
