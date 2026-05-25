@@ -96,7 +96,11 @@ tr:hover td{background:#f8f9fb}
 
 <div class="header">
   <div><h1>EC売上ダッシュボード</h1><div class="ts" id="syncTs">読み込み中...</div></div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <button id="syncBtn" onclick="runSync()" style="padding:10px 20px;background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .2s" onmouseover="this.style.background='rgba(255,255,255,.35)'" onmouseout="this.style.background='rgba(255,255,255,.2)'">&#x21bb; 集計更新</button>
+  </div>
 </div>
+<div id="syncResult" style="display:none;margin-bottom:16px;border-radius:10px;padding:14px 20px;font-size:13px;line-height:1.8"></div>
 
 <div class="date-filter">
   <label>開始日:</label><input type="date" id="startDate">
@@ -994,6 +998,58 @@ function renderSnsLineCharts(ln){
   if(Object.keys(age).length>0){
     snsCreateChart('cSnsLnAge',{type:'bar',data:{labels:Object.keys(age),datasets:[{label:'%',data:Object.values(age),backgroundColor:'rgba(6,199,85,0.7)'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{datalabels:{display:true,formatter:v=>v.toFixed(1)+'%',color:'#333',font:{size:11}},legend:{display:false}},scales:{y:{beginAtZero:true,title:{display:true,text:'%'}}}}});
   }
+}
+
+const SYNC_URL='http://127.0.0.1:3457';
+async function runSync(){
+  const btn=document.getElementById('syncBtn');
+  const box=document.getElementById('syncResult');
+  btn.disabled=true;btn.textContent='同期中...';
+  box.style.display='block';
+  box.style.background='#f0f4ff';box.style.border='1px solid #c7d2fe';
+  box.innerHTML='<strong>集計実行中...</strong> スプレッドシート・GA4・SNSのデータを取得しています。しばらくお待ちください。';
+
+  try{
+    // ヘルスチェック
+    const hc=await fetch(SYNC_URL+'/health',{cache:'no-store',signal:AbortSignal.timeout(3000)}).catch(()=>null);
+    if(!hc||!hc.ok){
+      box.style.background='#fef2f2';box.style.border='1px solid #fca5a5';
+      box.innerHTML='<strong>同期サーバー未接続</strong><br>このPCでは同期サーバーが起動していません。<code>run_sync_server.bat</code> を実行してください。';
+      btn.disabled=false;btn.textContent='\u21bb 集計更新';return;
+    }
+
+    const r=await fetch(SYNC_URL+'/sync',{cache:'no-store',signal:AbortSignal.timeout(300000)});
+    const data=await r.json();
+
+    // 結果表示
+    const labels={daily_summary:'日次サマリー',orders:'注文データ',ga4:'GA4',sns:'SNS',inventory:'在庫'};
+    let html='<strong>同期完了</strong><br>';
+    let hasSkip=false;
+    for(const[k,v]of Object.entries(data)){
+      const label=labels[k]||k;
+      if(v.ok){
+        html+=`<span style="color:#16a34a">\u2713</span> ${label}: ${v.count||0}件同期`;
+        if(v.partial_skip)html+=` <span style="color:#d97706">（${v.partial_skip}）</span>`;
+        html+='<br>';
+      }else if(v.skipped){
+        hasSkip=true;
+        html+=`<span style="color:#d97706">\u25b3</span> ${label}: スキップ — ${v.reason}<br>`;
+      }else{
+        html+=`<span style="color:#dc2626">\u2717</span> ${label}: エラー — ${v.error||'不明'}<br>`;
+      }
+    }
+    box.style.background=hasSkip?'#fffbeb':'#f0fdf4';
+    box.style.border=hasSkip?'1px solid #fcd34d':'1px solid #86efac';
+    box.innerHTML=html;
+
+    // データ再読み込み
+    await init();
+
+  }catch(e){
+    box.style.background='#fef2f2';box.style.border='1px solid #fca5a5';
+    box.innerHTML=`<strong>同期エラー</strong><br>${e.message}`;
+  }
+  btn.disabled=false;btn.textContent='\u21bb 集計更新';
 }
 
 init();
