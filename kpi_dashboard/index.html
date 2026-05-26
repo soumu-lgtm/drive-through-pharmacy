@@ -1215,7 +1215,7 @@ function renderSeoArticles(articles){
   h+=`<div style="overflow-x:auto"><table style="width:100%;font-size:12px;border-collapse:collapse">`;
   h+=`<thead><tr style="background:#f1f5f9;border-bottom:2px solid #e2e8f0">`;
   h+=`<th style="padding:8px;text-align:left;cursor:pointer;white-space:nowrap" ${sortClick('site_key')}>サイト ${sortIcon('site_key')}</th>`;
-  h+=`<th style="padding:8px;text-align:left;cursor:pointer;min-width:250px" ${sortClick('slug')}>記事 ${sortIcon('slug')}</th>`;
+  h+=`<th style="padding:8px;text-align:left;cursor:pointer;min-width:250px" ${sortClick('title')}>記事 ${sortIcon('title')}</th>`;
   h+=`<th style="padding:8px;text-align:right;cursor:pointer;white-space:nowrap" ${sortClick('clicks')}>クリック ${sortIcon('clicks')}</th>`;
   h+=`<th style="padding:8px;text-align:right;cursor:pointer;white-space:nowrap" ${sortClick('impressions')}>表示回数 ${sortIcon('impressions')}</th>`;
   h+=`<th style="padding:8px;text-align:right;cursor:pointer;white-space:nowrap" ${sortClick('ctr')}>CTR ${sortIcon('ctr')}</th>`;
@@ -1230,7 +1230,7 @@ function renderSeoArticles(articles){
     const ctrVal=r.ctr!=null?(Number(r.ctr)*100).toFixed(2)+'%':'-';
     h+=`<tr style="background:${bg};border-bottom:1px solid #f0f0f0">`;
     h+=`<td style="padding:6px 8px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${siteColor};margin-right:4px"></span>${siteName}</td>`;
-    h+=`<td style="padding:6px 8px"><a href="${r.url}" target="_blank" rel="noopener" style="color:#3b82f6;text-decoration:none" title="${r.url}">${r.slug}</a></td>`;
+    h+=`<td style="padding:6px 8px"><a href="${r.url}" target="_blank" rel="noopener" style="color:#3b82f6;text-decoration:none" title="${r.url}">${r.title||r.slug}</a>${r.title?`<div style="font-size:10px;color:#94a3b8;margin-top:1px">${r.slug}</div>`:''}</td>`;
     h+=`<td style="padding:6px 8px;text-align:right;font-weight:600">${fmt(r.clicks)}</td>`;
     h+=`<td style="padding:6px 8px;text-align:right">${fmt(r.impressions)}</td>`;
     h+=`<td style="padding:6px 8px;text-align:right">${ctrVal}</td>`;
