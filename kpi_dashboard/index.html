@@ -8,6 +8,7 @@
 <meta http-equiv="Expires" content="0">
 <title>EC売上ダッシュボード</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="trends_all.js" onerror="window.TRENDS=null"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <style>
 :root {
@@ -120,6 +121,7 @@ tr:hover td{background:#f8f9fb}
   <button class="tab-btn" onclick="showTab('kpi')">KPIレポート</button>
   <button class="tab-btn" onclick="showTab('inventory')">在庫状況</button>
   <button class="tab-btn" onclick="showTab('sns')">SNS分析</button>
+  <button class="tab-btn" onclick="showTab('seo')">SEO分析</button>
 </div>
 
 <div class="tab-content active" id="tab-dashboard"></div>
@@ -131,6 +133,7 @@ tr:hover td{background:#f8f9fb}
 <div class="tab-content" id="tab-kpi"></div>
 <div class="tab-content" id="tab-inventory"></div>
 <div class="tab-content" id="tab-sns"></div>
+<div class="tab-content" id="tab-seo"></div>
 
 <script>
 const SB='https://dyjhxkqzxibcpgoefbiv.supabase.co',SK='sb_publishable_bOK3qqLHkM1fFOojh3slpg_glKQoP3g',H={'apikey':SK};
@@ -147,7 +150,7 @@ function normProd(n){if(!n)return'不明';return n.replace(/\s*\(Shopify\)|\s*\(
 
 function showTab(id){
   document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',b.textContent.includes(
-    {dashboard:'ダッシュボード',charts:'グラフ',product:'商品',analytics:'アナリティクス',report:'売上報告',profit:'利益',kpi:'KPI',inventory:'在庫',sns:'SNS'}[id]||''
+    {dashboard:'ダッシュボード',charts:'グラフ',product:'商品',analytics:'アナリティクス',report:'売上報告',profit:'利益',kpi:'KPI',inventory:'在庫',sns:'SNS',seo:'SEO'}[id]||''
   )));
   document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
@@ -188,7 +191,7 @@ async function init(){
 function renderAll(){
   const d=filt(D),o=filt(O,'order_date'),g=filt(G);
   renderDash(d,o);renderCharts(d,o);renderProduct(o);renderGA4(g);
-  renderReport(d,o);renderProfit(d,o);renderKPI(d,o,g,S);renderInv(I);renderSNS(S);
+  renderReport(d,o);renderProfit(d,o);renderKPI(d,o,g,S);renderInv(I);renderSNS(S);renderSEO();
 }
 
 // ===== 1. ダッシュボード =====
@@ -998,6 +1001,153 @@ function renderSnsLineCharts(ln){
   if(Object.keys(age).length>0){
     snsCreateChart('cSnsLnAge',{type:'bar',data:{labels:Object.keys(age),datasets:[{label:'%',data:Object.values(age),backgroundColor:'rgba(6,199,85,0.7)'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{datalabels:{display:true,formatter:v=>v.toFixed(1)+'%',color:'#333',font:{size:11}},legend:{display:false}},scales:{y:{beginAtZero:true,title:{display:true,text:'%'}}}}});
   }
+}
+
+// ===== SEO分析タブ =====
+const SEO_SITES={HD:{name:'家来るドクター',color:'#7c3aed'},chiba:{name:'千葉美容',color:'#ec4899'},nishi:{name:'西春クリニック',color:'#0891b2'},yoko:{name:'横浜内科',color:'#ea580c'}};
+function renderSEO(){
+  const el=document.getElementById('tab-seo');
+  if(!window.TRENDS){el.innerHTML='<div class="card"><h2>SEO分析</h2><p>トレンドデータが読み込まれていません。<code>trends_all.js</code> を配置してください。</p></div>';return;}
+  const T=window.TRENDS;
+  const keys=Object.keys(T);
+  // 各サイトの直近14日 vs その前14日を比較
+  function calcPeriods(series){
+    if(!series||series.length<28)return null;
+    const recent=series.slice(-14),prev=series.slice(-28,-14);
+    const sum=(a,k)=>a.reduce((s,d)=>s+(d[k]||0),0);
+    const r={};
+    for(const k of['activeUsers','sessions','clicks','impressions']){
+      const rc=sum(recent,k),pv=sum(prev,k);
+      r[k]={current:rc,previous:pv,change:pv>0?((rc-pv)/pv*100):0};
+    }
+    r.ctr_current=r.impressions.current>0?(r.clicks.current/r.impressions.current*100):0;
+    r.ctr_previous=r.impressions.previous>0?(r.clicks.previous/r.impressions.previous*100):0;
+    r.ctr_change=r.ctr_previous>0?((r.ctr_current-r.ctr_previous)/r.ctr_previous*100):0;
+    return r;
+  }
+  // 移動平均
+  function ma7(series,key){
+    const r=[];
+    for(let i=0;i<series.length;i++){
+      if(i<6){r.push(null);continue;}
+      let s=0;for(let j=i-6;j<=i;j++)s+=series[j][key]||0;
+      r.push(Math.round(s/7));
+    }
+    return r;
+  }
+  // 傾向分析テキスト
+  function analyzeTrend(siteKey,data){
+    const p=calcPeriods(data.series);
+    if(!p)return'データ不足';
+    const msgs=[];
+    const auC=p.activeUsers.change;
+    if(auC>10)msgs.push(`アクティブユーザーが前2週比<strong style="color:#16a34a">+${auC.toFixed(1)}%</strong>と好調`);
+    else if(auC<-10)msgs.push(`アクティブユーザーが前2週比<strong style="color:#dc2626">${auC.toFixed(1)}%</strong>と下落傾向`);
+    else msgs.push(`アクティブユーザーは前2週比${auC>0?'+':''}${auC.toFixed(1)}%で横ばい`);
+    const clC=p.clicks.change;
+    if(clC>15)msgs.push(`クリック数が<strong style="color:#16a34a">+${clC.toFixed(1)}%</strong>増加 — 記事流入が拡大中`);
+    else if(clC<-15)msgs.push(`クリック数が<strong style="color:#dc2626">${clC.toFixed(1)}%</strong>減少 — 順位下落またはクエリ変動の可能性`);
+    const ctrNow=p.ctr_current.toFixed(2);
+    if(p.ctr_change>10)msgs.push(`CTR ${ctrNow}%（改善傾向）`);
+    else if(p.ctr_change<-10)msgs.push(`CTR ${ctrNow}%（低下傾向 — タイトル/ディスクリプション見直し推奨）`);
+    else msgs.push(`CTR ${ctrNow}%（安定）`);
+    // 週次トレンド方向
+    const s=data.series;
+    if(s.length>=28){
+      const w4=s.slice(-28,-21).reduce((a,d)=>a+d.activeUsers,0);
+      const w1=s.slice(-7).reduce((a,d)=>a+d.activeUsers,0);
+      if(w1>w4*1.15)msgs.push('直近4週で<strong style="color:#16a34a">上昇トレンド</strong>');
+      else if(w1<w4*0.85)msgs.push('直近4週で<strong style="color:#dc2626">下降トレンド</strong>');
+    }
+    return msgs.join('。');
+  }
+
+  // === スコアカード ===
+  let html='<div class="grid grid-4" style="margin-bottom:20px">';
+  let totalAU=0,totalClicks=0,totalImp=0,totalSess=0;
+  keys.forEach(k=>{const t=T[k].totals;totalAU+=t.activeUsers;totalClicks+=t.clicks;totalImp+=t.impressions;totalSess+=t.sessions});
+  const period=T[keys[0]]?`${T[keys[0]].start_date} ～ ${T[keys[0]].end_date}`:'';
+  html+=`<div class="card"><h2>全サイト合計AU</h2><div class="metric">${totalAU.toLocaleString()}</div><div class="metric-sub">${period}</div></div>`;
+  html+=`<div class="card"><h2>合計セッション</h2><div class="metric">${totalSess.toLocaleString()}</div></div>`;
+  html+=`<div class="card"><h2>合計クリック</h2><div class="metric">${totalClicks.toLocaleString()}</div></div>`;
+  html+=`<div class="card"><h2>平均CTR</h2><div class="metric">${totalImp>0?(totalClicks/totalImp*100).toFixed(2):'0'}%</div><div class="metric-sub">全サイト加重平均</div></div>`;
+  html+='</div>';
+
+  // === サイト別カード（前2週比較） ===
+  html+='<div class="grid grid-4" style="margin-bottom:20px">';
+  keys.forEach(k=>{
+    const cfg=SEO_SITES[k]||{name:k,color:'#666'};
+    const p=calcPeriods(T[k].series);
+    if(!p){html+=`<div class="card"><h2>${cfg.name}</h2><p>データ不足</p></div>`;return;}
+    const arrow=(v)=>v>0?`<span style="color:#16a34a">▲+${v.toFixed(1)}%</span>`:(v<0?`<span style="color:#dc2626">▼${v.toFixed(1)}%</span>`:`<span style="color:#888">→${v.toFixed(1)}%</span>`);
+    html+=`<div class="card" style="border-left:4px solid ${cfg.color}">
+      <h2>${cfg.name}</h2>
+      <table style="font-size:12px;width:100%">
+        <tr><td>AU</td><td class="num">${p.activeUsers.current.toLocaleString()}</td><td class="num">${arrow(p.activeUsers.change)}</td></tr>
+        <tr><td>クリック</td><td class="num">${p.clicks.current.toLocaleString()}</td><td class="num">${arrow(p.clicks.change)}</td></tr>
+        <tr><td>表示回数</td><td class="num">${p.impressions.current.toLocaleString()}</td><td class="num">${arrow(p.impressions.change)}</td></tr>
+        <tr><td>CTR</td><td class="num">${p.ctr_current.toFixed(2)}%</td><td class="num">${arrow(p.ctr_change)}</td></tr>
+      </table>
+      <div class="metric-sub" style="margin-top:8px">直近14日 vs 前14日</div>
+    </div>`;
+  });
+  html+='</div>';
+
+  // === サイト間ベンチマーク棒グラフ ===
+  html+='<div class="grid grid-2" style="margin-bottom:20px">';
+  html+='<div class="card"><h2>サイト間比較 — AU数（直近14日）</h2><div class="chart-box" style="height:220px"><canvas id="cSeoAuBar"></canvas></div></div>';
+  html+='<div class="card"><h2>サイト間比較 — CTR（直近14日）</h2><div class="chart-box" style="height:220px"><canvas id="cSeoCtrBar"></canvas></div></div>';
+  html+='</div>';
+
+  // === トレンドチャート（7日移動平均） ===
+  html+='<div class="card" style="margin-bottom:20px"><h2>アクティブユーザー推移（7日移動平均）</h2><div class="chart-box" style="height:320px"><canvas id="cSeoTrend"></canvas></div></div>';
+
+  // === 傾向分析コメント ===
+  html+='<div class="card" style="margin-bottom:20px"><h2>傾向分析サマリー</h2>';
+  keys.forEach(k=>{
+    const cfg=SEO_SITES[k]||{name:k,color:'#666'};
+    html+=`<div style="padding:10px 0;border-bottom:1px solid #f0f0f0">
+      <strong style="color:${cfg.color}">${cfg.name}</strong>
+      <div style="margin-top:4px;font-size:13px;line-height:1.8">${analyzeTrend(k,T[k])}</div>
+    </div>`;
+  });
+  html+='</div>';
+
+  // === EC商品×SEO連携インサイト ===
+  html+='<div class="card"><h2>EC商品 × SEO連携インサイト</h2>';
+  html+='<div style="font-size:13px;line-height:1.8">';
+  // 各サイトの成長率を計算してEC商品との関連をコメント
+  const growthRanking=keys.map(k=>{
+    const p=calcPeriods(T[k].series);
+    return{key:k,name:(SEO_SITES[k]||{}).name||k,auGrowth:p?p.activeUsers.change:0,clickGrowth:p?p.clicks.change:0};
+  }).sort((a,b)=>b.auGrowth-a.auGrowth);
+  const best=growthRanking[0],worst=growthRanking[growthRanking.length-1];
+  html+=`<p><strong>成長率1位:</strong> ${best.name}（AU ${best.auGrowth>0?'+':''}${best.auGrowth.toFixed(1)}%）— このサイト経由の商品ページ誘導が最も伸びています。EC商品のバナーやCTAを強化すると売上への波及が期待できます。</p>`;
+  if(worst.auGrowth<0)html+=`<p><strong>要注意:</strong> ${worst.name}（AU ${worst.auGrowth.toFixed(1)}%）— トラフィック減少中。記事の更新・リライトや、新商品に合わせた新規記事投入を推奨します。</p>`;
+  html+=`<p><strong>全サイトCTR改善余地:</strong> CTRが低いサイトは、検索結果でのタイトル・ディスクリプションの訴求力を見直すことで、同じ表示回数からより多くのクリック（＝商品ページへの流入）を獲得できます。</p>`;
+  html+='</div></div>';
+
+  el.innerHTML=html;
+
+  // --- チャート描画 ---
+  // AU棒グラフ
+  const auData=keys.map(k=>{const p=calcPeriods(T[k].series);return p?p.activeUsers.current:0});
+  destroyC('cSeoAuBar');
+  charts['cSeoAuBar']=new Chart(document.getElementById('cSeoAuBar'),{type:'bar',data:{labels:keys.map(k=>(SEO_SITES[k]||{}).name||k),datasets:[{data:auData,backgroundColor:keys.map(k=>(SEO_SITES[k]||{}).color||'#666')}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:true,anchor:'end',align:'top',formatter:v=>v.toLocaleString(),font:{weight:'bold',size:11}}},scales:{y:{beginAtZero:true}}}});
+
+  // CTR棒グラフ
+  const ctrData=keys.map(k=>{const p=calcPeriods(T[k].series);return p?parseFloat(p.ctr_current.toFixed(2)):0});
+  destroyC('cSeoCtrBar');
+  charts['cSeoCtrBar']=new Chart(document.getElementById('cSeoCtrBar'),{type:'bar',data:{labels:keys.map(k=>(SEO_SITES[k]||{}).name||k),datasets:[{data:ctrData,backgroundColor:keys.map(k=>(SEO_SITES[k]||{}).color||'#666')}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:true,anchor:'end',align:'top',formatter:v=>v+'%',font:{weight:'bold',size:11}}},scales:{y:{beginAtZero:true,ticks:{callback:v=>v+'%'}}}}});
+
+  // AU移動平均折れ線
+  const dates=T[keys[0]].series.map(d=>d.date);
+  const trendDatasets=keys.map(k=>{
+    const maData=ma7(T[k].series,'activeUsers');
+    return{label:(SEO_SITES[k]||{}).name||k,data:maData,borderColor:(SEO_SITES[k]||{}).color||'#666',backgroundColor:'transparent',borderWidth:2,pointRadius:0,tension:0.3};
+  });
+  destroyC('cSeoTrend');
+  charts['cSeoTrend']=new Chart(document.getElementById('cSeoTrend'),{type:'line',data:{labels:dates,datasets:trendDatasets},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top'},datalabels:{display:false}},scales:{x:{ticks:{maxTicksAuto:true,autoSkip:true,maxRotation:0}},y:{beginAtZero:false}}}});
 }
 
 const SYNC_URL='http://127.0.0.1:3457';
