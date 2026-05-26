@@ -137,7 +137,7 @@ tr:hover td{background:#f8f9fb}
 
 <script>
 const SB='https://dyjhxkqzxibcpgoefbiv.supabase.co',SK='sb_publishable_bOK3qqLHkM1fFOojh3slpg_glKQoP3g',H={'apikey':SK};
-let D=[],O=[],G=[],S=[],I=[],SY=[],SEO=[];
+let D=[],O=[],G=[],S=[],I=[],SY=[],SEO=[],SEO_ART=[];
 let dS=null,dE=null,charts={};
 
 async function sbGet(t,q=''){const r=await fetch(`${SB}/rest/v1/${t}?${q}`,{headers:H,cache:'no-store'});if(!r.ok)throw new Error(`${t}:${r.status}`);return r.json();}
@@ -163,7 +163,7 @@ function destroyC(id){if(charts[id]){charts[id].destroy();delete charts[id]}}
 
 async function init(){
   try{
-    [D,O,G,S,I,SY,SEO]=await Promise.all([
+    [D,O,G,S,I,SY,SEO,SEO_ART]=await Promise.all([
       sbGet('kpi_daily_summary','select=*&order=date.desc&limit=2000'),
       sbGet('kpi_orders','select=*&order=order_date.desc&limit=5000'),
       sbGet('kpi_ga4_metrics','select=*&order=date.desc&limit=500'),
@@ -171,6 +171,7 @@ async function init(){
       sbGet('kpi_inventory','select=*&order=snapshot_date.desc&limit=100'),
       sbGet('kpi_sync_status','select=*'),
       sbGet('kpi_seo_daily','select=*&order=date.asc&limit=5000'),
+      sbGet('kpi_seo_articles','select=*&order=clicks.desc&limit=3000'),
     ]);
     const ds=D.map(d=>d.date).sort();
     if(ds.length){
@@ -192,7 +193,7 @@ async function init(){
 function renderAll(){
   const d=filt(D),o=filt(O,'order_date'),g=filt(G);
   renderDash(d,o);renderCharts(d,o);renderProduct(o);renderGA4(g);
-  renderReport(d,o);renderProfit(d,o);renderKPI(d,o,g,S);renderInv(I);renderSNS(S);renderSEO(filt(SEO));
+  renderReport(d,o);renderProfit(d,o);renderKPI(d,o,g,S);renderInv(I);renderSNS(S);renderSEO(filt(SEO),SEO_ART);
 }
 
 // ===== 1. ダッシュボード =====
@@ -1006,14 +1007,15 @@ function renderSnsLineCharts(ln){
 
 // ===== SEO分析タブ =====
 const SEO_SITES={HD:{name:'家来るドクター',color:'#7c3aed'},chiba:{name:'千葉美容',color:'#ec4899'},nishi:{name:'西春クリニック',color:'#0891b2'},yoko:{name:'横浜内科',color:'#ea580c'}};
-function renderSEO(seoData){
+let seoArtState={page:0,sortKey:'clicks',sortDir:'desc',siteFilter:'all'};
+function renderSEO(seoData,articles){
   const el=document.getElementById('tab-seo');
-  if(!seoData||seoData.length===0){el.innerHTML='<div class="card"><h2>SEO分析</h2><p>SEOデータがありません。集計更新ボタンでGA4+Search Consoleデータを取得してください。</p></div>';return;}
+  if(!seoData||seoData.length===0){el.innerHTML='<div class="card"><h2>SEO分析</h2><p>SEOデータがありません。集計更新ボタンでGA4+Search Consoleデータを取得してください。</p></div><div id="seoArticleWrap"></div>';renderSeoArticles(articles||[]);return;}
   // Supabase行をサイト別に分割
   const byKey={};
   seoData.forEach(r=>{const k=r.site_key;if(!byKey[k])byKey[k]=[];byKey[k].push(r)});
   const keys=Object.keys(SEO_SITES).filter(k=>byKey[k]&&byKey[k].length>0);
-  if(keys.length===0){el.innerHTML='<div class="card"><h2>SEO分析</h2><p>選択期間内にSEOデータがありません。</p></div>';return;}
+  if(keys.length===0){el.innerHTML='<div class="card"><h2>SEO分析</h2><p>選択期間内にSEOデータがありません。</p></div><div id="seoArticleWrap"></div>';renderSeoArticles(articles||[]);return;}
   // 各サイトのseriesを日付昇順にソート
   keys.forEach(k=>byKey[k].sort((a,b)=>a.date.localeCompare(b.date)));
 
@@ -1131,6 +1133,9 @@ function renderSEO(seoData){
   html+=`<p><strong>CTR改善余地:</strong> CTRが低いサイトはタイトル・ディスクリプションの見直しで同じ表示回数からクリック増が期待できます。</p>`;
   html+='</div></div>';
 
+  // 記事別詳細テーブル用コンテナ
+  html+='<div id="seoArticleWrap"></div>';
+
   el.innerHTML=html;
 
   // --- チャート描画 ---
@@ -1149,6 +1154,100 @@ function renderSEO(seoData){
   });
   destroyC('cSeoTrend');
   charts['cSeoTrend']=new Chart(document.getElementById('cSeoTrend'),{type:'line',data:{labels:allDates,datasets:trendDatasets},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top'},datalabels:{display:false}},scales:{x:{ticks:{maxTicksAuto:true,autoSkip:true,maxRotation:0}},y:{beginAtZero:false}}}});
+
+  // === 記事別詳細テーブル ===
+  renderSeoArticles(articles||[]);
+}
+
+function renderSeoArticles(articles){
+  const wrap=document.getElementById('seoArticleWrap');
+  if(!wrap)return;
+  if(!articles||articles.length===0){
+    wrap.innerHTML='<div class="card"><h2>記事別SEOデータ</h2><p>記事別データがありません。集計更新ボタンでSearch Consoleデータを取得してください。</p></div>';
+    return;
+  }
+  const st=seoArtState;
+  // フィルタ
+  let rows=st.siteFilter==='all'?articles:articles.filter(a=>a.site_key===st.siteFilter);
+  // ソート
+  rows=rows.slice().sort((a,b)=>{
+    let av=a[st.sortKey],bv=b[st.sortKey];
+    if(typeof av==='string')return (av||'').localeCompare(bv||'','ja')*(st.sortDir==='asc'?1:-1);
+    return((av||0)-(bv||0))*(st.sortDir==='asc'?1:-1);
+  });
+  // 統計
+  const total=rows.length;
+  const totalClicks=rows.reduce((s,r)=>s+(r.clicks||0),0);
+  const totalImp=rows.reduce((s,r)=>s+(r.impressions||0),0);
+  const avgCtr=totalImp>0?(totalClicks/totalImp*100).toFixed(2):'0';
+  // ページネーション
+  const perPage=20;
+  const maxPage=Math.max(0,Math.ceil(total/perPage)-1);
+  if(st.page>maxPage)st.page=maxPage;
+  const start=st.page*perPage;
+  const pageRows=rows.slice(start,start+perPage);
+  const period=rows[0]?`${rows[0].period_start||''} ～ ${rows[0].period_end||''}`:'';
+
+  // サイトフィルタボタン
+  const sites=[{key:'all',name:'全サイト'},...Object.entries(SEO_SITES).map(([k,v])=>({key:k,name:v.name}))];
+  let filterHtml=sites.map(s=>`<button onclick="seoArtState.siteFilter='${s.key}';seoArtState.page=0;renderSeoArticles(SEO_ART)" style="padding:4px 12px;border:1px solid ${st.siteFilter===s.key?'#667eea':'#ddd'};background:${st.siteFilter===s.key?'#667eea':'#fff'};color:${st.siteFilter===s.key?'#fff':'#333'};border-radius:6px;cursor:pointer;font-size:12px">${s.name}</button>`).join('');
+
+  // ソートヘッダークリック用
+  const sortIcon=(key)=>{
+    if(st.sortKey!==key)return'<span style="color:#ccc">⇅</span>';
+    return st.sortDir==='asc'?'<span style="color:#667eea">▲</span>':'<span style="color:#667eea">▼</span>';
+  };
+  const sortClick=(key)=>`onclick="if(seoArtState.sortKey==='${key}'){seoArtState.sortDir=seoArtState.sortDir==='asc'?'desc':'asc'}else{seoArtState.sortKey='${key}';seoArtState.sortDir='desc'};seoArtState.page=0;renderSeoArticles(SEO_ART)"`;
+
+  let h='<div class="card" style="margin-top:20px">';
+  h+='<h2>記事別SEO詳細</h2>';
+  // 統計バー
+  h+=`<div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding:10px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">`;
+  h+=`<span style="font-size:14px;font-weight:700">${fmt(total)} 件</span>`;
+  h+=`<span style="font-size:12px;color:#666">合計クリック <strong>${fmt(totalClicks)}</strong></span>`;
+  h+=`<span style="font-size:12px;color:#666">合計表示 <strong>${fmt(totalImp)}</strong></span>`;
+  h+=`<span style="font-size:12px;color:#666">平均CTR <strong>${avgCtr}%</strong></span>`;
+  if(period)h+=`<span style="font-size:11px;color:#999;margin-left:auto">${period}</span>`;
+  h+='</div>';
+  // フィルタ
+  h+=`<div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">${filterHtml}</div>`;
+  // テーブル
+  h+=`<div style="overflow-x:auto"><table style="width:100%;font-size:12px;border-collapse:collapse">`;
+  h+=`<thead><tr style="background:#f1f5f9;border-bottom:2px solid #e2e8f0">`;
+  h+=`<th style="padding:8px;text-align:left;cursor:pointer;white-space:nowrap" ${sortClick('site_key')}>サイト ${sortIcon('site_key')}</th>`;
+  h+=`<th style="padding:8px;text-align:left;cursor:pointer;min-width:250px" ${sortClick('slug')}>記事 ${sortIcon('slug')}</th>`;
+  h+=`<th style="padding:8px;text-align:right;cursor:pointer;white-space:nowrap" ${sortClick('clicks')}>クリック ${sortIcon('clicks')}</th>`;
+  h+=`<th style="padding:8px;text-align:right;cursor:pointer;white-space:nowrap" ${sortClick('impressions')}>表示回数 ${sortIcon('impressions')}</th>`;
+  h+=`<th style="padding:8px;text-align:right;cursor:pointer;white-space:nowrap" ${sortClick('ctr')}>CTR ${sortIcon('ctr')}</th>`;
+  h+=`<th style="padding:8px;text-align:right;cursor:pointer;white-space:nowrap" ${sortClick('position')}>平均順位 ${sortIcon('position')}</th>`;
+  h+=`</tr></thead><tbody>`;
+  pageRows.forEach((r,i)=>{
+    const bg=i%2===0?'#fff':'#fafafa';
+    const siteColor=(SEO_SITES[r.site_key]||{}).color||'#666';
+    const siteName=(SEO_SITES[r.site_key]||{}).name||r.site_key;
+    const pos=r.position!=null?Number(r.position).toFixed(1):'-';
+    const posColor=pos!=='-'?(Number(pos)<=3?'#ca8a04':Number(pos)<=10?'#3b82f6':'#333'):'#999';
+    const ctrVal=r.ctr!=null?(Number(r.ctr)*100).toFixed(2)+'%':'-';
+    h+=`<tr style="background:${bg};border-bottom:1px solid #f0f0f0">`;
+    h+=`<td style="padding:6px 8px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${siteColor};margin-right:4px"></span>${siteName}</td>`;
+    h+=`<td style="padding:6px 8px"><a href="${r.url}" target="_blank" rel="noopener" style="color:#3b82f6;text-decoration:none" title="${r.url}">${r.slug}</a></td>`;
+    h+=`<td style="padding:6px 8px;text-align:right;font-weight:600">${fmt(r.clicks)}</td>`;
+    h+=`<td style="padding:6px 8px;text-align:right">${fmt(r.impressions)}</td>`;
+    h+=`<td style="padding:6px 8px;text-align:right">${ctrVal}</td>`;
+    h+=`<td style="padding:6px 8px;text-align:right;color:${posColor};font-weight:${Number(pos)<=10?'600':'400'}">${pos}</td>`;
+    h+=`</tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  // ページネーション
+  if(total>perPage){
+    h+=`<div style="display:flex;justify-content:center;align-items:center;gap:12px;margin-top:12px;padding:8px">`;
+    h+=`<button onclick="seoArtState.page=Math.max(0,seoArtState.page-1);renderSeoArticles(SEO_ART)" style="padding:6px 14px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;font-size:12px" ${st.page===0?'disabled':''}>&laquo; 前へ</button>`;
+    h+=`<span style="font-size:12px;color:#666">${st.page+1} / ${maxPage+1} ページ（${start+1}～${Math.min(start+perPage,total)} / ${total}件）</span>`;
+    h+=`<button onclick="seoArtState.page=Math.min(${maxPage},seoArtState.page+1);renderSeoArticles(SEO_ART)" style="padding:6px 14px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;font-size:12px" ${st.page>=maxPage?'disabled':''}> 次へ &raquo;</button>`;
+    h+=`</div>`;
+  }
+  h+='</div>';
+  wrap.innerHTML=h;
 }
 
 const SYNC_URL='http://127.0.0.1:3457';
@@ -1173,7 +1272,7 @@ async function runSync(){
     const data=await r.json();
 
     // 結果表示
-    const labels={daily_summary:'日次サマリー',orders:'注文データ',ga4:'GA4',sns:'SNS',inventory:'在庫',seo:'SEO (4サイト)'};
+    const labels={daily_summary:'日次サマリー',orders:'注文データ',ga4:'GA4',sns:'SNS',inventory:'在庫',seo:'SEO (4サイト)',seo_articles:'SEO記事別'};
     let html='<strong>同期完了</strong><br>';
     let hasSkip=false;
     for(const[k,v]of Object.entries(data)){
