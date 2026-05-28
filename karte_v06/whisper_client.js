@@ -1,18 +1,109 @@
 /**
  * Whisper-Karte クライアント (v0.6 カルテ統合版)
- * localhost:5000 の faster-whisper バックエンドと通信
+ * Vercel Serverless Functions 経由で Groq Whisper + Claude API と通信
+ * localhost不要 — クラウドAPI常時接続
  */
 
 // ========================================
 // 設定
 // ========================================
-const WHISPER_API = 'http://localhost:5000';
+// Vercel API (常時稼働) を使用。localhostは不要
+const WHISPER_API = (function() {
+  // Vercelデプロイ時: 同一ドメインの /api
+  if (location.hostname.includes('vercel.app')) return '/api';
+  // GitHub Pages等の外部デプロイ: Vercel URLを直接指定
+  return 'https://kartev06whisper.vercel.app/api';
+})();
 let whisperRecording = false;
 let whisperMediaRecorder = null;
 let whisperAudioChunks = [];
 let whisperRecordTimer = null;
 let whisperRecordSeconds = 0;
 let whisperStream = null;
+
+// 語句登録テンプレート（診療科別）
+const VOCAB_TEMPLATES = {
+  '循環器': '心房細動,心室頻拍,大動脈弁狭窄症,僧帽弁閉鎖不全,心不全,狭心症,心筋梗塞,ワルファリン,アミオダロン,DOAC',
+  '消化器': '逆流性食道炎,胃潰瘍,十二指腸潰瘍,クローン病,潰瘍性大腸炎,ヘリコバクター・ピロリ,PPI,ランソプラゾール',
+  '呼吸器': '気管支喘息,COPD,間質性肺炎,肺気腫,気胸,胸水,吸入ステロイド,LABA,LAMA',
+  '整形': '変形性膝関節症,腰椎椎間板ヘルニア,脊柱管狭窄症,骨粗鬆症,関節リウマチ,大腿骨頸部骨折',
+  '皮膚科': 'アトピー性皮膚炎,蕁麻疹,帯状疱疹,白癬,乾癬,ステロイド外用',
+  '検査値': 'HbA1c,eGFR,BNP,CRP,AST,ALT,γ-GTP,Cr,BUN,WBC,Hb,PLT,PT-INR',
+  '内服薬': 'アムロジピン,メトホルミン,リナグリプチン,ロサルタン,アトルバスタチン,ランソプラゾール,レバミピド',
+  '症状': '倦怠感,食欲不振,呼吸困難,浮腫,動悸,めまい,悪心,嘔吐,下痢,便秘,発熱,頭痛'
+};
+
+// ========================================
+// 語句登録
+// ========================================
+function whisperLoadVocab() {
+  try {
+    return JSON.parse(localStorage.getItem('whisper_vocab') || '[]');
+  } catch { return []; }
+}
+
+function whisperSaveVocab(words) {
+  localStorage.setItem('whisper_vocab', JSON.stringify(words));
+}
+
+function whisperGetInitialPrompt() {
+  const words = whisperLoadVocab();
+  if (words.length === 0) return '';
+  // Whisperのinitial_promptとして語句をカンマ区切りで結合
+  return words.join('、');
+}
+
+function whisperAddVocabWords(text) {
+  const existing = whisperLoadVocab();
+  const newWords = text.split(/[,、\n\s]+/).map(w => w.trim()).filter(w => w && !existing.includes(w));
+  if (newWords.length === 0) return;
+  const updated = [...existing, ...newWords];
+  whisperSaveVocab(updated);
+  whisperRenderVocabList();
+}
+
+function whisperRemoveVocab(word) {
+  const words = whisperLoadVocab().filter(w => w !== word);
+  whisperSaveVocab(words);
+  whisperRenderVocabList();
+}
+
+function whisperClearVocab() {
+  whisperSaveVocab([]);
+  whisperRenderVocabList();
+}
+
+function whisperRenderVocabList() {
+  const container = document.getElementById('whisperVocabList');
+  if (!container) return;
+  const words = whisperLoadVocab();
+  if (words.length === 0) {
+    container.innerHTML = '<span style="color:var(--text-muted);font-size:11px;">登録語句なし</span>';
+    return;
+  }
+  container.innerHTML = words.map(w => {
+    const safe = escapeHtml(w);
+    const safeAttr = safe.replace(/'/g, '&#39;');
+    return `<span class="whisper-vocab-tag">${safe}<button onclick="whisperRemoveVocab('${safeAttr}')" title="削除">&times;</button></span>`;
+  }).join('');
+}
+
+function whisperApplyTemplate() {
+  const sel = document.getElementById('whisperVocabTemplate');
+  if (!sel) return;
+  const key = sel.value;
+  if (!key || !VOCAB_TEMPLATES[key]) return;
+  whisperAddVocabWords(VOCAB_TEMPLATES[key]);
+  sel.value = '';
+}
+
+function whisperToggleVocabPanel() {
+  const panel = document.getElementById('whisperVocabPanel');
+  if (!panel) return;
+  const visible = panel.style.display !== 'none';
+  panel.style.display = visible ? 'none' : '';
+  if (!visible) whisperRenderVocabList();
+}
 
 // ========================================
 // 初期化
@@ -43,6 +134,9 @@ async function whisperInit() {
     document.getElementById('whisperRecBtn').disabled = false;
   }
 
+  // 語句登録リスト描画
+  whisperRenderVocabList();
+
   // プロンプト一覧を取得
   try {
     const res = await fetch(`${WHISPER_API}/prompts`);
@@ -56,12 +150,13 @@ async function whisperInit() {
         opt.textContent = p.name;
         sel.appendChild(opt);
       });
-      whisperSetStatus('Whisper-Karte 接続OK', 'success');
+      whisperSetStatus('音声カルテ 接続OK', 'success');
     } else {
-      whisperSetStatus('Whisper-Karte 未起動 (localhost:5000)', 'error');
+      whisperSetStatus('音声カルテ API応答エラー', 'error');
     }
   } catch (e) {
-    whisperSetStatus('Whisper-Karte 未接続 — start.batで起動してください', 'error');
+    console.warn('Whisper API接続失敗:', e);
+    whisperSetStatus('音声カルテ APIに接続できません', 'error');
   }
 }
 
@@ -154,6 +249,9 @@ async function whisperOnRecordStop() {
 
   const formData = new FormData();
   formData.append('audio', blob, 'recording.webm');
+  // 語句登録がある場合、initial_promptとして送信
+  const vocabPrompt = whisperGetInitialPrompt();
+  if (vocabPrompt) formData.append('initial_prompt', vocabPrompt);
 
   try {
     const t0 = performance.now();
@@ -186,15 +284,21 @@ async function whisperGenerate() {
   if (!transcript) return;
 
   const template = document.getElementById('whisperPromptSelect').value;
+  const memoEl = document.getElementById('whisperMemo');
+  const memo = memoEl ? memoEl.value.trim() : '';
+
   whisperSetStatus('カルテ生成中...', 'processing');
   document.getElementById('whisperGenBtn').disabled = true;
 
   try {
     const t0 = performance.now();
+    const payload = { transcript, template };
+    if (memo) payload.memo = memo;
+
     const res = await fetch(`${WHISPER_API}/generate-karte`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ transcript, template }),
+      body: JSON.stringify(payload),
     });
     const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
 
@@ -210,6 +314,9 @@ async function whisperGenerate() {
     document.getElementById('whisperGenBtn').disabled = false;
     document.getElementById('whisperApplyBtn').disabled = false;
     whisperSetStatus(`カルテ生成完了 (${elapsed}秒)`, 'success');
+
+    // 録音履歴に保存
+    whisperSaveHistory(transcript, data.karte, template);
   } catch (e) {
     whisperSetStatus('API通信エラー: ' + e.message, 'error');
     document.getElementById('whisperGenBtn').disabled = false;
@@ -232,15 +339,49 @@ function whisperApplyToFields() {
     if (cc) cc.value = sections.chiefComplaint;
   }
 
-  // 所見エディタ（リッチテキスト）に全文反映
+  // 所見エディタ（リッチテキスト）に構造化して反映
   const editor = document.getElementById('findingsEditor');
   if (editor) {
-    // 既存内容があれば追記、なければ置換
+    const hasParsedSections = sections.presentIllness || sections.physicalExam || sections.labFindings || sections.assessment || sections.plan;
+
+    const isEmptySection = (val) => !val || /^[（(]?(記載なし|情報なし|なし|特記なし|特記事項なし)[）)]?$/i.test(val.trim());
+
+    let html = '';
+    if (hasParsedSections) {
+      // パースできた場合：構造化して表示（「記載なし」セクションはスキップ）
+      if (!isEmptySection(sections.presentIllness)) {
+        html += `<b style="color:#059669">[現病歴]</b><br>${escapeHtml(sections.presentIllness).replace(/\n/g, '<br>')}<br><br>`;
+      }
+      if (!isEmptySection(sections.physicalExam)) {
+        html += `<b style="color:#059669">[身体所見]</b><br>${escapeHtml(sections.physicalExam).replace(/\n/g, '<br>')}<br><br>`;
+      }
+      if (!isEmptySection(sections.labFindings)) {
+        html += `<b style="color:#059669">[検査所見]</b><br>${escapeHtml(sections.labFindings).replace(/\n/g, '<br>')}<br><br>`;
+      }
+      if (sections.isAssessmentPlanCombined) {
+        // A&P統合型：1セクションで表示
+        if (sections.assessment) {
+          html += `<b style="color:#2563eb">[A&P]</b><br>${escapeHtml(sections.assessment).replace(/\n/g, '<br>')}`;
+        }
+      } else {
+        // A/P分離型
+        if (sections.assessment) {
+          html += `<b style="color:#2563eb">[A]</b><br>${escapeHtml(sections.assessment).replace(/\n/g, '<br>')}<br><br>`;
+        }
+        if (sections.plan) {
+          html += `<b style="color:#2563eb">[P]</b><br>${escapeHtml(sections.plan).replace(/\n/g, '<br>')}`;
+        }
+      }
+    } else {
+      // パースできなかった場合：全文をそのまま表示
+      html = escapeHtml(karteText).replace(/\n/g, '<br>');
+    }
+
     const existing = editor.innerText.trim();
     if (existing) {
-      editor.innerHTML += '<br><hr><br>' + karteText.replace(/\n/g, '<br>');
+      editor.innerHTML += '<br><hr><br>' + html;
     } else {
-      editor.innerHTML = karteText.replace(/\n/g, '<br>');
+      editor.innerHTML = html;
     }
   }
 
@@ -260,15 +401,82 @@ function whisperApplyToFields() {
 
 /**
  * AIカルテ出力から各セクションをパース
+ * 【】形式 と ＜S＞＜O＞＜A＞＜P＞形式の両方に対応
  */
 function parseKarteSections(text) {
-  const result = { chiefComplaint: '', vitals: null };
+  const result = {
+    chiefComplaint: '',
+    presentIllness: '',   // 現病歴
+    physicalExam: '',     // 身体所見
+    labFindings: '',      // 検査所見
+    assessment: '',       // A (評価)
+    plan: '',             // P (計画)
+    subjective: '',       // S (SOAP)
+    objective: '',        // O (SOAP)
+    isAssessmentPlanCombined: false, // A&P統合型か
+    vitals: null,
+    fullText: text
+  };
 
-  // 主訴抽出
-  const ccMatch = text.match(/【主訴】\s*(.+?)(?=\n【|$)/s);
-  if (ccMatch) result.chiefComplaint = ccMatch[1].trim();
+  // === 【】形式のパース ===
+  const bracketSections = {
+    '主訴': 'chiefComplaint',
+    '現病歴': 'presentIllness',
+    '身体所見': 'physicalExam',
+    '検査所見': 'labFindings',
+    '理学所見': 'physicalExam',
+    '評価': 'assessment',
+    '計画': 'plan',
+    'Assessment': 'assessment',
+    'Plan': 'plan',
+    'A': 'assessment',
+    'P': 'plan',
+    'A&P': 'assessment',
+    'アセスメント＆プラン': 'assessment',
+    'アセスメント&プラン': 'assessment',
+    'アセスメントとプラン': 'assessment',
+  };
 
-  // バイタルサイン抽出
+  const combinedAPLabels = ['A&P', 'アセスメント＆プラン', 'アセスメント&プラン', 'アセスメントとプラン'];
+
+  for (const [label, key] of Object.entries(bracketSections)) {
+    const regex = new RegExp(`【${label}】\\s*(.+?)(?=\\n【|$)`, 's');
+    const m = text.match(regex);
+    if (m) {
+      const val = m[1].trim();
+      result[key] = val;
+      if (combinedAPLabels.includes(label)) {
+        result.isAssessmentPlanCombined = true;
+      }
+    }
+  }
+
+  // === SOAP形式 ＜S＞＜O＞＜A＞＜P＞ のパース ===
+  const soapPatterns = [
+    { regex: /[＜<]S[＞>]\s*(.+?)(?=[＜<][SOAP][＞>]|$)/s, key: 'subjective' },
+    { regex: /[＜<]O[＞>]\s*(.+?)(?=[＜<][SAP][＞>]|$)/s, key: 'objective' },
+    { regex: /[＜<]A[＞>]\s*(.+?)(?=[＜<][SOP][＞>]|$)/s, key: 'assessment' },
+    { regex: /[＜<]P[＞>]\s*(.+?)(?=[＜<][SOA][＞>]|$)/s, key: 'plan' },
+  ];
+  for (const { regex, key } of soapPatterns) {
+    const m = text.match(regex);
+    if (m) result[key] = m[1].trim();
+  }
+
+  // SOAPが取れた場合、主訴・現病歴にフォールバック
+  if (!result.chiefComplaint && result.subjective) {
+    // Sの最初の行を主訴として抽出
+    const firstLine = result.subjective.split('\n')[0].trim();
+    result.chiefComplaint = firstLine;
+  }
+  if (!result.presentIllness && result.subjective) {
+    result.presentIllness = result.subjective;
+  }
+  if (!result.physicalExam && result.objective) {
+    result.physicalExam = result.objective;
+  }
+
+  // === バイタルサイン抽出 ===
   const vitals = {};
   const tempMatch = text.match(/(\d{2}\.\d)\s*[°℃]/);
   if (tempMatch) vitals.t = tempMatch[1];
@@ -290,6 +498,11 @@ function parseKarteSections(text) {
 // ========================================
 // ユーティリティ
 // ========================================
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function whisperSetStatus(msg, type) {
   const el = document.getElementById('whisperStatus');
   if (!el) return;
@@ -319,6 +532,8 @@ async function whisperUploadFile(input) {
 
   const formData = new FormData();
   formData.append('audio', file, file.name);
+  const vocabPrompt = whisperGetInitialPrompt();
+  if (vocabPrompt) formData.append('initial_prompt', vocabPrompt);
 
   try {
     const t0 = performance.now();
@@ -344,6 +559,92 @@ async function whisperUploadFile(input) {
 
   // inputをリセット（同じファイルの再選択を可能に）
   input.value = '';
+}
+
+// ========================================
+// 録音履歴
+// ========================================
+const WHISPER_HISTORY_KEY = 'whisper_history';
+const WHISPER_HISTORY_MAX = 50;
+
+function whisperLoadHistory() {
+  try {
+    return JSON.parse(localStorage.getItem(WHISPER_HISTORY_KEY) || '[]');
+  } catch { return []; }
+}
+
+function whisperSaveHistory(transcript, karte, template) {
+  const history = whisperLoadHistory();
+  history.unshift({
+    id: Date.now(),
+    date: new Date().toLocaleString('ja-JP'),
+    transcript: transcript,
+    karte: karte,
+    template,
+  });
+  // 上限超過分を削除
+  if (history.length > WHISPER_HISTORY_MAX) history.length = WHISPER_HISTORY_MAX;
+  localStorage.setItem(WHISPER_HISTORY_KEY, JSON.stringify(history));
+}
+
+function whisperDeleteHistory(id) {
+  const history = whisperLoadHistory().filter(h => h.id !== id);
+  localStorage.setItem(WHISPER_HISTORY_KEY, JSON.stringify(history));
+  whisperRenderHistory();
+}
+
+function whisperClearHistory() {
+  if (!confirm('録音履歴を全て削除しますか？')) return;
+  localStorage.removeItem(WHISPER_HISTORY_KEY);
+  whisperRenderHistory();
+}
+
+function whisperRestoreHistory(id) {
+  const entry = whisperLoadHistory().find(h => h.id === id);
+  if (!entry) return;
+  document.getElementById('whisperBody').style.display = '';
+  document.getElementById('whisperTranscript').value = entry.transcript;
+  document.getElementById('whisperKarte').value = entry.karte;
+  document.getElementById('whisperGenBtn').disabled = false;
+  document.getElementById('whisperApplyBtn').disabled = false;
+  whisperSetStatus(`履歴を復元しました (${entry.date})`, 'success');
+}
+
+function whisperRenderHistory(filter) {
+  const container = document.getElementById('whisperHistoryList');
+  if (!container) return;
+  let history = whisperLoadHistory();
+  if (filter) {
+    const q = filter.toLowerCase();
+    history = history.filter(h =>
+      h.transcript.toLowerCase().includes(q) ||
+      h.karte.toLowerCase().includes(q) ||
+      h.date.includes(q)
+    );
+  }
+  if (history.length === 0) {
+    container.innerHTML = '<div style="color:var(--text-muted);font-size:11px;padding:4px;">履歴なし</div>';
+    return;
+  }
+  container.innerHTML = history.map(h => `
+    <div class="whisper-history-item">
+      <div class="whisper-history-meta">
+        <span class="whisper-history-date">${escapeHtml(h.date)}</span>
+        <span class="whisper-history-template">${escapeHtml(h.template)}</span>
+        <button class="whisper-history-restore" onclick="whisperRestoreHistory(${h.id})" title="復元">復元</button>
+        <button class="whisper-history-delete" onclick="whisperDeleteHistory(${h.id})" title="削除">&times;</button>
+      </div>
+      <div class="whisper-history-text">${escapeHtml(h.transcript.substring(0, 80))}${h.transcript.length > 80 ? '...' : ''}</div>
+    </div>
+  `).join('');
+}
+
+function whisperToggleHistoryPanel() {
+  const panel = document.getElementById('whisperHistoryPanel');
+  if (!panel) return;
+  const visible = panel.style.display !== 'none';
+  panel.style.display = visible ? 'none' : '';
+  if (!visible) whisperRenderHistory();
 }
 
 function whisperCopy(elementId) {
