@@ -1603,6 +1603,33 @@
         </div>
     </div>
 
+    <!-- 月別消費量タブ -->
+    <div id="tab-consumption" class="tab-content">
+        <div class="container">
+            <div class="card">
+                <div class="card-title">📊 月別消費量</div>
+                <div style="display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; align-items:center;">
+                    <button id="consumption-refresh-btn" onclick="loadMonthlyConsumption()" style="padding:6px 14px; border:1px solid var(--border); border-radius:6px; background:white; font-size:13px; cursor:pointer;">🔄 更新</button>
+                    <input type="text" id="consumption-search" placeholder="薬品名で検索..." oninput="filterConsumption()" style="flex:1; min-width:150px; padding:6px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
+                    <select id="consumption-sort" onchange="filterConsumption()" style="padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
+                        <option value="name">薬品名順</option>
+                        <option value="total-desc">消費量多い順</option>
+                        <option value="total-asc">消費量少ない順</option>
+                        <option value="stock-asc">在庫少ない順</option>
+                    </select>
+                </div>
+                <div id="consumption-summary" style="display:flex; gap:10px; margin-bottom:12px; flex-wrap:wrap;"></div>
+                <div id="consumption-table-wrap" style="overflow-x:auto;">
+                    <table id="consumption-table" style="width:100%; border-collapse:collapse; font-size:13px;">
+                        <thead id="consumption-thead"></thead>
+                        <tbody id="consumption-tbody"></tbody>
+                    </table>
+                </div>
+                <div id="consumption-loading" style="text-align:center; padding:30px; color:var(--text-muted);">データを読み込み中...</div>
+            </div>
+        </div>
+    </div>
+
     <!-- ボトムナビ -->
     <div class="bottom-nav">
         <div class="nav-item active" onclick="switchTab('scan')">
@@ -1616,6 +1643,10 @@
         <div class="nav-item" onclick="switchTab('history')">
             <span>📋</span>
             履歴
+        </div>
+        <div class="nav-item" onclick="switchTab('consumption')">
+            <span>📊</span>
+            消費量
         </div>
     </div>
 
@@ -2600,8 +2631,10 @@
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.getElementById('tab-' + tabName).classList.add('active');
-            document.querySelectorAll('.nav-item')[['scan', 'stock', 'history'].indexOf(tabName)].classList.add('active');
+            const tabIndex = ['scan', 'stock', 'history', 'consumption'].indexOf(tabName);
+            if (tabIndex >= 0) document.querySelectorAll('.nav-item')[tabIndex].classList.add('active');
             if (tabName === 'stock') renderStockList();
+            if (tabName === 'consumption' && !window._consumptionLoaded) loadMonthlyConsumption();
             if (tabName === 'history') {
                 renderHistory();
                 if (USE_GAS) loadHistoryFromGAS();
@@ -3330,6 +3363,105 @@
         function confirmAndSubmit() {
             closeConfirm();
             doSubmitAll();
+        }
+
+        // ===== 月別消費量 =====
+        let _consumptionData = null;
+
+        async function loadMonthlyConsumption() {
+            const loading = document.getElementById('consumption-loading');
+            const tableWrap = document.getElementById('consumption-table-wrap');
+            const summary = document.getElementById('consumption-summary');
+            loading.style.display = 'block';
+            tableWrap.style.display = 'none';
+            summary.innerHTML = '';
+
+            const result = await gasGet('getMonthlyConsumption');
+            loading.style.display = 'none';
+
+            if (!result || !result.success) {
+                summary.innerHTML = '<div style="color:var(--danger);padding:10px;">データ取得エラー: ' + (result?.error || '通信失敗') + '</div>';
+                return;
+            }
+
+            window._consumptionLoaded = true;
+            _consumptionData = result;
+            renderConsumption();
+        }
+
+        function renderConsumption() {
+            if (!_consumptionData) return;
+            const { months, drugs } = _consumptionData;
+            const search = (document.getElementById('consumption-search').value || '').trim().toLowerCase();
+            const sortKey = document.getElementById('consumption-sort').value;
+
+            let filtered = drugs;
+            if (search) {
+                filtered = filtered.filter(d => d.name.toLowerCase().includes(search));
+            }
+
+            filtered = [...filtered];
+            switch (sortKey) {
+                case 'name': filtered.sort((a, b) => a.name.localeCompare(b.name, 'ja')); break;
+                case 'total-desc': filtered.sort((a, b) => b.total - a.total); break;
+                case 'total-asc': filtered.sort((a, b) => a.total - b.total); break;
+                case 'stock-asc': filtered.sort((a, b) => a.stock - b.stock); break;
+            }
+
+            const totalDrugs = filtered.length;
+            const totalConsumption = filtered.reduce((s, d) => s + d.total, 0);
+            const lowStock = filtered.filter(d => d.stock <= 5).length;
+            const summary = document.getElementById('consumption-summary');
+            summary.innerHTML = `
+                <div style="flex:1;min-width:100px;background:#f0f4ff;border-radius:8px;padding:8px 12px;text-align:center;">
+                    <div style="font-size:11px;color:#666;">薬品数</div>
+                    <div style="font-size:20px;font-weight:700;color:#2563eb;">${totalDrugs}</div>
+                </div>
+                <div style="flex:1;min-width:100px;background:#f0fdf4;border-radius:8px;padding:8px 12px;text-align:center;">
+                    <div style="font-size:11px;color:#666;">総消費量</div>
+                    <div style="font-size:20px;font-weight:700;color:#16a34a;">${totalConsumption}</div>
+                </div>
+                <div style="flex:1;min-width:100px;background:${lowStock > 0 ? '#fef2f2' : '#f9fafb'};border-radius:8px;padding:8px 12px;text-align:center;">
+                    <div style="font-size:11px;color:#666;">在庫少(≤5)</div>
+                    <div style="font-size:20px;font-weight:700;color:${lowStock > 0 ? '#dc2626' : '#666'};">${lowStock}</div>
+                </div>
+            `;
+
+            const thead = document.getElementById('consumption-thead');
+            let hdrHtml = '<tr><th style="position:sticky;left:0;background:#f8fafc;padding:8px 6px;border-bottom:2px solid #e2e8f0;text-align:left;white-space:nowrap;">薬品名</th>';
+            hdrHtml += '<th style="padding:8px 6px;border-bottom:2px solid #e2e8f0;text-align:right;white-space:nowrap;">在庫</th>';
+            for (const m of months) {
+                hdrHtml += `<th style="padding:8px 6px;border-bottom:2px solid #e2e8f0;text-align:right;white-space:nowrap;">${m}</th>`;
+            }
+            hdrHtml += '<th style="padding:8px 6px;border-bottom:2px solid #e2e8f0;text-align:right;white-space:nowrap;font-weight:700;">合計</th></tr>';
+            thead.innerHTML = hdrHtml;
+
+            const tbody = document.getElementById('consumption-tbody');
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="' + (months.length + 3) + '" style="text-align:center;padding:20px;color:#999;">該当する薬品がありません</td></tr>';
+            } else {
+                let bodyHtml = '';
+                for (const d of filtered) {
+                    const stockColor = d.stock <= 5 ? '#dc2626' : d.stock <= 10 ? '#f59e0b' : '#333';
+                    bodyHtml += `<tr style="border-bottom:1px solid #f1f5f9;">`;
+                    bodyHtml += `<td style="position:sticky;left:0;background:white;padding:6px;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis;" title="${d.name}">${d.name}</td>`;
+                    bodyHtml += `<td style="padding:6px;text-align:right;font-weight:600;color:${stockColor};">${d.stock}</td>`;
+                    for (const m of months) {
+                        const val = d.monthly[m] || 0;
+                        const bg = val > 0 ? `background:rgba(37,99,235,${Math.min(val / 20, 0.15)})` : '';
+                        bodyHtml += `<td style="padding:6px;text-align:right;${bg}">${val || '-'}</td>`;
+                    }
+                    bodyHtml += `<td style="padding:6px;text-align:right;font-weight:700;">${d.total}</td>`;
+                    bodyHtml += '</tr>';
+                }
+                tbody.innerHTML = bodyHtml;
+            }
+
+            document.getElementById('consumption-table-wrap').style.display = 'block';
+        }
+
+        function filterConsumption() {
+            renderConsumption();
         }
 
         // ===== 初期化 =====
