@@ -341,6 +341,10 @@ function recordStockIn(data) {
   // 在庫サマリーを更新
   updateCurrentStock(code, quantity);
 
+  // 夜間休日外来DBの在庫管理タブを更新（在庫数加算のみ、消費量は加算しない）
+  const drugName = medicineName || getMedicineName(code);
+  updateNightClinicInventory(drugName, quantity);
+
   return { success: true, message: '入庫を記録しました' };
 }
 
@@ -384,6 +388,10 @@ function recordStockOut(data) {
   if (!skipStockUpdate) {
     updateCurrentStock(code, -quantity);
   }
+
+  // 夜間休日外来DBの在庫管理タブを更新（在庫数減算 + 月別消費量加算）
+  const drugName = medicineName || getMedicineName(code);
+  updateNightClinicInventory(drugName, -quantity);
 
   return { success: true, message: '出庫を記録しました' };
 }
@@ -1107,10 +1115,125 @@ function runFillMissingPatientIds() {
   SpreadsheetApp.getUi().alert(result.message || result.error);
 }
 
-// ===== 処方履歴連携（夜間休日外来DB） =====
+// ===== 夜間休日外来DB連携 =====
 
 const PRESCRIPTION_SS_ID = '12ylHWZhQO2ABfT6xhMM3z8jfD31kH7lRbaGY-Br4Y-k';
 const PRESCRIPTION_SHEET_NAME = '処方履歴';
+const NIGHTCLINIC_INVENTORY_SHEET = '在庫管理';
+
+/**
+ * 夜間休日外来DBの在庫管理タブを更新
+ * - 在庫数（B列）を増減
+ * - 出庫時のみ: 該当月の消費量列に加算
+ *
+ * @param {string} medicineName - 薬品名（A列と照合）
+ * @param {number} delta - 在庫の変動量（出庫: -N, 入庫: +N）
+ */
+function updateNightClinicInventory(medicineName, delta) {
+  if (!medicineName || delta === 0) return;
+
+  try {
+    const ss = SpreadsheetApp.openById(PRESCRIPTION_SS_ID);
+    const sheet = ss.getSheetByName(NIGHTCLINIC_INVENTORY_SHEET);
+    if (!sheet) {
+      Logger.log('在庫管理シートが見つかりません');
+      return;
+    }
+
+    const lastRow = sheet.getLastRow();
+    const lastCol = sheet.getLastColumn();
+    if (lastRow < 2 || lastCol < 2) return;
+
+    // ヘッダー行を取得（1行目）
+    const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+
+    // A列の薬品名一覧を取得（2行目以降）
+    const drugNames = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+
+    // 薬品名の部分一致で行を検索（正規化して比較）
+    function normDrug(n) {
+      return String(n || '').replace(/[\s\u3000]+/g, '').replace(/[「」『』（）()]/g, '');
+    }
+    const targetNorm = normDrug(medicineName);
+    let matchedRow = -1;
+
+    for (let i = 0; i < drugNames.length; i++) {
+      const rowNorm = normDrug(drugNames[i][0]);
+      if (rowNorm === targetNorm) {
+        matchedRow = i + 2; // 1-indexed, ヘッダー分+1
+        break;
+      }
+    }
+
+    // 完全一致がない場合、部分一致を試す
+    if (matchedRow === -1) {
+      for (let i = 0; i < drugNames.length; i++) {
+        const rowNorm = normDrug(drugNames[i][0]);
+        if (rowNorm && targetNorm && (rowNorm.includes(targetNorm) || targetNorm.includes(rowNorm))) {
+          matchedRow = i + 2;
+          break;
+        }
+      }
+    }
+
+    if (matchedRow === -1) {
+      Logger.log('在庫管理: 薬品名不一致 - ' + medicineName);
+      return;
+    }
+
+    // B列（在庫数）を更新
+    const stockCell = sheet.getRange(matchedRow, 2);
+    const currentStock = Number(stockCell.getValue()) || 0;
+    stockCell.setValue(currentStock + delta);
+
+    // 出庫の場合のみ月別消費量を加算
+    if (delta < 0) {
+      const now = new Date();
+      const currentMonth = Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy/MM');
+      // 短縮形（2026/1, 2026/01 等）にも対応
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1;
+
+      let monthCol = -1;
+      for (let c = 2; c < headers.length; c++) {
+        const h = String(headers[c]).trim();
+        if (!h) continue;
+        // ヘッダーが日付オブジェクトの場合
+        if (headers[c] instanceof Date) {
+          const hYear = headers[c].getFullYear();
+          const hMonth = headers[c].getMonth() + 1;
+          if (hYear === year && hMonth === month) {
+            monthCol = c + 1; // 1-indexed
+            break;
+          }
+          continue;
+        }
+        // 文字列ヘッダー: "2026/06", "2026/6", "2026年6月" 等
+        const m = h.match(/(\d{4})[\/\-年](\d{1,2})/);
+        if (m && Number(m[1]) === year && Number(m[2]) === month) {
+          monthCol = c + 1;
+          break;
+        }
+      }
+
+      if (monthCol === -1) {
+        // 該当月の列がない → 新しい列を末尾に追加
+        monthCol = lastCol + 1;
+        const monthLabel = year + '/' + String(month).padStart(2, '0');
+        sheet.getRange(1, monthCol).setValue(monthLabel);
+      }
+
+      // 消費量を加算（deltaは負なのでMath.absで正にする）
+      const consumeCell = sheet.getRange(matchedRow, monthCol);
+      const currentConsume = Number(consumeCell.getValue()) || 0;
+      consumeCell.setValue(currentConsume + Math.abs(delta));
+    }
+
+    Logger.log('在庫管理更新: ' + medicineName + ' delta=' + delta + ' row=' + matchedRow);
+  } catch (e) {
+    Logger.log('在庫管理更新エラー: ' + e.message);
+  }
+}
 
 /**
  * 処方履歴を夜間休日外来DBに記録
