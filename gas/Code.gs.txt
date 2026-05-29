@@ -98,6 +98,9 @@ function doGet(e) {
         drugs: JSON.parse(e.parameter.drugs || '[]')
       });
       break;
+    case 'getMonthlyConsumption':
+      result = getMonthlyConsumption();
+      break;
     default:
       result = { error: 'Unknown action' };
   }
@@ -1232,6 +1235,57 @@ function updateNightClinicInventory(medicineName, delta) {
     Logger.log('在庫管理更新: ' + medicineName + ' delta=' + delta + ' row=' + matchedRow);
   } catch (e) {
     Logger.log('在庫管理更新エラー: ' + e.message);
+  }
+}
+
+/**
+ * 夜間休日外来DBの在庫管理タブから月別消費量データを取得
+ */
+function getMonthlyConsumption() {
+  try {
+    const ss = SpreadsheetApp.openById(PRESCRIPTION_SS_ID);
+    const sheet = ss.getSheetByName(NIGHTCLINIC_INVENTORY_SHEET);
+    if (!sheet) {
+      return { success: false, error: '在庫管理シートが見つかりません' };
+    }
+
+    const data = sheet.getDataRange().getValues();
+    if (data.length < 2) {
+      return { success: true, months: [], drugs: [] };
+    }
+
+    // ヘッダー行: A=薬品名, B=在庫数, C以降=月別
+    const headers = data[0];
+    const months = [];
+    for (let c = 2; c < headers.length; c++) {
+      const h = headers[c];
+      if (!h) continue;
+      if (h instanceof Date) {
+        months.push({ col: c, label: Utilities.formatDate(h, 'Asia/Tokyo', 'yyyy/MM') });
+      } else {
+        const s = String(h).trim();
+        if (s) months.push({ col: c, label: s });
+      }
+    }
+
+    const drugs = [];
+    for (let r = 1; r < data.length; r++) {
+      const name = String(data[r][0] || '').trim();
+      if (!name) continue;
+      const stock = Number(data[r][1]) || 0;
+      const monthly = {};
+      let total = 0;
+      for (const m of months) {
+        const val = Number(data[r][m.col]) || 0;
+        monthly[m.label] = val;
+        total += val;
+      }
+      drugs.push({ name, stock, monthly, total });
+    }
+
+    return { success: true, months: months.map(m => m.label), drugs };
+  } catch (e) {
+    return { success: false, error: '月別消費量取得エラー: ' + e.message };
   }
 }
 
