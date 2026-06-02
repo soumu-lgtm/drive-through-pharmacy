@@ -262,8 +262,9 @@ async function whisperOnRecordStop() {
     const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
 
     if (!res.ok) {
-      const err = await res.json();
-      whisperSetStatus(`文字起こしエラー: ${err.error}`, 'error');
+      let errMsg;
+      try { const err = await res.json(); errMsg = err.error; } catch { errMsg = `HTTP ${res.status}: ${await res.text().catch(() => res.statusText)}`; }
+      whisperSetStatus(`文字起こしエラー: ${errMsg}`, 'error');
       return;
     }
 
@@ -303,8 +304,9 @@ async function whisperGenerate() {
     const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
 
     if (!res.ok) {
-      const err = await res.json();
-      whisperSetStatus(`生成エラー: ${err.error}`, 'error');
+      let errMsg;
+      try { const err = await res.json(); errMsg = err.error; } catch { errMsg = `HTTP ${res.status}: ${await res.text().catch(() => res.statusText)}`; }
+      whisperSetStatus(`生成エラー: ${errMsg}`, 'error');
       document.getElementById('whisperGenBtn').disabled = false;
       return;
     }
@@ -518,6 +520,14 @@ async function whisperUploadFile(input) {
   const file = input.files[0];
   if (!file) return;
 
+  // Vercel Serverless Functions のボディ制限チェック (4.5MB)
+  const MAX_SIZE = 4.5 * 1024 * 1024;
+  if (file.size > MAX_SIZE) {
+    whisperSetStatus(`ファイルが大きすぎます (${(file.size/1024/1024).toFixed(1)}MB)。4.5MB以下にしてください。`, 'error');
+    input.value = '';
+    return;
+  }
+
   // ファイル名表示
   const nameEl = document.getElementById('whisperFileName');
   if (nameEl) nameEl.textContent = file.name;
@@ -544,8 +554,9 @@ async function whisperUploadFile(input) {
     const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
 
     if (!res.ok) {
-      const err = await res.json();
-      whisperSetStatus(`文字起こしエラー: ${err.error}`, 'error');
+      let errMsg;
+      try { const err = await res.json(); errMsg = err.error; } catch { errMsg = `HTTP ${res.status}: ${await res.text().catch(() => res.statusText)}`; }
+      whisperSetStatus(`文字起こしエラー: ${errMsg}`, 'error');
       return;
     }
 
