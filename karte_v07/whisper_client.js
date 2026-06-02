@@ -256,7 +256,7 @@ async function whisperOnRecordStop() {
     whisperSetStatus(`音声圧縮中... (${(blob.size/1024/1024).toFixed(1)}MB)`, 'processing');
     try {
       uploadBlob = await whisperCompressAudio(blob);
-      uploadName = 'recording_compressed.wav';
+      uploadName = 'recording_compressed.webm';
       whisperSetStatus('文字起こし中...', 'processing');
     } catch (e) {
       console.warn('録音圧縮失敗、元データで送信:', e);
@@ -531,21 +531,21 @@ function whisperSetStatus(msg, type) {
 }
 
 // ========================================
-// 音声圧縮 (Web Audio API → 16kHz mono WAV)
+// 音声圧縮 (OfflineAudioContext → webm/opus)
 // ========================================
 
 /**
- * 音声ファイル/BlobをWAV 16kHz monoに圧縮
- * 10分の診察音声(~100MB WAV/~10MB mp3) → ~2MB WAV
+ * 音声ファイル/Blobを16kHz mono webm/opusに圧縮
+ * m4a/wav/mp3等 → webm opus (~6KB/秒 = ~3.6MB/10分)
  * @param {Blob|File} audioBlob
- * @returns {Promise<Blob>} 圧縮済みWAV Blob
+ * @returns {Promise<Blob>} 圧縮済みwebm Blob
  */
 async function whisperCompressAudio(audioBlob) {
   const TARGET_SAMPLE_RATE = 16000;
 
+  // 1. デコード
   const arrayBuffer = await audioBlob.arrayBuffer();
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
   let audioBuffer;
   try {
     audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
@@ -553,74 +553,53 @@ async function whisperCompressAudio(audioBlob) {
     audioCtx.close();
   }
 
-  // モノラルにダウンミックス
-  const numChannels = audioBuffer.numberOfChannels;
-  const originalLength = audioBuffer.length;
-  const originalRate = audioBuffer.sampleRate;
+  // 2. OfflineAudioContextで16kHz monoにリサンプル
   const duration = audioBuffer.duration;
+  const offlineLength = Math.ceil(duration * TARGET_SAMPLE_RATE);
+  const offline = new OfflineAudioContext(1, offlineLength, TARGET_SAMPLE_RATE);
+  const source = offline.createBufferSource();
+  source.buffer = audioBuffer;
+  source.connect(offline.destination);
+  source.start(0);
+  const renderedBuffer = await offline.startRendering();
 
-  const monoData = new Float32Array(originalLength);
-  if (numChannels === 1) {
-    monoData.set(audioBuffer.getChannelData(0));
-  } else {
-    const ch0 = audioBuffer.getChannelData(0);
-    const ch1 = audioBuffer.getChannelData(1);
-    for (let i = 0; i < originalLength; i++) {
-      monoData[i] = (ch0[i] + ch1[i]) * 0.5;
-    }
-  }
+  // 3. MediaRecorderでwebm/opusにエンコード
+  const realtimeCtx = new AudioContext({ sampleRate: TARGET_SAMPLE_RATE });
+  const bufferSource = realtimeCtx.createBufferSource();
+  bufferSource.buffer = renderedBuffer;
 
-  // リサンプル (線形補間)
-  const newLength = Math.round(duration * TARGET_SAMPLE_RATE);
-  const resampled = new Float32Array(newLength);
-  const ratio = originalRate / TARGET_SAMPLE_RATE;
-  for (let i = 0; i < newLength; i++) {
-    const srcIdx = i * ratio;
-    const idx0 = Math.floor(srcIdx);
-    const idx1 = Math.min(idx0 + 1, originalLength - 1);
-    const frac = srcIdx - idx0;
-    resampled[i] = monoData[idx0] * (1 - frac) + monoData[idx1] * frac;
-  }
+  const dest = realtimeCtx.createMediaStreamDestination();
+  bufferSource.connect(dest);
 
-  // WAVエンコード (16bit PCM)
-  const wavBuffer = encodeWAV(resampled, TARGET_SAMPLE_RATE);
-  return new Blob([wavBuffer], { type: 'audio/wav' });
-}
+  const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+    ? 'audio/webm;codecs=opus' : 'audio/webm';
+  const recorder = new MediaRecorder(dest.stream, {
+    mimeType,
+    audioBitsPerSecond: 32000, // 32kbps (音声認識に十分)
+  });
 
-function encodeWAV(samples, sampleRate) {
-  const numSamples = samples.length;
-  const bitsPerSample = 16;
-  const bytesPerSample = bitsPerSample / 8;
-  const dataSize = numSamples * bytesPerSample;
-  const buffer = new ArrayBuffer(44 + dataSize);
-  const view = new DataView(buffer);
+  const chunks = [];
+  return new Promise((resolve, reject) => {
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunks.push(e.data);
+    };
+    recorder.onstop = () => {
+      realtimeCtx.close();
+      resolve(new Blob(chunks, { type: mimeType }));
+    };
+    recorder.onerror = (e) => {
+      realtimeCtx.close();
+      reject(e.error || new Error('MediaRecorder error'));
+    };
 
-  function writeString(offset, str) {
-    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
-  }
+    recorder.start();
+    bufferSource.start(0);
 
-  writeString(0, 'RIFF');
-  view.setUint32(4, 36 + dataSize, true);
-  writeString(8, 'WAVE');
-  writeString(12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true); // PCM
-  view.setUint16(22, 1, true); // mono
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * bytesPerSample, true);
-  view.setUint16(32, bytesPerSample, true);
-  view.setUint16(34, bitsPerSample, true);
-  writeString(36, 'data');
-  view.setUint32(40, dataSize, true);
-
-  let offset = 44;
-  for (let i = 0; i < numSamples; i++) {
-    const s = Math.max(-1, Math.min(1, samples[i]));
-    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-    offset += 2;
-  }
-
-  return buffer;
+    // 再生終了で停止
+    bufferSource.onended = () => {
+      setTimeout(() => recorder.stop(), 100);
+    };
+  });
 }
 
 // ========================================
@@ -651,7 +630,7 @@ async function whisperUploadFile(input) {
     whisperSetStatus(`音声圧縮中... (元: ${sizeMB}MB)`, 'processing');
     try {
       uploadBlob = await whisperCompressAudio(file);
-      uploadName = file.name.replace(/\.[^.]+$/, '') + '_compressed.wav';
+      uploadName = file.name.replace(/\.[^.]+$/, '') + '_compressed.webm';
       const newSizeMB = (uploadBlob.size / 1024 / 1024).toFixed(1);
       whisperSetStatus(`圧縮完了 (${sizeMB}MB → ${newSizeMB}MB)。文字起こし中...`, 'processing');
     } catch (e) {
