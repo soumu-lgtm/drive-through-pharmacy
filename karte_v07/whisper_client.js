@@ -247,8 +247,25 @@ function whisperStopRecord() {
 async function whisperOnRecordStop() {
   const blob = new Blob(whisperAudioChunks, { type: 'audio/webm' });
 
+  // 長時間録音の場合、圧縮してからアップロード
+  const UPLOAD_LIMIT = 4 * 1024 * 1024;
+  let uploadBlob = blob;
+  let uploadName = 'recording.webm';
+
+  if (blob.size > UPLOAD_LIMIT) {
+    whisperSetStatus(`音声圧縮中... (${(blob.size/1024/1024).toFixed(1)}MB)`, 'processing');
+    try {
+      uploadBlob = await whisperCompressAudio(blob);
+      uploadName = 'recording_compressed.wav';
+      whisperSetStatus('文字起こし中...', 'processing');
+    } catch (e) {
+      console.warn('録音圧縮失敗、元データで送信:', e);
+      uploadBlob = blob;
+    }
+  }
+
   const formData = new FormData();
-  formData.append('audio', blob, 'recording.webm');
+  formData.append('audio', uploadBlob, uploadName);
   // 語句登録がある場合、initial_promptとして送信
   const vocabPrompt = whisperGetInitialPrompt();
   if (vocabPrompt) formData.append('initial_prompt', vocabPrompt);
@@ -514,19 +531,104 @@ function whisperSetStatus(msg, type) {
 }
 
 // ========================================
+// 音声圧縮 (Web Audio API → 16kHz mono WAV)
+// ========================================
+
+/**
+ * 音声ファイル/BlobをWAV 16kHz monoに圧縮
+ * 10分の診察音声(~100MB WAV/~10MB mp3) → ~2MB WAV
+ * @param {Blob|File} audioBlob
+ * @returns {Promise<Blob>} 圧縮済みWAV Blob
+ */
+async function whisperCompressAudio(audioBlob) {
+  const TARGET_SAMPLE_RATE = 16000;
+
+  const arrayBuffer = await audioBlob.arrayBuffer();
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  let audioBuffer;
+  try {
+    audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+  } finally {
+    audioCtx.close();
+  }
+
+  // モノラルにダウンミックス
+  const numChannels = audioBuffer.numberOfChannels;
+  const originalLength = audioBuffer.length;
+  const originalRate = audioBuffer.sampleRate;
+  const duration = audioBuffer.duration;
+
+  const monoData = new Float32Array(originalLength);
+  if (numChannels === 1) {
+    monoData.set(audioBuffer.getChannelData(0));
+  } else {
+    const ch0 = audioBuffer.getChannelData(0);
+    const ch1 = audioBuffer.getChannelData(1);
+    for (let i = 0; i < originalLength; i++) {
+      monoData[i] = (ch0[i] + ch1[i]) * 0.5;
+    }
+  }
+
+  // リサンプル (線形補間)
+  const newLength = Math.round(duration * TARGET_SAMPLE_RATE);
+  const resampled = new Float32Array(newLength);
+  const ratio = originalRate / TARGET_SAMPLE_RATE;
+  for (let i = 0; i < newLength; i++) {
+    const srcIdx = i * ratio;
+    const idx0 = Math.floor(srcIdx);
+    const idx1 = Math.min(idx0 + 1, originalLength - 1);
+    const frac = srcIdx - idx0;
+    resampled[i] = monoData[idx0] * (1 - frac) + monoData[idx1] * frac;
+  }
+
+  // WAVエンコード (16bit PCM)
+  const wavBuffer = encodeWAV(resampled, TARGET_SAMPLE_RATE);
+  return new Blob([wavBuffer], { type: 'audio/wav' });
+}
+
+function encodeWAV(samples, sampleRate) {
+  const numSamples = samples.length;
+  const bitsPerSample = 16;
+  const bytesPerSample = bitsPerSample / 8;
+  const dataSize = numSamples * bytesPerSample;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+
+  function writeString(offset, str) {
+    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+  }
+
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + dataSize, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, 1, true); // mono
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * bytesPerSample, true);
+  view.setUint16(32, bytesPerSample, true);
+  view.setUint16(34, bitsPerSample, true);
+  writeString(36, 'data');
+  view.setUint32(40, dataSize, true);
+
+  let offset = 44;
+  for (let i = 0; i < numSamples; i++) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    offset += 2;
+  }
+
+  return buffer;
+}
+
+// ========================================
 // 音声ファイルアップロード → 文字起こし
 // ========================================
 async function whisperUploadFile(input) {
   const file = input.files[0];
   if (!file) return;
-
-  // Vercel Serverless Functions のボディ制限チェック (4.5MB)
-  const MAX_SIZE = 4.5 * 1024 * 1024;
-  if (file.size > MAX_SIZE) {
-    whisperSetStatus(`ファイルが大きすぎます (${(file.size/1024/1024).toFixed(1)}MB)。4.5MB以下にしてください。`, 'error');
-    input.value = '';
-    return;
-  }
 
   // ファイル名表示
   const nameEl = document.getElementById('whisperFileName');
@@ -538,10 +640,40 @@ async function whisperUploadFile(input) {
   document.getElementById('whisperKarte').value = '';
   document.getElementById('whisperGenBtn').disabled = true;
   document.getElementById('whisperApplyBtn').disabled = true;
-  whisperSetStatus('ファイル読込中...', 'processing');
+
+  // 音声圧縮 (Vercel 4.5MB制限対策: 16kHz mono WAVに変換)
+  const UPLOAD_LIMIT = 4 * 1024 * 1024; // 4MB (マージン込み)
+  let uploadBlob = file;
+  let uploadName = file.name;
+
+  if (file.size > UPLOAD_LIMIT) {
+    const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+    whisperSetStatus(`音声圧縮中... (元: ${sizeMB}MB)`, 'processing');
+    try {
+      uploadBlob = await whisperCompressAudio(file);
+      uploadName = file.name.replace(/\.[^.]+$/, '') + '_compressed.wav';
+      const newSizeMB = (uploadBlob.size / 1024 / 1024).toFixed(1);
+      whisperSetStatus(`圧縮完了 (${sizeMB}MB → ${newSizeMB}MB)。文字起こし中...`, 'processing');
+    } catch (e) {
+      console.error('音声圧縮失敗:', e);
+      whisperSetStatus('音声圧縮に失敗しました: ' + e.message, 'error');
+      input.value = '';
+      return;
+    }
+
+    // 圧縮後もまだ大きい場合はエラー
+    if (uploadBlob.size > UPLOAD_LIMIT) {
+      const compressedMB = (uploadBlob.size / 1024 / 1024).toFixed(1);
+      whisperSetStatus(`圧縮後も ${compressedMB}MB あります。録音時間が長すぎる可能性があります。`, 'error');
+      input.value = '';
+      return;
+    }
+  } else {
+    whisperSetStatus('文字起こし中...', 'processing');
+  }
 
   const formData = new FormData();
-  formData.append('audio', file, file.name);
+  formData.append('audio', uploadBlob, uploadName);
   const vocabPrompt = whisperGetInitialPrompt();
   if (vocabPrompt) formData.append('initial_prompt', vocabPrompt);
 
