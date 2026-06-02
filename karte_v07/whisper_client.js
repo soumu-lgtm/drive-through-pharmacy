@@ -246,49 +246,56 @@ function whisperStopRecord() {
 // ========================================
 async function whisperOnRecordStop() {
   const blob = new Blob(whisperAudioChunks, { type: 'audio/webm' });
-
-  // 長時間録音の場合、圧縮してからアップロード
-  const UPLOAD_LIMIT = 4 * 1024 * 1024;
-  let uploadBlob = blob;
-  let uploadName = 'recording.webm';
-
-  if (blob.size > UPLOAD_LIMIT) {
-    whisperSetStatus(`音声圧縮中... (${(blob.size/1024/1024).toFixed(1)}MB)`, 'processing');
-    try {
-      uploadBlob = await whisperCompressAudio(blob);
-      uploadName = 'recording_compressed.webm';
-      whisperSetStatus('文字起こし中...', 'processing');
-    } catch (e) {
-      console.warn('録音圧縮失敗、元データで送信:', e);
-      uploadBlob = blob;
-    }
-  }
-
-  const formData = new FormData();
-  formData.append('audio', uploadBlob, uploadName);
-  // 語句登録がある場合、initial_promptとして送信
   const vocabPrompt = whisperGetInitialPrompt();
-  if (vocabPrompt) formData.append('initial_prompt', vocabPrompt);
+  const UPLOAD_LIMIT = 4 * 1024 * 1024;
+  const t0 = performance.now();
 
   try {
-    const t0 = performance.now();
-    const res = await fetch(`${WHISPER_API}/transcribe`, {
-      method: 'POST',
-      body: formData,
-    });
-    const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
-
-    if (!res.ok) {
-      let errMsg;
-      try { const err = await res.json(); errMsg = err.error; } catch { errMsg = `HTTP ${res.status}: ${await res.text().catch(() => res.statusText)}`; }
-      whisperSetStatus(`文字起こしエラー: ${errMsg}`, 'error');
+    // 小さい録音はそのまま送信
+    if (blob.size <= UPLOAD_LIMIT) {
+      const formData = new FormData();
+      formData.append('audio', blob, 'recording.webm');
+      if (vocabPrompt) formData.append('initial_prompt', vocabPrompt);
+      const res = await fetch(`${WHISPER_API}/transcribe`, { method: 'POST', body: formData });
+      const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+      if (!res.ok) {
+        let errMsg;
+        try { const err = await res.json(); errMsg = err.error; } catch { errMsg = `HTTP ${res.status}: ${await res.text().catch(() => res.statusText)}`; }
+        whisperSetStatus(`文字起こしエラー: ${errMsg}`, 'error');
+        return;
+      }
+      const data = await res.json();
+      document.getElementById('whisperTranscript').value = data.transcript;
+      document.getElementById('whisperGenBtn').disabled = false;
+      whisperSetStatus(`文字起こし完了 (${elapsed}秒)`, 'success');
       return;
     }
 
-    const data = await res.json();
-    document.getElementById('whisperTranscript').value = data.transcript;
+    // 大きい録音: デコード→チャンク分割→並列送信
+    whisperSetStatus('長時間録音をデコード中...', 'processing');
+    const audioBuffer = await whisperDecodeAudio(blob);
+    const duration = audioBuffer.duration;
+    const numChunks = Math.ceil(duration / CHUNK_DURATION_SEC);
+    whisperSetStatus(`${numChunks}分割で文字起こし中...`, 'processing');
+
+    const promises = [];
+    for (let i = 0; i < numChunks; i++) {
+      const start = Math.max(0, i * CHUNK_DURATION_SEC - (i > 0 ? CHUNK_OVERLAP_SEC : 0));
+      const end = Math.min(duration, (i + 1) * CHUNK_DURATION_SEC);
+      const wavBlob = audioBufferSliceToWav(audioBuffer, start, end);
+      promises.push(
+        whisperTranscribeChunk(wavBlob, `chunk_${i}.wav`, vocabPrompt)
+          .then(text => ({ index: i, text, ok: true }))
+          .catch(err => ({ index: i, text: '', ok: false, error: err.message }))
+      );
+    }
+    const results = await Promise.all(promises);
+    results.sort((a, b) => a.index - b.index);
+    const transcript = results.filter(r => r.ok).map(r => r.text).join('\n');
+    const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+    document.getElementById('whisperTranscript').value = transcript;
     document.getElementById('whisperGenBtn').disabled = false;
-    whisperSetStatus(`文字起こし完了 (${elapsed}秒)`, 'success');
+    whisperSetStatus(`文字起こし完了 (${elapsed}秒, ${numChunks}分割)`, 'success');
   } catch (e) {
     whisperSetStatus('API通信エラー: ' + e.message, 'error');
   }
@@ -531,75 +538,88 @@ function whisperSetStatus(msg, type) {
 }
 
 // ========================================
-// 音声圧縮 (OfflineAudioContext → webm/opus)
+// 音声デコード＆チャンク分割 (高速・非リアルタイム)
 // ========================================
+const CHUNK_DURATION_SEC = 120; // 2分ごとに分割
+const CHUNK_OVERLAP_SEC = 1;   // 1秒オーバーラップ（単語切れ防止）
+const TARGET_SAMPLE_RATE = 16000;
 
 /**
- * 音声ファイル/Blobを16kHz mono webm/opusに圧縮
- * m4a/wav/mp3等 → webm opus (~6KB/秒 = ~3.6MB/10分)
- * @param {Blob|File} audioBlob
- * @returns {Promise<Blob>} 圧縮済みwebm Blob
+ * 音声Blobをデコード → 16kHz mono PCMに変換
+ * OfflineAudioContextで一瞬で完了（リアルタイム再生不要）
  */
-async function whisperCompressAudio(audioBlob) {
-  const TARGET_SAMPLE_RATE = 16000;
-
-  // 1. デコード
+async function whisperDecodeAudio(audioBlob) {
   const arrayBuffer = await audioBlob.arrayBuffer();
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  let audioBuffer;
+  let decoded;
   try {
-    audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+    decoded = await audioCtx.decodeAudioData(arrayBuffer);
   } finally {
     audioCtx.close();
   }
+  const offlineLen = Math.ceil(decoded.duration * TARGET_SAMPLE_RATE);
+  const offline = new OfflineAudioContext(1, offlineLen, TARGET_SAMPLE_RATE);
+  const src = offline.createBufferSource();
+  src.buffer = decoded;
+  src.connect(offline.destination);
+  src.start(0);
+  return await offline.startRendering();
+}
 
-  // 2. OfflineAudioContextで16kHz monoにリサンプル
-  const duration = audioBuffer.duration;
-  const offlineLength = Math.ceil(duration * TARGET_SAMPLE_RATE);
-  const offline = new OfflineAudioContext(1, offlineLength, TARGET_SAMPLE_RATE);
-  const source = offline.createBufferSource();
-  source.buffer = audioBuffer;
-  source.connect(offline.destination);
-  source.start(0);
-  const renderedBuffer = await offline.startRendering();
+/**
+ * AudioBufferの一部をWAV Blobに変換（一瞬で完了）
+ */
+function audioBufferSliceToWav(audioBuffer, startSec, endSec) {
+  const rate = audioBuffer.sampleRate;
+  const ch = audioBuffer.getChannelData(0);
+  const s0 = Math.floor(startSec * rate);
+  const s1 = Math.min(Math.ceil(endSec * rate), ch.length);
+  const samples = ch.subarray(s0, s1);
+  const numSamples = samples.length;
+  const dataSize = numSamples * 2;
+  const buf = new ArrayBuffer(44 + dataSize);
+  const v = new DataView(buf);
+  // RIFF header
+  [0x52,0x49,0x46,0x46].forEach((b,i) => v.setUint8(i, b));
+  v.setUint32(4, 36 + dataSize, true);
+  [0x57,0x41,0x56,0x45].forEach((b,i) => v.setUint8(8+i, b));
+  [0x66,0x6D,0x74,0x20].forEach((b,i) => v.setUint8(12+i, b));
+  v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true);
+  v.setUint16(22, 1, true);
+  v.setUint32(24, rate, true);
+  v.setUint32(28, rate * 2, true);
+  v.setUint16(32, 2, true);
+  v.setUint16(34, 16, true);
+  [0x64,0x61,0x74,0x61].forEach((b,i) => v.setUint8(36+i, b));
+  v.setUint32(40, dataSize, true);
+  let off = 44;
+  for (let i = 0; i < numSamples; i++) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    v.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    off += 2;
+  }
+  return new Blob([buf], { type: 'audio/wav' });
+}
 
-  // 3. MediaRecorderでwebm/opusにエンコード
-  const realtimeCtx = new AudioContext({ sampleRate: TARGET_SAMPLE_RATE });
-  const bufferSource = realtimeCtx.createBufferSource();
-  bufferSource.buffer = renderedBuffer;
-
-  const dest = realtimeCtx.createMediaStreamDestination();
-  bufferSource.connect(dest);
-
-  const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-    ? 'audio/webm;codecs=opus' : 'audio/webm';
-  const recorder = new MediaRecorder(dest.stream, {
-    mimeType,
-    audioBitsPerSecond: 32000, // 32kbps (音声認識に十分)
+/**
+ * 1チャンクをAPIに送信して文字起こし
+ */
+async function whisperTranscribeChunk(wavBlob, chunkName, vocabPrompt) {
+  const formData = new FormData();
+  formData.append('audio', wavBlob, chunkName);
+  if (vocabPrompt) formData.append('initial_prompt', vocabPrompt);
+  const res = await fetch(`${WHISPER_API}/transcribe`, {
+    method: 'POST',
+    body: formData,
   });
-
-  const chunks = [];
-  return new Promise((resolve, reject) => {
-    recorder.ondataavailable = (e) => {
-      if (e.data.size > 0) chunks.push(e.data);
-    };
-    recorder.onstop = () => {
-      realtimeCtx.close();
-      resolve(new Blob(chunks, { type: mimeType }));
-    };
-    recorder.onerror = (e) => {
-      realtimeCtx.close();
-      reject(e.error || new Error('MediaRecorder error'));
-    };
-
-    recorder.start();
-    bufferSource.start(0);
-
-    // 再生終了で停止
-    bufferSource.onended = () => {
-      setTimeout(() => recorder.stop(), 100);
-    };
-  });
+  if (!res.ok) {
+    let errMsg;
+    try { const err = await res.json(); errMsg = err.error; } catch { errMsg = `HTTP ${res.status}: ${await res.text().catch(() => res.statusText)}`; }
+    throw new Error(errMsg);
+  }
+  const data = await res.json();
+  return data.transcript;
 }
 
 // ========================================
@@ -609,77 +629,88 @@ async function whisperUploadFile(input) {
   const file = input.files[0];
   if (!file) return;
 
-  // ファイル名表示
   const nameEl = document.getElementById('whisperFileName');
   if (nameEl) nameEl.textContent = file.name;
 
-  // UI準備
   document.getElementById('whisperBody').style.display = '';
   document.getElementById('whisperTranscript').value = '';
   document.getElementById('whisperKarte').value = '';
   document.getElementById('whisperGenBtn').disabled = true;
   document.getElementById('whisperApplyBtn').disabled = true;
 
-  // 音声圧縮 (Vercel 4.5MB制限対策: 16kHz mono WAVに変換)
-  const UPLOAD_LIMIT = 4 * 1024 * 1024; // 4MB (マージン込み)
-  let uploadBlob = file;
-  let uploadName = file.name;
-
-  if (file.size > UPLOAD_LIMIT) {
-    const sizeMB = (file.size / 1024 / 1024).toFixed(1);
-    whisperSetStatus(`音声圧縮中... (元: ${sizeMB}MB)`, 'processing');
-    try {
-      uploadBlob = await whisperCompressAudio(file);
-      uploadName = file.name.replace(/\.[^.]+$/, '') + '_compressed.webm';
-      const newSizeMB = (uploadBlob.size / 1024 / 1024).toFixed(1);
-      whisperSetStatus(`圧縮完了 (${sizeMB}MB → ${newSizeMB}MB)。文字起こし中...`, 'processing');
-    } catch (e) {
-      console.error('音声圧縮失敗:', e);
-      whisperSetStatus('音声圧縮に失敗しました: ' + e.message, 'error');
-      input.value = '';
-      return;
-    }
-
-    // 圧縮後もまだ大きい場合はエラー
-    if (uploadBlob.size > UPLOAD_LIMIT) {
-      const compressedMB = (uploadBlob.size / 1024 / 1024).toFixed(1);
-      whisperSetStatus(`圧縮後も ${compressedMB}MB あります。録音時間が長すぎる可能性があります。`, 'error');
-      input.value = '';
-      return;
-    }
-  } else {
-    whisperSetStatus('文字起こし中...', 'processing');
-  }
-
-  const formData = new FormData();
-  formData.append('audio', uploadBlob, uploadName);
+  const UPLOAD_LIMIT = 4 * 1024 * 1024;
   const vocabPrompt = whisperGetInitialPrompt();
-  if (vocabPrompt) formData.append('initial_prompt', vocabPrompt);
+  const t0 = performance.now();
 
   try {
-    const t0 = performance.now();
-    const res = await fetch(`${WHISPER_API}/transcribe`, {
-      method: 'POST',
-      body: formData,
-    });
-    const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
-
-    if (!res.ok) {
-      let errMsg;
-      try { const err = await res.json(); errMsg = err.error; } catch { errMsg = `HTTP ${res.status}: ${await res.text().catch(() => res.statusText)}`; }
-      whisperSetStatus(`文字起こしエラー: ${errMsg}`, 'error');
+    // 小さいファイルはそのまま送信
+    if (file.size <= UPLOAD_LIMIT) {
+      whisperSetStatus('文字起こし中...', 'processing');
+      const formData = new FormData();
+      formData.append('audio', file, file.name);
+      if (vocabPrompt) formData.append('initial_prompt', vocabPrompt);
+      const res = await fetch(`${WHISPER_API}/transcribe`, { method: 'POST', body: formData });
+      const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+      if (!res.ok) {
+        let errMsg;
+        try { const err = await res.json(); errMsg = err.error; } catch { errMsg = `HTTP ${res.status}: ${await res.text().catch(() => res.statusText)}`; }
+        whisperSetStatus(`文字起こしエラー: ${errMsg}`, 'error');
+        return;
+      }
+      const data = await res.json();
+      document.getElementById('whisperTranscript').value = data.transcript;
+      document.getElementById('whisperGenBtn').disabled = false;
+      whisperSetStatus(`文字起こし完了 (${elapsed}秒) — ${file.name}`, 'success');
+      input.value = '';
       return;
     }
 
-    const data = await res.json();
-    document.getElementById('whisperTranscript').value = data.transcript;
+    // === 大きいファイル: デコード → チャンク分割 → 並列送信 ===
+    const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+    whisperSetStatus(`音声デコード中... (${sizeMB}MB)`, 'processing');
+
+    const audioBuffer = await whisperDecodeAudio(file);
+    const duration = audioBuffer.duration;
+    const numChunks = Math.ceil(duration / CHUNK_DURATION_SEC);
+
+    whisperSetStatus(`${numChunks}分割で文字起こし中... (${Math.round(duration)}秒の音声)`, 'processing');
+
+    // チャンクWAV生成（一瞬）& 並列アップロード
+    const promises = [];
+    for (let i = 0; i < numChunks; i++) {
+      const start = Math.max(0, i * CHUNK_DURATION_SEC - (i > 0 ? CHUNK_OVERLAP_SEC : 0));
+      const end = Math.min(duration, (i + 1) * CHUNK_DURATION_SEC);
+      const wavBlob = audioBufferSliceToWav(audioBuffer, start, end);
+      promises.push(
+        whisperTranscribeChunk(wavBlob, `chunk_${i}.wav`, vocabPrompt)
+          .then(text => ({ index: i, text, ok: true }))
+          .catch(err => ({ index: i, text: '', ok: false, error: err.message }))
+      );
+    }
+
+    const results = await Promise.all(promises);
+    results.sort((a, b) => a.index - b.index);
+
+    const failed = results.filter(r => !r.ok);
+    if (failed.length === results.length) {
+      whisperSetStatus(`全チャンク失敗: ${failed[0].error}`, 'error');
+      input.value = '';
+      return;
+    }
+
+    const transcript = results.filter(r => r.ok).map(r => r.text).join('\n');
+    const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+
+    document.getElementById('whisperTranscript').value = transcript;
     document.getElementById('whisperGenBtn').disabled = false;
-    whisperSetStatus(`ファイル文字起こし完了 (${elapsed}秒) — ${file.name}`, 'success');
+
+    const warn = failed.length > 0 ? ` (${failed.length}チャンク失敗)` : '';
+    whisperSetStatus(`文字起こし完了 (${elapsed}秒, ${numChunks}分割)${warn} — ${file.name}`, 'success');
+
   } catch (e) {
-    whisperSetStatus('API通信エラー: ' + e.message, 'error');
+    whisperSetStatus('エラー: ' + e.message, 'error');
   }
 
-  // inputをリセット（同じファイルの再選択を可能に）
   input.value = '';
 }
 
