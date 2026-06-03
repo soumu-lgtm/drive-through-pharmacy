@@ -164,6 +164,8 @@ function renderPatientList() {
   showDateShift(selectedDate);
   const tbody = document.getElementById('patientListBody');
   let filtered = getPatientsForDate(selectedDate);
+  // 元の登録番号を保持（ソート前の順番）
+  filtered.forEach((p, i) => { p._origNum = i + 1; });
   // 機能7: ソート（昇順/降順対応）
   const dir = currentSortAsc ? 1 : -1;
   if (currentSortMode === 'name') {
@@ -174,8 +176,7 @@ function renderPatientList() {
   } else if (currentSortMode === 'arrival') {
     filtered.sort((a,b) => dir * ((a.arrivedAt||'99:99').localeCompare(b.arrivedAt||'99:99')));
   } else if (currentSortMode === 'number') {
-    // 元のインデックス順（patients配列の並び）
-    filtered.sort((a,b) => dir * (patients.indexOf(a) - patients.indexOf(b)));
+    filtered.sort((a,b) => dir * (a._origNum - b._origNum));
   }
   let waitC = 0, activeC = 0, doneC = 0;
   if (filtered.length === 0) {
@@ -196,14 +197,14 @@ function renderPatientList() {
       const doctor = visit ? (visit.doctor || '') : '';
       const tests = visit ? [visit.covid ? 'C+' : '', visit.flu ? 'Flu+' : '', visit.strep ? '溶+' : ''].filter(Boolean).join(' ') : '';
       const typeBadge = p.type === '新規' ? '<span class="status-badge" style="background:#dcfce7;color:#16a34a;">新規</span>' : '<span class="status-badge" style="background:#dbeafe;color:#2563eb;">再診</span>';
-      return '<tr onclick="openKarte(\'' + p.id + '\')" style="cursor:pointer;background:#f8faff;"><td>' + (i+1) + '</td><td class="td-status">' + typeBadge + '</td><td class="td-name">' + p.name + '<div class="sub">DB / ' + (p.address || '') + ' / ' + time + '</div></td><td>' + p.age + '歳 ' + p.sex + '</td><td>' + p.insurance + '</td><td class="td-allergy">' + (tests || '-') + '</td><td class="td-lane">' + doctor + '</td><td class="td-questionnaire">' + (p.route || '-') + '</td><td class="td-actions"><button class="action-btn karte-btn" onclick="event.stopPropagation();openKarte(\'' + p.id + '\')">カルテ</button></td></tr>';
+      return '<tr onclick="openKarte(\'' + p.id + '\')" style="cursor:pointer;background:#f8faff;"><td>' + (p._origNum||i+1) + '</td><td class="td-status">' + typeBadge + '</td><td class="td-name">' + p.name + '<div class="sub">DB / ' + (p.address || '') + ' / ' + time + '</div></td><td>' + p.age + '歳 ' + p.sex + '</td><td>' + p.insurance + '</td><td class="td-allergy">' + (tests || '-') + '</td><td class="td-lane">' + doctor + '</td><td class="td-questionnaire">' + (p.route || '-') + '</td><td class="td-actions"><button class="action-btn karte-btn" onclick="event.stopPropagation();openKarte(\'' + p.id + '\')">カルテ</button></td></tr>';
     }
     if (p.status === 'waiting') waitC++; else if (p.status === 'active') activeC++; else if (p.status === 'done') doneC++;
     const statusBadge = p.status === 'active' ? '<span class="status-badge active">診察中</span>' : p.status === 'done' ? '<span class="status-badge done">完了</span>' : '<span class="status-badge waiting">待機</span>';
     const allergyStr = p.allergies.length > 0 ? p.allergies.join(', ') : '-';
     const qBadge = p.questionnaire ? '<span class="q-badge received">受信済</span>' : '<span class="q-badge none">-</span>';
     const rowClass = p.status === 'done' ? ' class="status-done-row"' : '';
-    return '<tr' + rowClass + ' onclick="openKarte(\'' + p.id + '\')" style="cursor:pointer;"><td>' + (i+1) + '</td><td class="td-status">' + statusBadge + '</td><td class="td-name">' + p.name + '<div class="sub">' + (p.nameKana||'') + ' / ' + p.id + ' / ' + (p.arrivedAt||'') + '</div></td><td>' + p.age + '歳 ' + p.sex + '</td><td>' + p.insurance + '</td><td class="td-allergy">' + allergyStr + '</td><td class="td-lane">L' + p.vehicle.lane + '</td><td class="td-questionnaire">' + qBadge + '</td><td class="td-actions"><button class="action-btn karte-btn" onclick="event.stopPropagation();openKarte(\'' + p.id + '\')">カルテ</button>' + (p.status === 'waiting' ? '<button class="action-btn call-btn" onclick="event.stopPropagation();callPatientFromList(\'' + p.id + '\')">呼出</button>' : '') + '</td></tr>';
+    return '<tr' + rowClass + ' onclick="openKarte(\'' + p.id + '\')" style="cursor:pointer;"><td>' + (p._origNum||i+1) + '</td><td class="td-status">' + statusBadge + '</td><td class="td-name">' + p.name + '<div class="sub">' + (p.nameKana||'') + ' / ' + p.id + ' / ' + (p.arrivedAt||'') + '</div></td><td>' + p.age + '歳 ' + p.sex + '</td><td>' + p.insurance + '</td><td class="td-allergy">' + allergyStr + '</td><td class="td-lane">L' + p.vehicle.lane + '</td><td class="td-questionnaire">' + qBadge + '</td><td class="td-actions"><button class="action-btn karte-btn" onclick="event.stopPropagation();openKarte(\'' + p.id + '\')">カルテ</button>' + (p.status === 'waiting' ? '<button class="action-btn call-btn" onclick="event.stopPropagation();callPatientFromList(\'' + p.id + '\')">呼出</button>' : '') + '</td></tr>';
   }).join('');
   document.getElementById('listWait').textContent = waitC;
   document.getElementById('listActive').textContent = activeC;
@@ -1589,7 +1590,7 @@ let currentSortMode = 'arrival';
 let currentSortAsc = true;
 function sortPatientList(mode) {
   if (currentSortMode === mode) { currentSortAsc = !currentSortAsc; }
-  else { currentSortMode = mode; currentSortAsc = true; }
+  else { currentSortMode = mode; currentSortAsc = (mode === 'number') ? false : true; }
   updateSortBtnUI();
   renderPatientList();
   const dir = currentSortAsc ? '昇順' : '降順';
