@@ -42,9 +42,9 @@
     </div>
     <div style="display:flex;gap:4px;align-items:center;">
       <span style="font-size:11px;color:var(--text-muted);">並替:</span>
-      <button class="sort-btn" onclick="sortPatientList('name')" title="名前順">名前</button>
-      <button class="sort-btn" onclick="sortPatientList('arrival')" title="来院順">来院</button>
-      <button class="sort-btn" onclick="sortPatientList('status')" title="状態順">状態</button>
+      <button class="sort-btn" id="sortBtnName" onclick="sortPatientList('name')" title="名前順">名前</button>
+      <button class="sort-btn" id="sortBtnArrival" onclick="sortPatientList('arrival')" title="来院順">来院</button>
+      <button class="sort-btn" id="sortBtnStatus" onclick="sortPatientList('status')" title="状態順">状態</button>
     </div>
     <button class="new-patient-btn" onclick="openNewPatientModal()">+ 新規受付</button>
     <span id="shiftBadge" style="display:none;background:#dbeafe;color:#1d4ed8;padding:4px 10px;border-radius:6px;font-size:11px;white-space:nowrap;"></span>
@@ -578,6 +578,41 @@
       </div>
       <!-- 判定結果表示エリア -->
       <div id="insuranceCalcResult" style="margin-top:8px;display:none;"></div>
+    </fieldset>
+
+    <!-- 医療証セクション -->
+    <fieldset style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:10px;">
+      <legend style="font-size:12px;font-weight:600;color:#7c3aed;padding:0 6px;">医療証（公費受給者証等）</legend>
+      <div style="text-align:center;margin-bottom:8px;">
+        <div class="insurance-photo-area" style="min-height:60px;border:1px dashed var(--border);cursor:pointer;" onclick="document.getElementById('iryoFileInput').click()">
+          <img id="iryoPhotoPreview" style="display:none;max-height:120px;">
+          <span id="iryoUploadText" style="font-size:11px;color:var(--text-muted);">医療証写真をアップロード（任意）</span>
+        </div>
+        <input type="file" id="iryoFileInput" accept="image/*" capture="environment" style="display:none" onchange="handleIryoPhoto(this)">
+        <button class="btn btn-sm btn-outline" id="iryoPhotoDeleteBtn" style="display:none;margin-top:4px;color:#dc2626;border-color:#dc2626;" onclick="deleteIryoPhoto()">医療証写真を削除</button>
+      </div>
+      <div class="edit-form-row"><label>医療証種別</label>
+        <select id="iryoType">
+          <option value="">なし</option>
+          <option value="乳幼児医療">乳幼児医療</option>
+          <option value="子ども医療">子ども医療</option>
+          <option value="障害者医療">障害者医療</option>
+          <option value="ひとり親医療">ひとり親医療</option>
+          <option value="精神通院">精神通院（自立支援）</option>
+          <option value="特定医療費">特定医療費（指定難病）</option>
+          <option value="被爆者">被爆者健康手帳</option>
+          <option value="その他">その他</option>
+        </select>
+      </div>
+      <div class="edit-form-row"><label>受給者番号</label><input type="text" id="iryoRecipientNumber" placeholder="受給者番号"></div>
+      <div class="edit-form-row"><label>有効期間</label>
+        <div style="display:flex;gap:4px;align-items:center;">
+          <input type="date" id="iryoValidFrom" style="flex:1;">
+          <span>〜</span>
+          <input type="date" id="iryoValidTo" style="flex:1;">
+        </div>
+      </div>
+      <div class="edit-form-row"><label>備考</label><textarea id="iryoMemo" rows="2" style="width:100%;font-size:12px;border:1px solid var(--border);border-radius:4px;padding:6px;resize:vertical;" placeholder="自己負担上限額、適用条件等"></textarea></div>
     </fieldset>
 
     <!-- 手動設定（従来互換） -->

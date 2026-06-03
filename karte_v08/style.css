@@ -884,6 +884,7 @@ body.resizing img {
   color: var(--text-muted);
 }
 .sort-btn:hover { background: var(--primary-light); color: var(--primary); }
+.sort-btn.sort-active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
 /* v0.8: Set order CRUD */
 .set-order-del {

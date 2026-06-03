@@ -164,14 +164,16 @@ function renderPatientList() {
   showDateShift(selectedDate);
   const tbody = document.getElementById('patientListBody');
   let filtered = getPatientsForDate(selectedDate);
-  // 機能7: ソート
+  // 機能7: ソート（昇順/降順対応）
+  const dir = currentSortAsc ? 1 : -1;
   if (currentSortMode === 'name') {
-    filtered.sort((a,b) => (a.nameKana||a.name).localeCompare(b.nameKana||b.name, 'ja'));
+    filtered.sort((a,b) => dir * (a.nameKana||a.name).localeCompare(b.nameKana||b.name, 'ja'));
   } else if (currentSortMode === 'status') {
     const ord = {active:0, waiting:1, done:2};
-    filtered.sort((a,b) => (ord[a.status]||1) - (ord[b.status]||1));
+    filtered.sort((a,b) => dir * ((ord[a.status]||1) - (ord[b.status]||1)));
+  } else if (currentSortMode === 'arrival') {
+    filtered.sort((a,b) => dir * ((a.arrivedAt||'99:99').localeCompare(b.arrivedAt||'99:99')));
   }
-  // arrival = default order (by arrival time)
   let waitC = 0, activeC = 0, doneC = 0;
   if (filtered.length === 0) {
     const dbCount = patients.filter(p => p.dbSource).length;
@@ -902,6 +904,16 @@ function renderPatientInfoTab(p) {
       h += '<div class="info-row"><span class="label">保険種別</span><span class="value">' + p.insurance + '</span></div>';
       h += '<div class="info-row"><span class="label">負担割合</span><span class="value" style="font-weight:700;color:var(--primary);">' + (p.ratio * 100) + '%</span></div>';
       if (p.kouhiNumber) h += '<div class="info-row"><span class="label">公費</span><span class="value">' + p.kouhiNumber + '</span></div>';
+      if (p.recipientNumber) h += '<div class="info-row"><span class="label">受給者番号</span><span class="value">' + p.recipientNumber + '</span></div>';
+      if (p.iryoType) {
+        h += '<div class="info-section" style="margin-top:6px;"><div class="info-section-title" style="color:#7c3aed;">医療証</div>';
+        h += '<div class="info-row"><span class="label">種別</span><span class="value">' + p.iryoType + '</span></div>';
+        if (p.iryoRecipientNumber) h += '<div class="info-row"><span class="label">受給者番号</span><span class="value">' + p.iryoRecipientNumber + '</span></div>';
+        if (p.iryoValidFrom || p.iryoValidTo) h += '<div class="info-row"><span class="label">有効期間</span><span class="value">' + (p.iryoValidFrom||'') + ' 〜 ' + (p.iryoValidTo||'') + '</span></div>';
+        if (p.iryoMemo) h += '<div class="info-row"><span class="label">備考</span><span class="value" style="font-size:10px;">' + p.iryoMemo + '</span></div>';
+        if (p.iryoPhoto) h += '<div style="margin-top:4px;"><img src="' + p.iryoPhoto + '" style="max-height:80px;border-radius:4px;border:1px solid var(--border);"></div>';
+        h += '</div>';
+      }
       break;
 
     case 'allergy':
@@ -1341,6 +1353,14 @@ function openInsuranceModal() {
   // OCRプレビューをリセット
   document.getElementById('insuranceOcrPreviewWrap').style.display = 'none';
   document.getElementById('insuranceOcrCameraWrap').style.display = 'none';
+  // 医療証データ復元
+  if (p.iryoPhoto) { document.getElementById('iryoPhotoPreview').src = p.iryoPhoto; document.getElementById('iryoPhotoPreview').style.display = 'block'; document.getElementById('iryoUploadText').style.display = 'none'; document.getElementById('iryoPhotoDeleteBtn').style.display = ''; }
+  else { document.getElementById('iryoPhotoPreview').style.display = 'none'; document.getElementById('iryoUploadText').style.display = ''; document.getElementById('iryoPhotoDeleteBtn').style.display = 'none'; }
+  document.getElementById('iryoType').value = p.iryoType || '';
+  document.getElementById('iryoRecipientNumber').value = p.iryoRecipientNumber || '';
+  document.getElementById('iryoValidFrom').value = p.iryoValidFrom || '';
+  document.getElementById('iryoValidTo').value = p.iryoValidTo || '';
+  document.getElementById('iryoMemo').value = p.iryoMemo || '';
   document.getElementById('insurancePhotoModal').classList.add('show');
   if (p.insurerNumber) { setTimeout(function() { runInsuranceCalc(); }, 100); }
 }
@@ -1404,8 +1424,14 @@ function saveInsuranceInfo() {
   p.ratio = ratio;
   const rl = ratio===0.1?'1割':ratio===0.2?'2割':ratio===0.05?'5%':ratio===0.3?'3割':'0割';
   p.insurance = type === '後期高齢者' ? '後期高齢者' + rl : type === '公費' ? '公費' : type + rl;
-  postToApi('saveInsurance', { '患者ID': p.id, '保険区分': type, '番号': p.insuranceNumber, '保険者番号': p.insurerNumber, '公費番号': p.kouhiNumber, '所得区分': p.incomeLevel, '負担割合': ratio });
-  closeModal('insurancePhotoModal'); renderAllKarte(); showToast('保険証情報を更新');
+  // 医療証データ保存
+  p.iryoType = document.getElementById('iryoType').value;
+  p.iryoRecipientNumber = document.getElementById('iryoRecipientNumber').value;
+  p.iryoValidFrom = document.getElementById('iryoValidFrom').value;
+  p.iryoValidTo = document.getElementById('iryoValidTo').value;
+  p.iryoMemo = document.getElementById('iryoMemo').value;
+  postToApi('saveInsurance', { '患者ID': p.id, '保険区分': type, '番号': p.insuranceNumber, '保険者番号': p.insurerNumber, '公費番号': p.kouhiNumber, '所得区分': p.incomeLevel, '負担割合': ratio, '医療証種別': p.iryoType, '医療証受給者番号': p.iryoRecipientNumber });
+  closeModal('insurancePhotoModal'); renderAllKarte(); showToast('保険証・医療証情報を更新');
 }
 
 // v0.4: ルール参照モーダル
@@ -1555,12 +1581,26 @@ function toWareki(dateStr) {
   return dateStr;
 }
 
-// ===== v0.8: 機能7 患者一覧ソート =====
+// ===== v0.8: 機能7 患者一覧ソート（昇順/降順トグル） =====
 let currentSortMode = 'arrival';
+let currentSortAsc = true;
 function sortPatientList(mode) {
-  currentSortMode = mode;
+  if (currentSortMode === mode) { currentSortAsc = !currentSortAsc; }
+  else { currentSortMode = mode; currentSortAsc = true; }
+  updateSortBtnUI();
   renderPatientList();
-  showToast('並替: ' + (mode==='name'?'名前順':mode==='status'?'状態順':'来院順'));
+  const dir = currentSortAsc ? '昇順' : '降順';
+  showToast('並替: ' + (mode==='name'?'名前':mode==='status'?'状態':'来院') + ' ' + dir);
+}
+function updateSortBtnUI() {
+  ['name','arrival','status'].forEach(m => {
+    const btn = document.getElementById('sortBtn' + m.charAt(0).toUpperCase() + m.slice(1));
+    if (!btn) return;
+    const arrow = currentSortMode === m ? (currentSortAsc ? ' ▲' : ' ▼') : '';
+    const label = m==='name'?'名前':m==='arrival'?'来院':'状態';
+    btn.textContent = label + arrow;
+    btn.classList.toggle('sort-active', currentSortMode === m);
+  });
 }
 
 // ===== v0.8: 機能8 検査セクション折りたたみ =====
@@ -1633,66 +1673,151 @@ function processInsuranceOcrImage(dataUrl) {
   document.getElementById('insuranceOcrProgressArea').style.display = '';
   document.getElementById('insuranceOcrResultArea').style.display = 'none';
   document.getElementById('insuranceOcrApplyBtn').style.display = 'none';
-  // OCR実行（既存のocrInsuranceCard関数を流用）
-  if (typeof ocrInsuranceCard === 'function') {
-    ocrInsuranceCard(dataUrl, function(progress) {
-      document.getElementById('insuranceOcrProgressFill').style.width = Math.round(progress*100) + '%';
-      document.getElementById('insuranceOcrProgressText').textContent = Math.round(progress*100) + '%';
-    }).then(function(result) {
-      document.getElementById('insuranceOcrProgressArea').style.display = 'none';
-      document.getElementById('insuranceOcrResultArea').style.display = '';
-      document.getElementById('insuranceOcrResultArea').innerHTML = formatOcrResult(result);
-      document.getElementById('insuranceOcrApplyBtn').style.display = '';
-      window._insuranceOcrResult = result;
-    }).catch(function(e) {
-      document.getElementById('insuranceOcrProgressArea').style.display = 'none';
-      document.getElementById('insuranceOcrResultArea').style.display = '';
-      document.getElementById('insuranceOcrResultArea').textContent = 'OCR失敗: ' + e.message;
-    });
-  } else {
-    // ocrInsuranceCardが無い場合はTesseractで直接OCR
-    document.getElementById('insuranceOcrProgressText').textContent = 'OCRエンジン準備中...';
-    Tesseract.recognize(dataUrl, 'jpn', {
-      logger: function(m) { if (m.progress) { document.getElementById('insuranceOcrProgressFill').style.width = Math.round(m.progress*100) + '%'; document.getElementById('insuranceOcrProgressText').textContent = Math.round(m.progress*100) + '%'; } }
-    }).then(function(r) {
-      document.getElementById('insuranceOcrProgressArea').style.display = 'none';
-      document.getElementById('insuranceOcrResultArea').style.display = '';
-      document.getElementById('insuranceOcrResultArea').innerHTML = '<div style="font-size:11px;white-space:pre-wrap;max-height:120px;overflow-y:auto;">' + r.data.text + '</div>';
-      document.getElementById('insuranceOcrApplyBtn').style.display = '';
-      window._insuranceOcrResult = {rawText: r.data.text};
-    }).catch(function(e) {
-      document.getElementById('insuranceOcrProgressArea').style.display = 'none';
-      document.getElementById('insuranceOcrResultArea').style.display = '';
-      document.getElementById('insuranceOcrResultArea').textContent = 'OCR失敗: ' + e.message;
-    });
-  }
+
+  // ===== ハイブリッド方式: QRコード優先 → OCR補完（新規登録と同じ方式） =====
+  document.getElementById('insuranceOcrProgressText').textContent = 'QRコード検出中...';
+  document.getElementById('insuranceOcrProgressFill').style.width = '10%';
+
+  const qrPromise = (typeof QR_DECODER !== 'undefined')
+    ? QR_DECODER.decodeFromDataUrl(dataUrl)
+    : Promise.resolve(null);
+
+  qrPromise.then(function(qrResult) {
+    document.getElementById('insuranceOcrProgressText').textContent = 'OCR実行中...';
+    document.getElementById('insuranceOcrProgressFill').style.width = '20%';
+
+    // OCR_ENGINE（ocr_engine.js）がある場合はそちらを使用
+    if (typeof OCR_ENGINE !== 'undefined' && OCR_ENGINE.recognize) {
+      return OCR_ENGINE.recognize(dataUrl, function(status, pct) {
+        document.getElementById('insuranceOcrProgressText').textContent = status;
+        document.getElementById('insuranceOcrProgressFill').style.width = (20 + pct * 80) + '%';
+      }).then(function(data) { return { qrResult: qrResult, ocrData: data }; });
+    } else {
+      // fallback: Tesseract直接
+      return Tesseract.recognize(dataUrl, 'jpn', {
+        logger: function(m) { if (m.progress) { document.getElementById('insuranceOcrProgressFill').style.width = (20 + m.progress * 80) + '%'; document.getElementById('insuranceOcrProgressText').textContent = Math.round(m.progress*100) + '%'; } }
+      }).then(function(r) { return { qrResult: qrResult, ocrData: { text: r.data.text } }; });
+    }
+  }).then(function(result) {
+    var qrResult = result.qrResult;
+    var ocrData = result.ocrData;
+    document.getElementById('insuranceOcrProgressArea').style.display = 'none';
+
+    // OCRフィールド抽出
+    var ocrFields = {};
+    if (typeof OCR_ENGINE !== 'undefined' && OCR_ENGINE.extractInsuranceFields) {
+      ocrFields = ocrData._mergedFields || OCR_ENGINE.extractInsuranceFields(ocrData.text);
+      if (typeof validateOcrFields === 'function') validateOcrFields(ocrFields);
+    } else {
+      ocrFields = { rawText: ocrData.text };
+    }
+
+    // QRデータをOCR結果にマージ（QR優先）
+    if (typeof mergeQrAndOcr === 'function') {
+      ocrFields = mergeQrAndOcr(qrResult, ocrFields);
+    } else if (qrResult && qrResult.insurerNumber) {
+      ocrFields.insurerNumber = qrResult.insurerNumber;
+      if (qrResult.symbol) ocrFields.symbol = qrResult.symbol;
+      if (qrResult.memberNumber) ocrFields.memberNumber = qrResult.memberNumber;
+      ocrFields._qrResult = qrResult;
+    }
+
+    window._insuranceOcrResult = ocrFields;
+
+    // 結果表示
+    var area = document.getElementById('insuranceOcrResultArea');
+    area.style.display = '';
+    area.innerHTML = renderInsuranceOcrResultHTML(ocrFields);
+    document.getElementById('insuranceOcrApplyBtn').style.display = '';
+  }).catch(function(e) {
+    document.getElementById('insuranceOcrProgressArea').style.display = 'none';
+    document.getElementById('insuranceOcrResultArea').style.display = '';
+    document.getElementById('insuranceOcrResultArea').textContent = '読取エラー: ' + e.message;
+  });
+
   // 写真としても保存
-  const p = patients.find(x => x.id === currentPatientId);
+  var p = patients.find(function(x) { return x.id === currentPatientId; });
   if (p) { p.insurancePhoto = dataUrl; document.getElementById('insurancePhotoPreview').src = dataUrl; document.getElementById('insurancePhotoPreview').style.display = 'block'; document.getElementById('insuranceUploadText2').style.display = 'none'; document.getElementById('insurancePhotoDeleteBtn').style.display = ''; }
 }
-function formatOcrResult(result) {
-  if (!result) return '';
-  let h = '<div style="font-size:11px;">';
-  if (result.name) h += '<div>氏名: <b>' + result.name + '</b></div>';
-  if (result.insurerNumber) h += '<div>保険者番号: ' + result.insurerNumber + '</div>';
-  if (result.number) h += '<div>記号番号: ' + result.number + '</div>';
-  if (result.expiry) h += '<div>有効期限: ' + result.expiry + '</div>';
-  if (result.rawText) h += '<div style="white-space:pre-wrap;max-height:80px;overflow-y:auto;color:var(--text-muted);margin-top:4px;">' + result.rawText + '</div>';
-  h += '</div>';
+
+function renderInsuranceOcrResultHTML(f) {
+  var hasQR = f._qrResult && f._qrResult.format !== 'unknown';
+  var h = '';
+  if (hasQR) {
+    h += '<div style="background:#d4edda;border:1px solid #28a745;border-radius:4px;padding:4px 8px;margin-bottom:6px;font-size:11px;color:#155724;font-weight:700;">&#10004; QRコード読取成功</div>';
+  }
+  if (f._validationWarnings && f._validationWarnings.length > 0) {
+    h += '<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:4px 8px;margin-bottom:4px;font-size:10px;color:#856404;">&#9888; ' + f._validationWarnings.join('<br>&#9888; ') + '</div>';
+  }
+  var rows = [
+    { l:'保険者番号', v:f.insurerNumber, qr:f._insurerFromQR },
+    { l:'記号', v:f.symbol, qr:f._symbolFromQR },
+    { l:'番号', v:f.memberNumber, qr:f._memberFromQR },
+    { l:'枝番', v:f.edaban, qr:f._edabanFromQR },
+    { l:'フリガナ', v:f.nameKana },
+    { l:'氏名', v:f.name },
+    { l:'生年月日', v:f.dob },
+    { l:'住所', v:f.address }
+  ];
+  rows.forEach(function(r) {
+    if (!r.v) return;
+    var icon = r.qr ? ' <span style="color:#28a745;font-size:10px;">&#10004;QR</span>' : ' <span style="color:#f59e0b;font-size:10px;">&#9888;要確認</span>';
+    h += '<div style="font-size:11px;display:flex;gap:4px;margin-bottom:2px;"><span style="color:var(--text-muted);min-width:70px;">' + r.l + '</span><b>' + r.v + '</b>' + icon + '</div>';
+  });
+  if (f.rawText && !f.insurerNumber && !f.nameKana) {
+    h += '<div style="font-size:10px;white-space:pre-wrap;max-height:80px;overflow-y:auto;color:var(--text-muted);margin-top:4px;border-top:1px solid var(--border);padding-top:4px;">' + f.rawText + '</div>';
+  }
+  if (!hasQR) {
+    h += '<div style="font-size:10px;color:#856404;margin-top:4px;">&#9888; QRコード未検出。OCR参考値のため必ず目視確認してください。</div>';
+  }
   return h;
 }
+
 function applyInsuranceOcrResults() {
-  const result = window._insuranceOcrResult;
-  if (!result) return;
-  if (result.insurerNumber) { document.getElementById('insurerNumberInput').value = result.insurerNumber; onInsurerNumberInput(result.insurerNumber); }
-  if (result.number) document.getElementById('insuranceNumber').value = result.number;
-  if (result.expiry) document.getElementById('insuranceExpiry').value = result.expiry;
-  if (result.insurerName) document.getElementById('insurerName').value = result.insurerName;
-  showToast('OCR結果を反映しました（内容をご確認ください）');
+  var f = window._insuranceOcrResult;
+  if (!f) return;
+  if (f.insurerNumber) { document.getElementById('insurerNumberInput').value = f.insurerNumber; onInsurerNumberInput(f.insurerNumber); }
+  if (f.symbol && f.memberNumber) {
+    document.getElementById('insuranceNumber').value = (f.symbol || '') + '-' + (f.memberNumber || '');
+  } else if (f.symbol) {
+    document.getElementById('insuranceNumber').value = f.symbol;
+  }
+  if (f.edaban) {
+    var cur = document.getElementById('insuranceNumber').value;
+    if (cur && !cur.includes('枝')) document.getElementById('insuranceNumber').value = cur + ' (枝' + f.edaban + ')';
+  }
+  showToast('読取結果を反映しました（内容をご確認ください）');
 }
 function clearInsuranceOcrPreview() {
   document.getElementById('insuranceOcrPreviewWrap').style.display = 'none';
   window._insuranceOcrResult = null;
+}
+
+// ===== v0.8: 医療証写真・データ管理 =====
+function handleIryoPhoto(input) {
+  var file = input.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var p = patients.find(function(x) { return x.id === currentPatientId; });
+    if (!p) return;
+    p.iryoPhoto = e.target.result;
+    document.getElementById('iryoPhotoPreview').src = e.target.result;
+    document.getElementById('iryoPhotoPreview').style.display = 'block';
+    document.getElementById('iryoUploadText').style.display = 'none';
+    document.getElementById('iryoPhotoDeleteBtn').style.display = '';
+    showToast('医療証写真を保存');
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+function deleteIryoPhoto() {
+  if (!confirm('医療証写真を削除しますか？')) return;
+  var p = patients.find(function(x) { return x.id === currentPatientId; });
+  if (p) p.iryoPhoto = null;
+  document.getElementById('iryoPhotoPreview').style.display = 'none';
+  document.getElementById('iryoUploadText').style.display = '';
+  document.getElementById('iryoPhotoDeleteBtn').style.display = 'none';
+  showToast('医療証写真を削除');
 }
 
 // ===== Init =====
