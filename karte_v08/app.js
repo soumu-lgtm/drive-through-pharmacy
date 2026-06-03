@@ -173,6 +173,9 @@ function renderPatientList() {
     filtered.sort((a,b) => dir * ((ord[a.status]||1) - (ord[b.status]||1)));
   } else if (currentSortMode === 'arrival') {
     filtered.sort((a,b) => dir * ((a.arrivedAt||'99:99').localeCompare(b.arrivedAt||'99:99')));
+  } else if (currentSortMode === 'number') {
+    // 元のインデックス順（patients配列の並び）
+    filtered.sort((a,b) => dir * (patients.indexOf(a) - patients.indexOf(b)));
   }
   let waitC = 0, activeC = 0, doneC = 0;
   if (filtered.length === 0) {
@@ -1601,6 +1604,9 @@ function updateSortBtnUI() {
     btn.textContent = label + arrow;
     btn.classList.toggle('sort-active', currentSortMode === m);
   });
+  // #列ヘッダー矢印
+  const numH = document.getElementById('sortHeaderNum');
+  if (numH) numH.textContent = currentSortMode === 'number' ? (currentSortAsc ? '▲' : '▼') : '';
 }
 
 // ===== v0.8: 機能8 検査セクション折りたたみ =====
@@ -1673,6 +1679,7 @@ function processInsuranceOcrImage(dataUrl) {
   document.getElementById('insuranceOcrProgressArea').style.display = '';
   document.getElementById('insuranceOcrResultArea').style.display = 'none';
   document.getElementById('insuranceOcrApplyBtn').style.display = 'none';
+  document.getElementById('insuranceOcrApplyQrOnlyBtn').style.display = 'none';
 
   // ===== ハイブリッド方式: QRコード優先 → OCR補完（新規登録と同じ方式） =====
   document.getElementById('insuranceOcrProgressText').textContent = 'QRコード検出中...';
@@ -1729,6 +1736,9 @@ function processInsuranceOcrImage(dataUrl) {
     area.style.display = '';
     area.innerHTML = renderInsuranceOcrResultHTML(ocrFields);
     document.getElementById('insuranceOcrApplyBtn').style.display = '';
+    // QRのみ反映ボタンはQR検出成功時のみ表示
+    var hasQR = ocrFields._qrResult && ocrFields._qrResult.format !== 'unknown';
+    document.getElementById('insuranceOcrApplyQrOnlyBtn').style.display = hasQR ? '' : 'none';
   }).catch(function(e) {
     document.getElementById('insuranceOcrProgressArea').style.display = 'none';
     document.getElementById('insuranceOcrResultArea').style.display = '';
@@ -1773,20 +1783,36 @@ function renderInsuranceOcrResultHTML(f) {
   return h;
 }
 
-function applyInsuranceOcrResults() {
+function applyInsuranceOcrResults(qrOnly) {
   var f = window._insuranceOcrResult;
   if (!f) return;
-  if (f.insurerNumber) { document.getElementById('insurerNumberInput').value = f.insurerNumber; onInsurerNumberInput(f.insurerNumber); }
-  if (f.symbol && f.memberNumber) {
-    document.getElementById('insuranceNumber').value = (f.symbol || '') + '-' + (f.memberNumber || '');
-  } else if (f.symbol) {
-    document.getElementById('insuranceNumber').value = f.symbol;
+  if (qrOnly) {
+    // QR由来フィールドのみ反映（確実なデータだけ）
+    if (f._insurerFromQR && f.insurerNumber) { document.getElementById('insurerNumberInput').value = f.insurerNumber; onInsurerNumberInput(f.insurerNumber); }
+    if (f._symbolFromQR && f.symbol) {
+      var num = f.symbol;
+      if (f._memberFromQR && f.memberNumber) num += '-' + f.memberNumber;
+      document.getElementById('insuranceNumber').value = num;
+    }
+    if (f._edabanFromQR && f.edaban) {
+      var cur = document.getElementById('insuranceNumber').value;
+      if (cur && !cur.includes('枝')) document.getElementById('insuranceNumber').value = cur + ' (枝' + f.edaban + ')';
+    }
+    showToast('QR読取データのみ反映しました');
+  } else {
+    // 全項目反映（QR+OCR）
+    if (f.insurerNumber) { document.getElementById('insurerNumberInput').value = f.insurerNumber; onInsurerNumberInput(f.insurerNumber); }
+    if (f.symbol && f.memberNumber) {
+      document.getElementById('insuranceNumber').value = (f.symbol || '') + '-' + (f.memberNumber || '');
+    } else if (f.symbol) {
+      document.getElementById('insuranceNumber').value = f.symbol;
+    }
+    if (f.edaban) {
+      var cur2 = document.getElementById('insuranceNumber').value;
+      if (cur2 && !cur2.includes('枝')) document.getElementById('insuranceNumber').value = cur2 + ' (枝' + f.edaban + ')';
+    }
+    showToast('読取結果を反映しました（内容をご確認ください）');
   }
-  if (f.edaban) {
-    var cur = document.getElementById('insuranceNumber').value;
-    if (cur && !cur.includes('枝')) document.getElementById('insuranceNumber').value = cur + ' (枝' + f.edaban + ')';
-  }
-  showToast('読取結果を反映しました（内容をご確認ください）');
 }
 function clearInsuranceOcrPreview() {
   document.getElementById('insuranceOcrPreviewWrap').style.display = 'none';

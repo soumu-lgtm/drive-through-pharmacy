@@ -56,7 +56,7 @@
     <table class="patient-table">
       <thead>
         <tr>
-          <th>#</th>
+          <th style="cursor:pointer;user-select:none;" onclick="sortPatientList('number')" title="番号順"># <span id="sortHeaderNum"></span></th>
           <th>状態</th>
           <th>患者名</th>
           <th>年齢/性別</th>
@@ -536,7 +536,8 @@
         </div>
         <div style="text-align:right;margin-top:6px;">
           <button class="btn btn-sm btn-outline" onclick="clearInsuranceOcrPreview()">クリア</button>
-          <button class="btn btn-sm btn-success" id="insuranceOcrApplyBtn" style="display:none;" onclick="applyInsuranceOcrResults()">読取結果を反映</button>
+          <button class="btn btn-sm btn-outline" id="insuranceOcrApplyQrOnlyBtn" style="display:none;color:#28a745;border-color:#28a745;" onclick="applyInsuranceOcrResults(true)">QRのみ反映</button>
+          <button class="btn btn-sm btn-success" id="insuranceOcrApplyBtn" style="display:none;" onclick="applyInsuranceOcrResults(false)">全て反映</button>
         </div>
       </div>
     </div>
