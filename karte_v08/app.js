@@ -1158,23 +1158,60 @@ function renderExamCheckList() {
 function toggleExam(id) { const k = karteData[currentPatientId]; const i = k.selectedExams.indexOf(id); if (i >= 0) k.selectedExams.splice(i,1); else k.selectedExams.push(id); recalcBilling(); }
 
 // ===== Billing Menu (Phase 4) =====
-let billingMyList = loadBillingMyList();
-function loadBillingMyList() { try { const s = localStorage.getItem('karte_billingMyList'); if (s) return JSON.parse(s); } catch(e) {} return []; }
-function saveBillingMyList() { localStorage.setItem('karte_billingMyList', JSON.stringify(billingMyList)); }
+var billingMyLists = loadBillingMyLists();
+var currentMyListIdx = 0;
+function loadBillingMyLists() {
+  try {
+    var s = localStorage.getItem('karte_billingMyLists');
+    if (s) { var d = JSON.parse(s); if (Array.isArray(d) && d.length) return d; }
+    // migrate from old single list
+    var old = localStorage.getItem('karte_billingMyList');
+    if (old) { var items = JSON.parse(old); if (items.length) return [{name:'マイリスト1', items:items}]; }
+  } catch(e) {}
+  return [{name:'マイリスト1', items:[]}];
+}
+function saveBillingMyLists() { localStorage.setItem('karte_billingMyLists', JSON.stringify(billingMyLists)); }
+function currentMyList() { return billingMyLists[currentMyListIdx] || billingMyLists[0]; }
 
 function switchBillingTab(cat) {
+  if (cat === 'mylist' && currentBillingTab === 'mylist') {
+    // already on mylist — cycle to next list
+    currentMyListIdx = (currentMyListIdx + 1) % billingMyLists.length;
+    renderMyListTab();
+    renderBillingMenu();
+    return;
+  }
   currentBillingTab = cat;
-  document.querySelectorAll('.bm-tab').forEach(t => t.classList.toggle('active', t.dataset.cat === cat));
+  document.querySelectorAll('.bm-tab').forEach(function(t) { t.classList.toggle('active', t.dataset.cat === cat); });
   renderBillingMenu();
+}
+function renderMyListTab() {
+  var tab = document.querySelector('.bm-tab-mylist');
+  if (tab) tab.innerHTML = '&#9733; ' + currentMyList().name;
 }
 function renderBillingMenu() {
   var el = document.getElementById('billingMenuItems');
   if (currentBillingTab === 'mylist') {
-    if (!billingMyList.length) { el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text-muted);font-size:11px;">マイリストが空です<br>各タブの★ボタンで登録できます</div>'; return; }
-    el.innerHTML = billingMyList.map(function(it,i) {
+    var ml = currentMyList();
+    var header = '<div class="bm-mylist-header">' +
+      '<span class="bm-mylist-name" onclick="renameBillingMyList()" title="クリックで名前変更">' + ml.name + '</span>' +
+      '<span class="bm-mylist-nav">' +
+      (billingMyLists.length > 1 ? '<span class="bm-mylist-nav-btn" onclick="cycleMyList(-1)" title="前のリスト">&#9664;</span>' : '') +
+      '<span style="font-size:10px;color:var(--text-muted);">' + (currentMyListIdx+1) + '/' + billingMyLists.length + '</span>' +
+      (billingMyLists.length > 1 ? '<span class="bm-mylist-nav-btn" onclick="cycleMyList(1)" title="次のリスト">&#9654;</span>' : '') +
+      '</span>' +
+      '<span class="bm-mylist-actions">' +
+      '<span class="bm-mylist-action-btn" onclick="addNewBillingMyList()" title="新規リスト">+</span>' +
+      (billingMyLists.length > 1 ? '<span class="bm-mylist-action-btn bm-mylist-action-del" onclick="deleteBillingMyList()" title="このリストを削除">&#128465;</span>' : '') +
+      '</span></div>';
+    if (!ml.items.length) {
+      el.innerHTML = header + '<div style="text-align:center;padding:12px;color:var(--text-muted);font-size:11px;">リストが空です<br>各タブの★ボタンで登録できます</div>';
+      return;
+    }
+    el.innerHTML = header + ml.items.map(function(it,i) {
       var eName = it.name.replace(/'/g,"\\'");
       return '<div class="bm-item bm-mylist-item">' +
-        '<span class="bm-mylist-del" onclick="removeBillingMyList(' + i + ')" title="削除">&times;</span>' +
+        '<span class="bm-mylist-del" onclick="removeBillingMyListItem(' + i + ')" title="削除">&times;</span>' +
         '<span class="bm-item-label" onclick="addBillingItem(\'' + eName + '\',' + it.points + ')">' + it.name + '</span>' +
         '<span class="bm-pts">' + it.points + '点</span></div>';
     }).join('');
@@ -1183,35 +1220,66 @@ function renderBillingMenu() {
   var items = getActiveBillingMenu()[currentBillingTab] || [];
   var search = (document.getElementById('billingMenuSearch')?.value || '').toLowerCase();
   var filtered = search ? items.filter(function(it) { return it.name.toLowerCase().includes(search); }) : items;
+  var ml = currentMyList();
   el.innerHTML = filtered.map(function(it) {
     var eName = it.name.replace(/'/g,"\\'");
-    var inMyList = billingMyList.some(function(m) { return m.name === it.name; });
+    var inMyList = ml.items.some(function(m) { return m.name === it.name; });
     return '<div class="bm-item">' +
-      '<span class="bm-fav-btn' + (inMyList ? ' bm-fav-active' : '') + '" onclick="event.stopPropagation();toggleBillingMyListItem(\'' + eName + '\',' + it.points + ')" title="マイリストに登録/解除">&#9733;</span>' +
+      '<span class="bm-fav-btn' + (inMyList ? ' bm-fav-active' : '') + '" onclick="event.stopPropagation();toggleBillingMyListItem(\'' + eName + '\',' + it.points + ')" title="' + ml.name + 'に登録/解除">&#9733;</span>' +
       '<span class="bm-item-label" onclick="addBillingItem(\'' + eName + '\',' + it.points + ')">' + it.name + '</span>' +
       '<span class="bm-pts">' + it.points + '点</span></div>';
   }).join('');
 }
 function filterBillingMenu(q) { renderBillingMenu(); }
 function addBillingItem(name, points) {
-  const k = karteData[currentPatientId];
-  if (!k.addedBillingItems.find(x => x.name === name)) {
-    k.addedBillingItems.push({name, points});
+  var k = karteData[currentPatientId];
+  if (!k.addedBillingItems.find(function(x) { return x.name === name; })) {
+    k.addedBillingItems.push({name:name, points:points});
     recalcBilling();
     showToast(name + ' を追加');
   }
 }
 function toggleBillingMyListItem(name, points) {
-  const idx = billingMyList.findIndex(function(m) { return m.name === name; });
-  if (idx >= 0) { billingMyList.splice(idx, 1); showToast(name + ' をマイリストから削除'); }
-  else { billingMyList.push({name:name, points:points}); showToast(name + ' をマイリストに登録'); }
-  saveBillingMyList(); renderBillingMenu();
+  var ml = currentMyList();
+  var idx = ml.items.findIndex(function(m) { return m.name === name; });
+  if (idx >= 0) { ml.items.splice(idx, 1); showToast(name + ' を' + ml.name + 'から削除'); }
+  else { ml.items.push({name:name, points:points}); showToast(name + ' を' + ml.name + 'に登録'); }
+  saveBillingMyLists(); renderBillingMenu();
 }
-function removeBillingMyList(i) {
-  const name = billingMyList[i].name;
-  billingMyList.splice(i, 1); saveBillingMyList(); renderBillingMenu(); showToast(name + ' をマイリストから削除');
+function removeBillingMyListItem(i) {
+  var ml = currentMyList();
+  var name = ml.items[i].name;
+  ml.items.splice(i, 1); saveBillingMyLists(); renderBillingMenu(); showToast(name + ' を削除');
 }
-// openBillingMyListManager removed — managed inline via ★ buttons and mylist tab
+function cycleMyList(dir) {
+  currentMyListIdx = (currentMyListIdx + dir + billingMyLists.length) % billingMyLists.length;
+  renderMyListTab(); renderBillingMenu();
+}
+function addNewBillingMyList() {
+  var name = prompt('新しいリスト名:', 'マイリスト' + (billingMyLists.length + 1));
+  if (!name) return;
+  billingMyLists.push({name:name, items:[]});
+  currentMyListIdx = billingMyLists.length - 1;
+  saveBillingMyLists(); renderMyListTab(); renderBillingMenu();
+  showToast(name + ' を作成');
+}
+function deleteBillingMyList() {
+  if (billingMyLists.length <= 1) return;
+  var ml = currentMyList();
+  if (!confirm(ml.name + ' を削除しますか？')) return;
+  billingMyLists.splice(currentMyListIdx, 1);
+  if (currentMyListIdx >= billingMyLists.length) currentMyListIdx = billingMyLists.length - 1;
+  saveBillingMyLists(); renderMyListTab(); renderBillingMenu();
+  showToast('リストを削除');
+}
+function renameBillingMyList() {
+  var ml = currentMyList();
+  var name = prompt('リスト名を変更:', ml.name);
+  if (!name || name === ml.name) return;
+  ml.name = name;
+  saveBillingMyLists(); renderMyListTab(); renderBillingMenu();
+  showToast('名前を変更: ' + name);
+}
 
 // ===== Billing =====
 function recalcBilling() {
