@@ -902,13 +902,33 @@ body.resizing img {
   vertical-align: middle;
 }
 .set-order-del:hover { background: var(--danger-light); }
-.set-order-add, .set-order-save {
+.set-order-save, .set-order-manage {
   background: var(--card) !important;
   border: 1px dashed var(--border) !important;
   color: var(--primary) !important;
   font-size: 11px !important;
 }
-.set-order-add:hover, .set-order-save:hover { background: var(--primary-light) !important; }
+.set-order-save:hover, .set-order-manage:hover { background: var(--primary-light) !important; }
+
+/* Set Order Manager Modal */
+.set-manager-modal { max-width: 440px; width: 90vw; max-height: 70vh; overflow-y: auto; }
+.set-manager-list { display: flex; flex-direction: column; gap: 4px; }
+.set-manager-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--bg); border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.set-manager-info { flex: 1; min-width: 0; }
+.set-manager-name { font-size: 12px; font-weight: 600; color: var(--text); display: block; }
+.set-manager-detail { font-size: 10px; color: var(--text-muted); display: block; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px; }
+.set-manager-del { background: none; border: 1px solid var(--danger); color: var(--danger); font-size: 10px; padding: 2px 8px; border-radius: var(--radius-sm); cursor: pointer; }
+.set-manager-del:hover { background: var(--danger-light); }
+.set-manager-close { background: var(--primary); color: #fff; border: none; padding: 6px 18px; border-radius: var(--radius-sm); cursor: pointer; font-size: 12px; }
+.set-manager-close:hover { opacity: 0.9; }
+
+/* Billing MyList */
+.bm-tab-mylist { color: #d97706 !important; font-weight: 700; }
+.bm-tab-mylist.active { background: #fef3c7 !important; border-color: #d97706 !important; color: #92400e !important; }
+.bm-star { color: #d97706; font-size: 10px; margin-right: 2px; }
+.bm-mylist-item { position: relative; }
+.bm-mylist-del { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); color: var(--danger); font-size: 14px; cursor: pointer; padding: 0 4px; line-height: 1; }
+.bm-mylist-del:hover { color: #b91c1c; }
 
 /* v0.8: Added billing list */
 .added-billing-list { margin-top: 4px; }

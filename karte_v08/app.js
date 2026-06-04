@@ -1082,11 +1082,10 @@ function renderSelectedDiseases() {
 function renderSetOrders() {
   const el = document.getElementById('setOrderBtns');
   el.innerHTML = setOrders.map((s,i) =>
-    '<button class="set-order-btn" onclick="applySetOrder(' + i + ')">' + s.name + '</button>' +
-    (!s.builtin ? '<span class="set-order-del" onclick="deleteSetOrder(' + i + ')" title="削除">&times;</span>' : '')
+    '<button class="set-order-btn" onclick="applySetOrder(' + i + ')">' + s.name + '</button>'
   ).join('') +
-  '<button class="set-order-btn set-order-add" onclick="openSetOrderEditor()" title="新規セット作成">+ 作成</button>' +
-  '<button class="set-order-btn set-order-save" onclick="saveCurrentAsSet()" title="現在の処方をセットとして保存">&#128190; 保存</button>';
+  '<button class="set-order-btn set-order-save" onclick="saveCurrentAsSet()" title="現在の処方をセットとして保存">&#128190; 保存</button>' +
+  '<button class="set-order-btn set-order-manage" onclick="openSetOrderManager()" title="セット整理・削除">&#9881; 管理</button>';
 }
 function applySetOrder(i) { const s = setOrders[i]; const k = karteData[currentPatientId]; k.prescriptions = []; s.items.forEach(item => { const d = drugs.find(x => x.id === item.drugId); if (d) k.prescriptions.push({drug:d,qty:item.qty,days:s.days}); }); k.rxDays = s.days; document.getElementById('rxDays').value = s.days; renderRxList(); recalcBilling(); showToast(s.name + 'を適用'); }
 function doRx() { const p = patients.find(x => x.id === currentPatientId); const k = karteData[currentPatientId]; k.prescriptions = []; p.prevRx.forEach(rx => { const d = drugs.find(x => x.id === rx.drugId); if (d) k.prescriptions.push({drug:d,qty:rx.qty,days:p.prevDays}); }); k.rxDays = p.prevDays; document.getElementById('rxDays').value = p.prevDays; renderRxList(); recalcBilling(); showToast('Do処方を適用'); }
@@ -1100,10 +1099,34 @@ function saveCurrentAsSet() {
   setOrders.push({name:name,items:items,days:days,builtin:false});
   saveSetOrders(); renderSetOrders(); showToast(name + ' を保存');
 }
-function openSetOrderEditor() {
-  const name = prompt('新しいセット名を入力:');
-  if (!name) return;
-  showToast('薬品を検索・追加してから「💾 保存」でセットに登録できます');
+function openSetOrderManager() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+  const modal = document.createElement('div');
+  modal.className = 'modal-content set-manager-modal';
+  function render() {
+    modal.innerHTML = '<h3 style="margin:0 0 12px;font-size:15px;color:var(--primary);">処方セット管理</h3>' +
+      '<div class="set-manager-list">' +
+      setOrders.map(function(s,i) {
+        const drugNames = s.items.map(function(it) { const d = drugs.find(function(x) { return x.id === it.drugId; }); return d ? d.name + ' x' + it.qty : it.drugId; }).join(', ');
+        return '<div class="set-manager-item">' +
+          '<div class="set-manager-info"><span class="set-manager-name">' + s.name + (s.builtin ? ' <span style="font-size:9px;color:var(--text-muted);">(組込)</span>' : '') + '</span>' +
+          '<span class="set-manager-detail">' + drugNames + ' / ' + s.days + '日分</span></div>' +
+          '<div class="set-manager-actions">' +
+          (!s.builtin ? '<button class="set-manager-del" onclick="deleteSetOrderFromManager(' + i + ')">削除</button>' : '') +
+          '</div></div>';
+      }).join('') +
+      '</div>' +
+      '<div style="text-align:right;margin-top:12px;"><button class="set-manager-close" onclick="this.closest(\'.modal-overlay\').remove()">閉じる</button></div>';
+  }
+  window.deleteSetOrderFromManager = function(i) {
+    if (!confirm(setOrders[i].name + ' を削除しますか？')) return;
+    setOrders.splice(i,1); saveSetOrders(); renderSetOrders(); render(); showToast('セットを削除');
+  };
+  render();
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
 }
 function searchDrug(q) { const r = document.getElementById('drugResults'); if (!q) { r.classList.remove('show'); return; } const f = drugs.filter(d => d.name.includes(q) || d.category.includes(q)); if (!f.length) { r.classList.remove('show'); return; } r.innerHTML = f.map(d => '<div class="drug-result-item" onclick="addDrug(\'' + d.id + '\')"><span>' + d.name + stockBadge(d.name) + '</span><span class="price">' + (d.price ? d.price.toFixed(1) + '円' : '') + '</span></div>').join(''); r.classList.add('show'); }
 function addDrug(id) { const d = drugs.find(x => x.id === id); if (!d) return; const k = karteData[currentPatientId]; const ex = k.prescriptions.find(rx => rx.drug.id === id); if (ex) ex.qty += 1; else k.prescriptions.push({drug:d,qty:1,days:k.rxDays||7}); document.getElementById('drugSearch').value = ''; document.getElementById('drugResults').classList.remove('show'); renderRxList(); recalcBilling(); }
@@ -1128,16 +1151,35 @@ function renderExamCheckList() {
 function toggleExam(id) { const k = karteData[currentPatientId]; const i = k.selectedExams.indexOf(id); if (i >= 0) k.selectedExams.splice(i,1); else k.selectedExams.push(id); recalcBilling(); }
 
 // ===== Billing Menu (Phase 4) =====
+let billingMyList = loadBillingMyList();
+function loadBillingMyList() { try { const s = localStorage.getItem('karte_billingMyList'); if (s) return JSON.parse(s); } catch(e) {} return []; }
+function saveBillingMyList() { localStorage.setItem('karte_billingMyList', JSON.stringify(billingMyList)); }
+
 function switchBillingTab(cat) {
   currentBillingTab = cat;
   document.querySelectorAll('.bm-tab').forEach(t => t.classList.toggle('active', t.dataset.cat === cat));
   renderBillingMenu();
 }
 function renderBillingMenu() {
+  const el = document.getElementById('billingMenuItems');
+  if (currentBillingTab === 'mylist') {
+    if (!billingMyList.length) { el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text-muted);font-size:11px;">マイリストが空です<br>各タブの項目を長押しで登録できます</div>'; return; }
+    el.innerHTML = billingMyList.map(function(it,i) {
+      return '<div class="bm-item bm-mylist-item" onclick="addBillingItem(\'' + it.name.replace(/'/g,"\\'") + '\',' + it.points + ')">' +
+        '<span>' + it.name + '</span><span class="bm-pts">' + it.points + '点</span>' +
+        '<span class="bm-mylist-del" onclick="event.stopPropagation();removeBillingMyList(' + i + ')" title="マイリストから削除">&times;</span></div>';
+    }).join('');
+    return;
+  }
   const items = getActiveBillingMenu()[currentBillingTab] || [];
   const search = (document.getElementById('billingMenuSearch')?.value || '').toLowerCase();
   const filtered = search ? items.filter(it => it.name.toLowerCase().includes(search)) : items;
-  document.getElementById('billingMenuItems').innerHTML = filtered.map(it => '<div class="bm-item" onclick="addBillingItem(\'' + it.name.replace(/'/g,"\\'") + '\',' + it.points + ')"><span>' + it.name + '</span><span class="bm-pts">' + it.points + '点</span></div>').join('');
+  el.innerHTML = filtered.map(function(it) {
+    const inMyList = billingMyList.some(function(m) { return m.name === it.name; });
+    return '<div class="bm-item" onclick="addBillingItem(\'' + it.name.replace(/'/g,"\\'") + '\',' + it.points + ')" oncontextmenu="event.preventDefault();toggleBillingMyListItem(\'' + it.name.replace(/'/g,"\\'") + '\',' + it.points + ')">' +
+      (inMyList ? '<span class="bm-star">&#9733;</span>' : '') +
+      '<span>' + it.name + '</span><span class="bm-pts">' + it.points + '点</span></div>';
+  }).join('');
 }
 function filterBillingMenu(q) { renderBillingMenu(); }
 function addBillingItem(name, points) {
@@ -1147,6 +1189,38 @@ function addBillingItem(name, points) {
     recalcBilling();
     showToast(name + ' を追加');
   }
+}
+function toggleBillingMyListItem(name, points) {
+  const idx = billingMyList.findIndex(function(m) { return m.name === name; });
+  if (idx >= 0) { billingMyList.splice(idx, 1); showToast(name + ' をマイリストから削除'); }
+  else { billingMyList.push({name:name, points:points}); showToast(name + ' をマイリストに登録'); }
+  saveBillingMyList(); renderBillingMenu();
+}
+function removeBillingMyList(i) {
+  const name = billingMyList[i].name;
+  billingMyList.splice(i, 1); saveBillingMyList(); renderBillingMenu(); showToast(name + ' をマイリストから削除');
+}
+function openBillingMyListManager() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+  const modal = document.createElement('div');
+  modal.className = 'modal-content set-manager-modal';
+  function render() {
+    modal.innerHTML = '<h3 style="margin:0 0 12px;font-size:15px;color:var(--primary);">算定マイリスト管理</h3>' +
+      (billingMyList.length ? '<div class="set-manager-list">' +
+      billingMyList.map(function(it,i) {
+        return '<div class="set-manager-item"><div class="set-manager-info"><span class="set-manager-name">' + it.name + '</span><span class="set-manager-detail">' + it.points + '点</span></div>' +
+          '<div class="set-manager-actions"><button class="set-manager-del" onclick="removeBillingMyListFromManager(' + i + ')">削除</button></div></div>';
+      }).join('') + '</div>' : '<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:12px;">マイリストが空です</div>') +
+      '<div style="text-align:right;margin-top:12px;"><button class="set-manager-close" onclick="this.closest(\'.modal-overlay\').remove()">閉じる</button></div>';
+  }
+  window.removeBillingMyListFromManager = function(i) {
+    billingMyList.splice(i,1); saveBillingMyList(); renderBillingMenu(); render(); showToast('削除しました');
+  };
+  render();
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
 }
 
 // ===== Billing =====
