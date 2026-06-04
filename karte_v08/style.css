@@ -925,9 +925,13 @@ body.resizing img {
 /* Billing MyList */
 .bm-tab-mylist { color: #d97706 !important; font-weight: 700; }
 .bm-tab-mylist.active { background: #fef3c7 !important; border-color: #d97706 !important; color: #92400e !important; }
-.bm-star { color: #d97706; font-size: 10px; margin-right: 2px; }
-.bm-mylist-item { position: relative; }
-.bm-mylist-del { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); color: var(--danger); font-size: 14px; cursor: pointer; padding: 0 4px; line-height: 1; }
+.bm-item { display: flex; align-items: center; gap: 4px; }
+.bm-item-label { flex: 1; cursor: pointer; }
+.bm-fav-btn { color: #d1d5db; font-size: 14px; cursor: pointer; flex-shrink: 0; line-height: 1; padding: 2px; }
+.bm-fav-btn:hover { color: #d97706; }
+.bm-fav-active { color: #d97706 !important; }
+.bm-mylist-item { display: flex; align-items: center; gap: 4px; }
+.bm-mylist-del { color: var(--danger); font-size: 14px; cursor: pointer; padding: 0 4px; line-height: 1; flex-shrink: 0; }
 .bm-mylist-del:hover { color: #b91c1c; }
 
 /* v0.8: Added billing list */
