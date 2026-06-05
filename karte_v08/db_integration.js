@@ -4,6 +4,7 @@
 // - 患者DB統合 / 検索 / 一覧
 // - シフト自動取得 / 担当医表示
 // - 処方履歴統合
+// - 遅延ロード: デフォルト直近数日分→日付移動で追加ロード
 
 // 夜間休日外来DB API
 const DB_API_URL = 'https://script.google.com/macros/s/AKfycbwWCL1aVy4RcCZsr2Wzrpy5JE8LU8pGWa2u_CY7qo7OGMgXrB0OZGir6rGJZiiV6hRd/exec';
@@ -15,24 +16,141 @@ let dbPatients = [];   // DB患者データ
 let dbShift = [];      // シフトデータ
 let dbLoaded = false;
 
-// ===== メインDB読み込み =====
+// 遅延ロード管理
+const DB_DEFAULT_DAYS = 7;  // 初回ロード日数
+let dbLoadedDateRange = { from: null, to: null };  // ロード済み日付範囲（M/D形式）
+let dbIsLoading = false;  // ロード中フラグ
+
+// ===== ローディングオーバーレイ =====
+function showDbLoadingOverlay(message) {
+  let overlay = document.getElementById('dbLoadOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'dbLoadOverlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:99999;';
+    overlay.innerHTML = '<div style="background:#fff;border-radius:12px;padding:32px 48px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.3);">' +
+      '<div style="font-size:24px;margin-bottom:12px;">&#128268;</div>' +
+      '<div id="dbLoadMsg" style="font-size:16px;font-weight:600;color:#1e293b;margin-bottom:8px;">DB読込中...</div>' +
+      '<div id="dbLoadSub" style="font-size:12px;color:#64748b;">患者データを取得しています</div>' +
+      '<div style="margin-top:16px;width:200px;height:4px;background:#e2e8f0;border-radius:2px;overflow:hidden;">' +
+      '<div id="dbLoadBar" style="width:30%;height:100%;background:#2563eb;border-radius:2px;animation:dbPulse 1.2s ease-in-out infinite;"></div></div></div>';
+    document.body.appendChild(overlay);
+    // アニメーション追加
+    if (!document.getElementById('dbLoadStyle')) {
+      const style = document.createElement('style');
+      style.id = 'dbLoadStyle';
+      style.textContent = '@keyframes dbPulse{0%{width:20%}50%{width:70%}100%{width:20%}}';
+      document.head.appendChild(style);
+    }
+  } else {
+    overlay.style.display = 'flex';
+  }
+  document.getElementById('dbLoadMsg').textContent = message || 'DB読込中...';
+}
+
+function updateDbLoadingMessage(msg, sub) {
+  const el = document.getElementById('dbLoadMsg');
+  if (el) el.textContent = msg;
+  const subEl = document.getElementById('dbLoadSub');
+  if (subEl && sub) subEl.textContent = sub;
+}
+
+function hideDbLoadingOverlay() {
+  const overlay = document.getElementById('dbLoadOverlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+// ===== 小さいインジケーター（追加ロード時） =====
+function showDbMiniIndicator(message) {
+  let ind = document.getElementById('dbMiniIndicator');
+  if (!ind) {
+    ind = document.createElement('div');
+    ind.id = 'dbMiniIndicator';
+    ind.style.cssText = 'position:fixed;top:8px;right:8px;background:#2563eb;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;z-index:99998;box-shadow:0 2px 8px rgba(0,0,0,0.2);display:flex;align-items:center;gap:8px;';
+    document.body.appendChild(ind);
+  }
+  ind.innerHTML = '<span style="display:inline-block;width:12px;height:12px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;"></span>' + message;
+  ind.style.display = 'flex';
+  if (!document.getElementById('dbSpinStyle')) {
+    const style = document.createElement('style');
+    style.id = 'dbSpinStyle';
+    style.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
+    document.head.appendChild(style);
+  }
+}
+
+function hideDbMiniIndicator() {
+  const ind = document.getElementById('dbMiniIndicator');
+  if (ind) ind.style.display = 'none';
+}
+
+function showDbSuccessBadge(msg) {
+  let ind = document.getElementById('dbMiniIndicator');
+  if (!ind) {
+    ind = document.createElement('div');
+    ind.id = 'dbMiniIndicator';
+    ind.style.cssText = 'position:fixed;top:8px;right:8px;padding:8px 16px;border-radius:8px;font-size:13px;z-index:99998;box-shadow:0 2px 8px rgba(0,0,0,0.2);';
+    document.body.appendChild(ind);
+  }
+  ind.innerHTML = msg;
+  ind.style.background = '#16a34a';
+  ind.style.color = '#fff';
+  ind.style.display = 'block';
+  setTimeout(() => { ind.style.display = 'none'; }, 3000);
+}
+
+// ===== M/D日付ユーティリティ =====
+function mdToSortable(md) {
+  // "6/3" → "06/03" ソート用
+  if (!md) return '99/99';
+  const parts = md.split('/');
+  return String(parts[0]).padStart(2,'0') + '/' + String(parts[1]).padStart(2,'0');
+}
+
+function isoToMDLocal(iso) {
+  if (!iso) return '';
+  const parts = iso.split('-');
+  return parseInt(parts[1]) + '/' + parseInt(parts[2]);
+}
+
+function getDateRangeForDays(centerIso, days) {
+  // centerIso "2026-06-05" を基準にdays日前までのM/D範囲を返す
+  const center = new Date(centerIso);
+  const from = new Date(center);
+  from.setDate(from.getDate() - days);
+  return {
+    fromMD: (from.getMonth()+1) + '/' + from.getDate(),
+    toMD: (center.getMonth()+1) + '/' + center.getDate()
+  };
+}
+
+function isDateInRange(dateMD, range) {
+  if (!range.from || !range.to) return false;
+  const s = mdToSortable(dateMD);
+  return s >= mdToSortable(range.from) && s <= mdToSortable(range.to);
+}
+
+// ===== メインDB読み込み（初回: 直近N日分） =====
 async function loadDbData() {
   if (!DB_API_URL) { console.log('DB_API_URL未設定 → ローカルデータで動作'); return; }
-  try {
-    const indicator = document.createElement('div');
-    indicator.id = 'dbLoadIndicator';
-    indicator.style.cssText = 'position:fixed;top:8px;right:8px;background:#2563eb;color:#fff;padding:6px 14px;border-radius:6px;font-size:12px;z-index:9999;';
-    indicator.textContent = 'DB読込中...';
-    document.body.appendChild(indicator);
+  if (dbIsLoading) return;
+  dbIsLoading = true;
 
-    const res = await fetch(DB_API_URL + '?action=all');
+  try {
+    showDbLoadingOverlay('患者データを読み込んでいます...');
+    updateDbLoadingMessage('DB読込中...', '直近' + DB_DEFAULT_DAYS + '日分のデータを取得しています');
+
+    const dateRange = getDateRangeForDays(selectedDate, DB_DEFAULT_DAYS);
+    const url = DB_API_URL + '?action=all&date_from=' + encodeURIComponent(dateRange.fromMD) + '&date_to=' + encodeURIComponent(dateRange.toMD);
+    const res = await fetch(url);
     const data = await res.json();
     if (!data.success) throw new Error(data.error || 'DB API error');
+
+    updateDbLoadingMessage('データ処理中...', '薬品・患者・処方を統合しています');
 
     // 薬品マスタ統合
     if (data.drugs && data.drugs.length) {
       dbDrugs = data.drugs;
-      // DB薬品をdrugs配列に追加（既存と重複しないもの）
       const existingNames = drugs.map(d => d.name);
       data.drugs.forEach(dd => {
         if (!existingNames.includes(dd.name)) {
@@ -61,7 +179,6 @@ async function loadDbData() {
     if (data.shift && data.shift.length) {
       dbShift = data.shift;
     } else if (data.patients && data.patients.length) {
-      // 患者データから日付→担当医マッピングを自動構築
       const dateDocMap = {};
       data.patients.forEach(p => {
         if (p.date && p.doctor) {
@@ -70,29 +187,94 @@ async function loadDbData() {
         }
       });
       dbShift = Object.entries(dateDocMap).map(([date, docs]) => {
-        // 最多担当の医師をメインに
         const sorted = Object.entries(docs).sort((a, b) => b[1] - a[1]);
-        return {
-          date: date,
-          doctor: sorted[0][0],
-          assistants: sorted.slice(1).map(s => s[0])
-        };
+        return { date: date, doctor: sorted[0][0], assistants: sorted.slice(1).map(s => s[0]) };
       });
     }
 
+    // ロード済み範囲を記録
+    dbLoadedDateRange = { from: dateRange.fromMD, to: dateRange.toMD };
     dbLoaded = true;
-    indicator.textContent = 'DB連携OK (' + (data.drugs?.length || 0) + '薬品 / ' + (dbPatients.length || 0) + '患者 / ' + Object.keys(dbStock).length + '在庫)';
-    indicator.style.background = '#16a34a';
-    setTimeout(() => indicator.remove(), 3000);
+
+    hideDbLoadingOverlay();
+    showDbSuccessBadge('DB連携OK (' + (dbPatients.length || 0) + '患者 / ' + Object.keys(dbStock).length + '在庫)');
 
     // 選択日のシフトを表示
     showDateShift(document.getElementById('listDate').value);
-    // 患者リストを再描画
     renderPatientList();
   } catch (e) {
     console.error('DB連携エラー:', e);
-    const indicator = document.getElementById('dbLoadIndicator');
-    if (indicator) { indicator.textContent = 'DB接続失敗'; indicator.style.background = '#dc2626'; setTimeout(() => indicator.remove(), 3000); }
+    hideDbLoadingOverlay();
+    showDbSuccessBadge('DB接続失敗: ' + e.message);
+    const ind = document.getElementById('dbMiniIndicator');
+    if (ind) { ind.style.background = '#dc2626'; }
+  } finally {
+    dbIsLoading = false;
+  }
+}
+
+// ===== 追加ロード（日付変更時に範囲外だった場合） =====
+async function loadDbDataForDate(targetIso) {
+  if (!DB_API_URL || dbIsLoading) return;
+  const targetMD = isoToMDLocal(targetIso);
+
+  // 既にロード済み範囲内ならスキップ
+  if (dbLoadedDateRange.from && isDateInRange(targetMD, dbLoadedDateRange)) return;
+
+  dbIsLoading = true;
+  try {
+    // ターゲット日から前後数日をロード
+    const extendDays = DB_DEFAULT_DAYS;
+    const dateRange = getDateRangeForDays(targetIso, extendDays);
+    showDbMiniIndicator('追加データ読込中...');
+
+    const url = DB_API_URL + '?action=all&date_from=' + encodeURIComponent(dateRange.fromMD) + '&date_to=' + encodeURIComponent(dateRange.toMD);
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'DB API error');
+
+    // 患者データを追加マージ（既存と重複しないもの）
+    if (data.patients && data.patients.length) {
+      const newPatients = data.patients.filter(dp => {
+        // 既に同名+同日のデータがあればスキップ
+        return !dbPatients.some(ep => ep.name === dp.name && ep.date === dp.date);
+      });
+      if (newPatients.length > 0) {
+        dbPatients = dbPatients.concat(newPatients);
+        mergeDbPatients(newPatients);
+      }
+    }
+
+    // 処方履歴追加
+    if (data.prescriptions && data.prescriptions.length) {
+      mergePrescriptionHistory(data.prescriptions);
+    }
+
+    // シフトデータ追加
+    if (data.shift && data.shift.length) {
+      data.shift.forEach(s => {
+        if (!dbShift.find(ex => ex.date === s.date)) dbShift.push(s);
+      });
+    }
+
+    // ロード範囲を拡張
+    const newFrom = mdToSortable(dateRange.fromMD) < mdToSortable(dbLoadedDateRange.from) ? dateRange.fromMD : dbLoadedDateRange.from;
+    const newTo = mdToSortable(dateRange.toMD) > mdToSortable(dbLoadedDateRange.to) ? dateRange.toMD : dbLoadedDateRange.to;
+    dbLoadedDateRange = { from: newFrom, to: newTo };
+
+    hideDbMiniIndicator();
+    showDbSuccessBadge('追加データ取得完了');
+
+    showDateShift(document.getElementById('listDate').value);
+    renderPatientList();
+  } catch (e) {
+    console.error('追加DB読込エラー:', e);
+    hideDbMiniIndicator();
+    showDbSuccessBadge('追加読込失敗');
+    const ind = document.getElementById('dbMiniIndicator');
+    if (ind) { ind.style.background = '#dc2626'; }
+  } finally {
+    dbIsLoading = false;
   }
 }
 

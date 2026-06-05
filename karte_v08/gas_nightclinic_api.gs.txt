@@ -11,6 +11,8 @@
 
 function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) || 'all';
+  var dateFrom = (e && e.parameter && e.parameter.date_from) || '';  // "M/D" 形式
+  var dateTo = (e && e.parameter && e.parameter.date_to) || '';      // "M/D" 形式
   var result = {};
 
   try {
@@ -23,7 +25,7 @@ function doGet(e) {
       result.stock = getStockData(ss);
     }
     if (action === 'patients' || action === 'all') {
-      result.patients = getPatientData(ss);
+      result.patients = getPatientData(ss, dateFrom, dateTo);
     }
     if (action === 'shift' || action === 'all') {
       result.shift = getShiftData(ss);
@@ -32,11 +34,12 @@ function doGet(e) {
       result.references = getReferenceData(ss);
     }
     if (action === 'prescriptions' || action === 'all') {
-      result.prescriptions = getPrescriptionHistory(ss);
+      result.prescriptions = getPrescriptionHistory(ss, dateFrom, dateTo);
     }
 
     result.success = true;
     result.timestamp = new Date().toISOString();
+    result.dateRange = { from: dateFrom, to: dateTo };
   } catch (err) {
     result.success = false;
     result.error = err.message;
@@ -93,8 +96,8 @@ function getStockData(ss) {
   return stock;
 }
 
-// --- 患者データ（当月分） ---
-function getPatientData(ss) {
+// --- 患者データ（日付フィルタ対応） ---
+function getPatientData(ss, dateFrom, dateTo) {
   // メインの患者記録シート（1枚目）
   var sheet = ss.getSheets()[0];
   var data = sheet.getDataRange().getValues();
@@ -110,9 +113,16 @@ function getPatientData(ss) {
   for (var i = 1; i < data.length; i++) {
     var name = String(data[i][colMap['患者名']] || '').trim();
     if (!name) continue;
+    var rowDate = formatDate(data[i][colMap['日付']]);
+
+    // 日付フィルタ（指定時のみ）
+    if (dateFrom && dateTo && rowDate) {
+      if (!isDateInMDRange(rowDate, dateFrom, dateTo)) continue;
+    }
+
     patients.push({
       name: name,
-      date: formatDate(data[i][colMap['日付']]),
+      date: rowDate,
       time: String(data[i][colMap['時間']] || ''),
       route: String(data[i][colMap['経路']] || ''),
       area: String(data[i][colMap['エリア']] || ''),
@@ -130,6 +140,25 @@ function getPatientData(ss) {
     });
   }
   return patients;
+}
+
+// M/D形式の日付範囲チェック
+function isDateInMDRange(dateMD, fromMD, toMD) {
+  var d = parseMD(dateMD);
+  var f = parseMD(fromMD);
+  var t = parseMD(toMD);
+  if (!d || !f || !t) return true;  // パースできなければフィルタしない
+  return d >= f && d <= t;
+}
+
+function parseMD(md) {
+  if (!md) return null;
+  var parts = String(md).split('/');
+  if (parts.length < 2) return null;
+  var m = parseInt(parts[0]);
+  var d = parseInt(parts[1]);
+  if (isNaN(m) || isNaN(d)) return null;
+  return m * 100 + d;  // 数値比較用（6/3 → 603）
 }
 
 // --- シフトデータ（当月+翌月） ---
@@ -225,8 +254,8 @@ function getReferenceData(ss) {
   return refs;
 }
 
-// --- 処方履歴 ---
-function getPrescriptionHistory(ss) {
+// --- 処方履歴（日付フィルタ対応） ---
+function getPrescriptionHistory(ss, dateFrom, dateTo) {
   var sheet = ss.getSheetByName('処方履歴');
   if (!sheet) return [];
 
@@ -301,9 +330,15 @@ function getPrescriptionHistory(ss) {
       rxItems.push({ drug: drugName, qty: qty });
     }
 
+    var rxDate = formatDate(data[i][colMap['診療日']]);
+    // 日付フィルタ（指定時のみ）
+    if (dateFrom && dateTo && rxDate) {
+      if (!isDateInMDRange(rxDate, dateFrom, dateTo)) continue;
+    }
+
     records.push({
       name: name,
-      date: formatDate(data[i][colMap['診療日']]),
+      date: rxDate,
       doctor: String(data[i][colMap['入力担当者']] || '').trim(),
       rxDate: formatDate(data[i][colMap['処方管理入力日']]),
       selfPay: Number(String(data[i][colMap['自己負担代']] || '0').replace(/[¥,]/g, '')) || 0,

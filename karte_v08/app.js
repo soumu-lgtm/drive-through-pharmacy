@@ -220,9 +220,9 @@ function callPatientFromList(id) {
   showToast(p.name + 'さんを呼び出しました（レーン' + p.vehicle.lane + '）');
 }
 
-function changeDate(delta) { const d = new Date(selectedDate); d.setDate(d.getDate()+delta); selectedDate = d.toISOString().split('T')[0]; document.getElementById('listDate').value = selectedDate; renderPatientList(); if (typeof updateRevisionBadge === 'function') updateRevisionBadge(); }
-function setToday() { selectedDate = new Date().toISOString().split('T')[0]; document.getElementById('listDate').value = selectedDate; renderPatientList(); if (typeof updateRevisionBadge === 'function') updateRevisionBadge(); }
-function onDateChange() { selectedDate = document.getElementById('listDate').value; renderPatientList(); if (typeof updateRevisionBadge === 'function') updateRevisionBadge(); }
+function changeDate(delta) { const d = new Date(selectedDate); d.setDate(d.getDate()+delta); selectedDate = d.toISOString().split('T')[0]; document.getElementById('listDate').value = selectedDate; renderPatientList(); if (typeof updateRevisionBadge === 'function') updateRevisionBadge(); if (typeof loadDbDataForDate === 'function') loadDbDataForDate(selectedDate); }
+function setToday() { selectedDate = new Date().toISOString().split('T')[0]; document.getElementById('listDate').value = selectedDate; renderPatientList(); if (typeof updateRevisionBadge === 'function') updateRevisionBadge(); if (typeof loadDbDataForDate === 'function') loadDbDataForDate(selectedDate); }
+function onDateChange() { selectedDate = document.getElementById('listDate').value; renderPatientList(); if (typeof updateRevisionBadge === 'function') updateRevisionBadge(); if (typeof loadDbDataForDate === 'function') loadDbDataForDate(selectedDate); }
 
 // ===== New Patient (Phase 5 - enhanced) =====
 function openNewPatientModal() {
@@ -1354,7 +1354,9 @@ function toggleExamStart() {
 // ===== Waiting List =====
 function renderWaitingList() {
   const list = document.getElementById('waitingList'); let wc = 0, dc = 0;
-  list.innerHTML = patients.map(p => {
+  // 当日の患者のみ表示（全患者表示を防止）
+  const todayPatients = getPatientsForDate(selectedDate);
+  list.innerHTML = todayPatients.map(p => {
     let sc = 'status-waiting';
     if (p.status === 'active') sc = 'status-active';
     if (p.status === 'done') { sc = 'status-done'; dc++; }
