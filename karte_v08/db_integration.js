@@ -7,7 +7,7 @@
 // - 遅延ロード: デフォルト直近数日分→日付移動で追加ロード
 
 // 夜間休日外来DB API
-const DB_API_URL = 'https://script.google.com/macros/s/AKfycbwWCL1aVy4RcCZsr2Wzrpy5JE8LU8pGWa2u_CY7qo7OGMgXrB0OZGir6rGJZiiV6hRd/exec';
+const DB_API_URL = 'https://script.google.com/macros/s/AKfycbxywYLtJ59BKpo2FaroSALblOsYvw4J1tyMu18TsHdzZqm_F3BfddeXv5QRFo5gqzyQbg/exec';
 
 // DB連携データ格納
 let dbDrugs = [];      // DB薬品マスタ
