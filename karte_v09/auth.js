@@ -5,6 +5,22 @@ let authUser = null;
 
 async function initAuth() {
   if (!supabaseClient) return false;
+
+  // Handle OAuth redirect callback (Google login returns with hash params)
+  const hashParams = new URLSearchParams(window.location.hash.substring(1));
+  if (hashParams.get('access_token') || window.location.search.includes('code=')) {
+    // Let Supabase process the OAuth callback
+    const { data: { session }, error } = await supabaseClient.auth.getSession();
+    if (session) {
+      authUser = session.user;
+      await ensureAppUser(session.user);
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname);
+      showApp();
+      return true;
+    }
+  }
+
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (session) {
     authUser = session.user;
@@ -62,6 +78,47 @@ async function handleLogin() {
   }
 }
 
+async function handleGoogleLogin() {
+  const btn = document.getElementById('googleLoginBtn');
+  const errorEl = document.getElementById('loginError');
+  errorEl.textContent = '';
+  btn.disabled = true;
+  btn.style.opacity = '0.6';
+
+  try {
+    const { error } = await supabaseClient.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin + window.location.pathname
+      }
+    });
+    if (error) {
+      errorEl.textContent = 'Google認証エラー: ' + error.message;
+      btn.disabled = false;
+      btn.style.opacity = '1';
+    }
+    // Browser will redirect to Google login page
+  } catch (e) {
+    errorEl.textContent = 'エラー: ' + e.message;
+    btn.disabled = false;
+    btn.style.opacity = '1';
+  }
+}
+
+// Ensure Google-authenticated user exists in app_users table
+async function ensureAppUser(user) {
+  if (!user || !supabaseClient) return;
+  const { data } = await supabaseClient.from('app_users').select('id').eq('id', user.id).single();
+  if (!data) {
+    await supabaseClient.from('app_users').upsert({
+      id: user.id,
+      email: user.email,
+      display_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email.split('@')[0],
+      role: 'staff'
+    }, { onConflict: 'id' });
+  }
+}
+
 async function handleLogout() {
   if (!supabaseClient) return;
   await supabaseClient.auth.signOut();
@@ -72,12 +129,16 @@ async function handleLogout() {
 // Listen for auth state changes (token refresh, etc.)
 function setupAuthListener() {
   if (!supabaseClient) return;
-  supabaseClient.auth.onAuthStateChange((event, session) => {
+  supabaseClient.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_OUT' || !session) {
       authUser = null;
       showLoginScreen();
     } else if (session) {
       authUser = session.user;
+      if (event === 'SIGNED_IN') {
+        await ensureAppUser(session.user);
+        showApp();
+      }
     }
   });
 }
