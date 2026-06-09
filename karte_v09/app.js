@@ -1986,7 +1986,7 @@ document.getElementById('listDate').value = selectedDate;
 renderSetOrders();
 renderDiseaseQuickBtns();
 renderPatientList();
-loadDbData();
+// loadDbData() is called after auth completes (inside initSupabase → showApp)
 initSupabase().then(ok => { if (ok) console.log('[v0.8] Supabase二重書き込みモード有効'); });
 updateRevisionBadge();
 applyExamCollapse();

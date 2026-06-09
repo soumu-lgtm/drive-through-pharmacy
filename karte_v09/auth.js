@@ -44,6 +44,10 @@ function showApp() {
     badge.textContent = authUser.email;
     badge.style.display = '';
   }
+  // Load DB data only after authentication
+  if (typeof loadDbData === 'function' && !dbLoaded) {
+    loadDbData();
+  }
 }
 
 async function handleLogin() {
