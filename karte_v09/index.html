@@ -50,6 +50,7 @@
     <div class="spacer"></div>
     <span class="clock" id="clockList">00:00:00</span>
     <span id="authUserBadge" style="display:none;background:#dbeafe;color:#1d4ed8;padding:3px 10px;border-radius:6px;font-size:11px;margin-left:8px;"></span>
+    <button onclick="openUserManager()" style="font-size:11px;padding:4px 10px;background:#6366f1;border:none;color:#fff;border-radius:6px;cursor:pointer;margin-left:4px;">ID管理</button>
     <button onclick="handleLogout()" style="font-size:11px;padding:4px 10px;background:#ef4444;border:none;color:#fff;border-radius:6px;cursor:pointer;margin-left:4px;">ログアウト</button>
   </div>
 
@@ -700,6 +701,52 @@
 </div>
 
 </div><!-- /appContainer -->
+
+<!-- ============================================================
+     USER MANAGER MODAL
+     ============================================================ -->
+<div id="userManagerModal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:24px 28px;width:620px;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.15);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="margin:0;font-size:16px;color:#1e293b;">ユーザー管理（ID/PW管理）</h3>
+      <button onclick="closeUserManager()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#64748b;">&times;</button>
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px;">
+      <thead>
+        <tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
+          <th style="text-align:left;padding:8px 6px;">メール</th>
+          <th style="text-align:left;padding:8px 6px;">表示名</th>
+          <th style="text-align:left;padding:8px 6px;">権限</th>
+          <th style="text-align:left;padding:8px 6px;">状態</th>
+          <th style="padding:8px 6px;"></th>
+        </tr>
+      </thead>
+      <tbody id="userListBody">
+        <tr><td colspan="5" style="text-align:center;color:#64748b;padding:16px;">読み込み中...</td></tr>
+      </tbody>
+    </table>
+
+    <div style="border-top:1px solid #e2e8f0;padding-top:16px;">
+      <h4 style="margin:0 0 12px;font-size:14px;color:#374151;">新規ユーザー追加</h4>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+        <input type="email" id="newUserEmail" placeholder="メールアドレス" style="padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+        <input type="text" id="newUserName" placeholder="表示名" style="padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+        <input type="password" id="newUserPassword" placeholder="パスワード（6文字以上）" style="padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+        <select id="newUserRole" style="padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+          <option value="staff">staff（一般）</option>
+          <option value="doctor">doctor（医師）</option>
+          <option value="admin">admin（管理者）</option>
+          <option value="readonly">readonly（閲覧のみ）</option>
+        </select>
+      </div>
+      <button onclick="addNewUser()" style="padding:8px 20px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">追加</button>
+      <span id="addUserError" style="margin-left:12px;font-size:12px;color:#dc2626;"></span>
+    </div>
+  </div>
+</div>
 
 <script src="insurance_calc.js"></script>
 <script src="name_dict.js"></script>
