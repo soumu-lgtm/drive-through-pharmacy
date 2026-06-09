@@ -140,7 +140,12 @@ const SB='https://dyjhxkqzxibcpgoefbiv.supabase.co',SK='sb_publishable_bOK3qqLHk
 let D=[],O=[],G=[],S=[],I=[],SY=[],SEO=[],SEO_ART=[];
 let dS=null,dE=null,charts={};
 
-async function sbGet(t,q='',maxRows=0){const hdrs={...H};if(maxRows>1000)hdrs['Range']='0-'+(maxRows-1);const r=await fetch(`${SB}/rest/v1/${t}?${q}`,{headers:hdrs,cache:'no-store'});if(!r.ok&&r.status!==206)throw new Error(`${t}:${r.status}`);return r.json();}
+async function sbGet(t,q='',maxRows=0){
+  if(maxRows<=1000){const r=await fetch(`${SB}/rest/v1/${t}?${q}`,{headers:H,cache:'no-store'});if(!r.ok)throw new Error(`${t}:${r.status}`);return r.json();}
+  let all=[],from=0;const pgSize=1000;
+  while(from<maxRows){const hdrs={...H,'Range':from+'-'+(from+pgSize-1)};const r=await fetch(`${SB}/rest/v1/${t}?${q}`,{headers:hdrs,cache:'no-store'});if(!r.ok&&r.status!==206)throw new Error(`${t}:${r.status}`);const d=await r.json();all=all.concat(d);if(d.length<pgSize)break;from+=pgSize;}
+  return all;
+}
 function fmt(n){return n!=null?Number(n).toLocaleString('ja-JP'):'-'}
 function yen(n){return n!=null?'¥'+Number(n).toLocaleString('ja-JP'):'-'}
 function pct(a,b){return b>0?((a/b)*100).toFixed(1)+'%':'-'}
