@@ -1250,22 +1250,70 @@ function renderSeoArticles(articles){
   wrap.innerHTML=h;
 }
 
+const GAS_SYNC_URL='https://script.google.com/macros/s/AKfycby07_cs-2TjUwpjCMW9wMkbbV_ywxzayHpTuEvsY639I51VnuubJTxrSjVnEYal_AI0/exec';
+const SNS_SYNC_URL='http://127.0.0.1:3457';
+
 async function runSync(){
   const btn=document.getElementById('syncBtn');
   const box=document.getElementById('syncResult');
-  btn.disabled=true;btn.textContent='更新中...';
+  btn.disabled=true;btn.textContent='同期中...';
   box.style.display='block';
   box.style.background='#f0f4ff';box.style.border='1px solid #c7d2fe';
-  box.innerHTML='<strong>データ再読み込み中...</strong> Supabaseから最新データを取得しています。';
+  box.innerHTML='<strong>集計実行中...</strong> スプレッドシート・GA4のデータをSupabaseに同期しています。';
 
+  const labels={daily_summary:'日次サマリー',orders:'注文データ',ga4:'GA4',inventory:'在庫',sns:'SNS'};
+  let results={};
+  let hasError=false;
+
+  // 1. GAS Web App → EC/GA4/在庫 をSupabaseに同期
   try{
-    await init();
-    box.style.background='#f0fdf4';box.style.border='1px solid #86efac';
-    box.innerHTML='<strong>更新完了</strong><br>Supabaseから最新データを再読み込みしました。';
+    const r=await fetch(GAS_SYNC_URL,{redirect:'follow',signal:AbortSignal.timeout(120000)});
+    const gasData=await r.json();
+    Object.assign(results,gasData);
   }catch(e){
-    box.style.background='#fef2f2';box.style.border='1px solid #fca5a5';
-    box.innerHTML=`<strong>読み込みエラー</strong><br>${e.message}`;
+    results.daily_summary={ok:false,error:'GAS同期失敗: '+e.message};
+    results.orders={ok:false,error:'GAS同期失敗: '+e.message};
+    results.ga4={ok:false,error:'GAS同期失敗: '+e.message};
+    results.inventory={ok:false,error:'GAS同期失敗: '+e.message};
+    hasError=true;
   }
+
+  // 2. ローカルサーバー → SNS（開いていれば実行）
+  box.innerHTML='<strong>集計実行中...</strong> SNSデータを確認しています。';
+  try{
+    const hc=await fetch(SNS_SYNC_URL+'/health',{cache:'no-store',signal:AbortSignal.timeout(2000)}).catch(()=>null);
+    if(hc&&hc.ok){
+      const sr=await fetch(SNS_SYNC_URL+'/sync-sns',{cache:'no-store',signal:AbortSignal.timeout(60000)});
+      const snsData=await sr.json();
+      results.sns=snsData.sns||{ok:false,skipped:true,reason:'レスポンスにSNSデータなし'};
+    }else{
+      results.sns={ok:false,skipped:true,reason:'ローカルサーバー未起動（SNSはスキップ）'};
+    }
+  }catch(e){
+    results.sns={ok:false,skipped:true,reason:'SNS同期スキップ: '+e.message};
+  }
+
+  // 3. 結果表示
+  let html='<strong>同期完了</strong><br>';
+  let hasSkip=false;
+  for(const[k,v]of Object.entries(results)){
+    const label=labels[k]||k;
+    if(v.ok){
+      html+=`<span style="color:#16a34a">\u2713</span> ${label}: ${v.count||0}件同期<br>`;
+    }else if(v.skipped){
+      hasSkip=true;
+      html+=`<span style="color:#d97706">\u25b3</span> ${label}: スキップ — ${v.reason}<br>`;
+    }else{
+      hasError=true;
+      html+=`<span style="color:#dc2626">\u2717</span> ${label}: エラー — ${v.error||'不明'}<br>`;
+    }
+  }
+  box.style.background=hasError?'#fef2f2':hasSkip?'#fffbeb':'#f0fdf4';
+  box.style.border=hasError?'1px solid #fca5a5':hasSkip?'1px solid #fcd34d':'1px solid #86efac';
+  box.innerHTML=html;
+
+  // 4. Supabaseからデータ再読み込み
+  try{ await init(); }catch(e){}
   btn.disabled=false;btn.textContent='\u21bb 集計更新';
 }
 
