@@ -121,7 +121,12 @@ async function ensureAppUser(user) {
 
 async function handleLogout() {
   if (!supabaseClient) return;
-  await supabaseClient.auth.signOut();
+  try {
+    await supabaseClient.auth.signOut();
+  } catch (e) {
+    // signOut may fail but we still want to clear local state
+    console.warn('signOut error:', e);
+  }
   authUser = null;
   showLoginScreen();
 }
@@ -129,15 +134,15 @@ async function handleLogout() {
 // Listen for auth state changes (token refresh, etc.)
 function setupAuthListener() {
   if (!supabaseClient) return;
-  supabaseClient.auth.onAuthStateChange(async (event, session) => {
+  supabaseClient.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_OUT' || !session) {
       authUser = null;
       showLoginScreen();
     } else if (session) {
       authUser = session.user;
       if (event === 'SIGNED_IN') {
-        await ensureAppUser(session.user);
-        showApp();
+        // Fire-and-forget: don't block the listener
+        ensureAppUser(session.user).then(() => showApp()).catch(console.error);
       }
     }
   });
