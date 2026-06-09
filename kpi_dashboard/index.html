@@ -1281,9 +1281,9 @@ async function runSync(){
   // 2. ローカルサーバー → SNS（開いていれば実行）
   box.innerHTML='<strong>集計実行中...</strong> SNSデータを確認しています。';
   try{
-    const hc=await fetch(SNS_SYNC_URL+'/health',{cache:'no-store',signal:AbortSignal.timeout(2000)}).catch(()=>null);
+    const hc=await fetch(SNS_SYNC_URL+'/health',{cache:'no-store',signal:AbortSignal.timeout(5000)}).catch(()=>null);
     if(hc&&hc.ok){
-      const sr=await fetch(SNS_SYNC_URL+'/sync-sns',{cache:'no-store',signal:AbortSignal.timeout(60000)});
+      const sr=await fetch(SNS_SYNC_URL+'/sync-sns',{cache:'no-store',signal:AbortSignal.timeout(120000)});
       const snsData=await sr.json();
       results.sns=snsData.sns||{ok:false,skipped:true,reason:'レスポンスにSNSデータなし'};
     }else{
