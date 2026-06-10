@@ -171,6 +171,7 @@ function isoToMD(iso) {
   return parseInt(parts[1]) + '/' + parseInt(parts[2]);
 }
 
+function showDateShift() {} // stub
 function renderPatientList() {
   showDateShift(selectedDate);
   const tbody = document.getElementById('patientListBody');
