@@ -4,7 +4,21 @@
  * プロキシ未起動時はモックモードで動作
  */
 const ORCA = (() => {
-  const PROXY_URL = 'http://localhost:3710';
+  // プロキシURL自動検出: URLパラメータ > localStorage > 候補リストの順に試行
+  function detectProxyUrl() {
+    const params = new URLSearchParams(location.search);
+    if (params.get('orca_proxy')) return params.get('orca_proxy').replace(/\/+$/, '');
+    if (localStorage.getItem('orca_proxy_url')) return localStorage.getItem('orca_proxy_url');
+    return null;
+  }
+
+  const PROXY_CANDIDATES = [
+    detectProxyUrl(),
+    'http://localhost:3710',
+    'http://' + location.hostname + ':3710'
+  ].filter(Boolean);
+
+  let PROXY_URL = PROXY_CANDIDATES[0];
   let connected = false;
   let connectionMode = 'checking'; // 'api', 'mock', 'checking'
 
@@ -22,19 +36,26 @@ const ORCA = (() => {
     }
   }
 
-  // --- 接続確認 ---
+  // --- 接続確認（複数候補を順に試行） ---
   async function checkConnection() {
-    try {
-      const res = await fetch(PROXY_URL + '/api/status', { signal: AbortSignal.timeout(3000) });
-      const data = await res.json();
-      connected = data.status === 'ok';
-      connectionMode = connected ? 'api' : 'mock';
-    } catch {
-      connected = false;
-      connectionMode = 'mock';
+    for (const candidate of PROXY_CANDIDATES) {
+      try {
+        const res = await fetch(candidate + '/api/status', { signal: AbortSignal.timeout(3000) });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          PROXY_URL = candidate;
+          connected = true;
+          connectionMode = 'api';
+          localStorage.setItem('orca_proxy_url', candidate);
+          updateStatusBadge();
+          return true;
+        }
+      } catch {}
     }
+    connected = false;
+    connectionMode = 'mock';
     updateStatusBadge();
-    return connected;
+    return false;
   }
 
   // --- ステータスバッジ ---
@@ -102,7 +123,8 @@ const ORCA = (() => {
     checkConnection, getPatients, getPatient, getDepartments,
     getMedical, searchDiseases, getReceipt, rawApi,
     get connected() { return connected; },
-    get mode() { return connectionMode; }
+    get mode() { return connectionMode; },
+    get proxyUrl() { return PROXY_URL; }
   };
 })();
 
@@ -375,6 +397,75 @@ async function orcaRawApiCall() {
   } catch (e) {
     div.textContent = 'エラー: ' + e.message;
   }
+}
+
+// --- カルテ画面内レセプト内訳表示 ---
+function toggleOrcaReceiptSection() {
+  const body = document.getElementById('orcaReceiptBody');
+  const icon = document.getElementById('orcaReceiptCollapseIcon');
+  if (!body) return;
+  if (body.style.display === 'none') { body.style.display = ''; icon.innerHTML = '&#9660;'; }
+  else { body.style.display = 'none'; icon.innerHTML = '&#9654;'; }
+}
+
+async function loadOrcaReceiptInline() {
+  const div = document.getElementById('orcaReceiptInline');
+  if (!div) return;
+  // 現在開いているカルテの患者に対応するORCA患者IDを推定
+  const p = typeof currentPatientId !== 'undefined' ? patients.find(x => x.id === currentPatientId) : null;
+  if (!p) { div.innerHTML = '<div style="color:#ef4444;">患者が選択されていません</div>'; return; }
+
+  div.innerHTML = '<div style="text-align:center;color:#aaa;padding:8px;">取得中...</div>';
+
+  // ORCA IDマッピング（デモ: D001→00001, D002→00002...）
+  const orcaId = p.id.replace('D', '').replace(/^0*/, '').padStart(5, '0');
+  const [medResult, receiptResult] = await Promise.all([
+    ORCA.getMedical(orcaId),
+    ORCA.getReceipt(orcaId)
+  ]);
+
+  let html = '';
+
+  // 診療行為（点数内訳）
+  if (medResult && !medResult.error) {
+    const recs = medResult.medical_records || [];
+    recs.forEach(function(rec) {
+      html += '<div style="border:1px solid #ddd;border-radius:4px;padding:8px;margin-bottom:6px;background:#f8fafc;">';
+      html += '<div style="font-weight:600;font-size:12px;color:#1e3a5f;margin-bottom:4px;">' + esc(rec.Perform_Date) + ' ' + esc(rec.Department) + '</div>';
+      html += '<table style="width:100%;border-collapse:collapse;font-size:11px;">';
+      html += '<tr style="background:#e8ecf1;"><th style="padding:3px 6px;text-align:left;border:1px solid #ddd;">診療項目</th><th style="padding:3px 6px;text-align:left;border:1px solid #ddd;">コード</th><th style="padding:3px 6px;text-align:right;border:1px solid #ddd;">点数</th></tr>';
+      (rec.Items || []).forEach(function(item) {
+        html += '<tr><td style="padding:3px 6px;border:1px solid #ddd;">' + esc(item.Name) + '</td>';
+        html += '<td style="padding:3px 6px;border:1px solid #ddd;font-family:monospace;font-size:10px;color:#666;">' + esc(item.Code) + '</td>';
+        html += '<td style="padding:3px 6px;border:1px solid #ddd;text-align:right;font-weight:600;">' + esc(item.Point) + '</td></tr>';
+      });
+      html += '</table>';
+      html += '<div style="text-align:right;margin-top:4px;font-size:12px;">合計 <b>' + esc(rec.Total_Point) + '点</b>（' + (rec.Total_Point * 10) + '円） / 患者負担 <b style="color:#dc2626;">&yen;' + esc(String(rec.Patient_Burden)) + '</b></div>';
+      html += '</div>';
+    });
+  }
+
+  // レセプト月次概要
+  if (receiptResult && !receiptResult.error && receiptResult.receipt) {
+    var r = receiptResult.receipt;
+    html += '<div style="border:1px solid #3b82f6;border-radius:4px;padding:8px;margin-top:6px;background:#eff6ff;">';
+    html += '<div style="font-weight:700;font-size:12px;color:#1e3a5f;margin-bottom:6px;">&#128203; 月次レセプト概要（' + esc(r.Year_Month) + '）</div>';
+    html += '<table style="width:100%;border-collapse:collapse;font-size:11px;">';
+    html += '<tr><td style="padding:3px 6px;color:#666;">保険種別</td><td style="padding:3px 6px;">' + esc(r.Insurance) + '（' + esc(r.Rate) + '）</td></tr>';
+    html += '<tr><td style="padding:3px 6px;color:#666;">月間合計点数</td><td style="padding:3px 6px;font-weight:700;">' + esc(r.Total_Point) + '点</td></tr>';
+    html += '<tr><td style="padding:3px 6px;color:#666;">患者負担合計</td><td style="padding:3px 6px;font-weight:700;color:#dc2626;">&yen;' + esc(String(r.Patient_Burden)) + '</td></tr>';
+    html += '<tr><td style="padding:3px 6px;color:#666;">受診回数</td><td style="padding:3px 6px;">' + esc(r.Visit_Count) + '回</td></tr>';
+    html += '<tr><td style="padding:3px 6px;color:#666;">傷病名</td><td style="padding:3px 6px;">' + (r.Diseases || []).map(function(d){ return esc(d); }).join(', ') + '</td></tr>';
+    html += '</table>';
+    html += '</div>';
+  }
+
+  if (!html) {
+    html = '<div style="color:#f59e0b;text-align:center;padding:8px;">データ取得失敗（プロキシ未接続またはORCA未登録患者）</div>';
+  }
+
+  var srcLabel = ORCA.connected ? '&#x1F4E1; ORCA API' : '&#x1F4CB; モックデータ';
+  div.innerHTML = '<div style="font-size:10px;color:#999;margin-bottom:4px;">データソース: ' + srcLabel + '</div>' + html;
 }
 
 // --- 初期化 ---

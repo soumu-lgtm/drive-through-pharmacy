@@ -310,6 +310,22 @@
     <!-- Right: Billing Menu (TABBED - Phase 4) + Waiting -->
     <div class="panel right-panel">
       <div class="right-panel-sections">
+        <!-- ORCA レセプト内訳 -->
+        <div class="right-section" id="orcaReceiptSection">
+          <div class="right-section-title" style="cursor:pointer;" onclick="toggleOrcaReceiptSection()">
+            <span class="icon">&#127979;</span> レセプト請求内訳（ORCA連携）
+            <span id="orcaReceiptCollapseIcon" style="float:right;font-size:10px;color:var(--text-muted);">&#9660;</span>
+          </div>
+          <div class="right-section-body" id="orcaReceiptBody">
+            <div id="orcaReceiptInline" style="font-size:12px;color:#888;padding:8px 0;">
+              <div style="text-align:center;color:#aaa;">カルテ確定後にレセプト内訳が表示されます</div>
+            </div>
+            <button onclick="loadOrcaReceiptInline()" style="width:100%;padding:6px;background:#3b82f6;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;margin-top:4px;">
+              ORCA請求内訳を取得
+            </button>
+          </div>
+        </div>
+
         <!-- 算定メニュー -->
         <div class="right-section">
           <div class="right-section-title"><span class="icon">&#128176;</span> 算定メニュー</div>
