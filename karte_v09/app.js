@@ -1,3 +1,6 @@
+// ===== XSS Protection =====
+function esc(s) { if (s == null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
 // ===== Config =====
 const API_URL = 'https://script.google.com/macros/s/AKfycbwFzGLG20GaSLxfdRDAg1ATqQu_s5MWYF045Rlc3OH01duvrL2rqlP9VSQxCEodiePX/exec';
 // DB連携は db_integration.js に分離済み
@@ -197,14 +200,14 @@ function renderPatientList() {
       const doctor = visit ? (visit.doctor || '') : '';
       const tests = visit ? [visit.covid ? 'C+' : '', visit.flu ? 'Flu+' : '', visit.strep ? '溶+' : ''].filter(Boolean).join(' ') : '';
       const typeBadge = p.type === '新規' ? '<span class="status-badge" style="background:#dcfce7;color:#16a34a;">新規</span>' : '<span class="status-badge" style="background:#dbeafe;color:#2563eb;">再診</span>';
-      return '<tr onclick="openKarte(\'' + p.id + '\')" style="cursor:pointer;background:#f8faff;"><td>' + (p._origNum||i+1) + '</td><td class="td-status">' + typeBadge + '</td><td class="td-name">' + p.name + '<div class="sub">DB / ' + (p.address || '') + ' / ' + time + '</div></td><td>' + p.age + '歳 ' + p.sex + '</td><td>' + p.insurance + '</td><td class="td-allergy">' + (tests || '-') + '</td><td class="td-lane">' + doctor + '</td><td class="td-questionnaire">' + (p.route || '-') + '</td><td class="td-actions"><button class="action-btn karte-btn" onclick="event.stopPropagation();openKarte(\'' + p.id + '\')">カルテ</button></td></tr>';
+      return '<tr onclick="openKarte(\'' + p.id + '\')" style="cursor:pointer;background:#f8faff;"><td>' + (p._origNum||i+1) + '</td><td class="td-status">' + typeBadge + '</td><td class="td-name">' + esc(p.name) + '<div class="sub">DB / ' + esc(p.address || '') + ' / ' + esc(time) + '</div></td><td>' + esc(p.age) + '歳 ' + esc(p.sex) + '</td><td>' + esc(p.insurance) + '</td><td class="td-allergy">' + esc(tests || '-') + '</td><td class="td-lane">' + esc(doctor) + '</td><td class="td-questionnaire">' + esc(p.route || '-') + '</td><td class="td-actions"><button class="action-btn karte-btn" onclick="event.stopPropagation();openKarte(\'' + p.id + '\')">カルテ</button></td></tr>';
     }
     if (p.status === 'waiting') waitC++; else if (p.status === 'active') activeC++; else if (p.status === 'done') doneC++;
     const statusBadge = p.status === 'active' ? '<span class="status-badge active">診察中</span>' : p.status === 'done' ? '<span class="status-badge done">完了</span>' : '<span class="status-badge waiting">待機</span>';
     const allergyStr = p.allergies.length > 0 ? p.allergies.join(', ') : '-';
     const qBadge = p.questionnaire ? '<span class="q-badge received">受信済</span>' : '<span class="q-badge none">-</span>';
     const rowClass = p.status === 'done' ? ' class="status-done-row"' : '';
-    return '<tr' + rowClass + ' onclick="openKarte(\'' + p.id + '\')" style="cursor:pointer;"><td>' + (p._origNum||i+1) + '</td><td class="td-status">' + statusBadge + '</td><td class="td-name">' + p.name + '<div class="sub">' + (p.nameKana||'') + ' / ' + p.id + ' / ' + (p.arrivedAt||'') + '</div></td><td>' + p.age + '歳 ' + p.sex + '</td><td>' + p.insurance + '</td><td class="td-allergy">' + allergyStr + '</td><td class="td-lane">L' + p.vehicle.lane + '</td><td class="td-questionnaire">' + qBadge + '</td><td class="td-actions"><button class="action-btn karte-btn" onclick="event.stopPropagation();openKarte(\'' + p.id + '\')">カルテ</button>' + (p.status === 'waiting' ? '<button class="action-btn call-btn" onclick="event.stopPropagation();callPatientFromList(\'' + p.id + '\')">呼出</button>' : '') + '</td></tr>';
+    return '<tr' + rowClass + ' onclick="openKarte(\'' + p.id + '\')" style="cursor:pointer;"><td>' + (p._origNum||i+1) + '</td><td class="td-status">' + statusBadge + '</td><td class="td-name">' + esc(p.name) + '<div class="sub">' + esc(p.nameKana||'') + ' / ' + esc(p.id) + ' / ' + esc(p.arrivedAt||'') + '</div></td><td>' + esc(p.age) + '歳 ' + esc(p.sex) + '</td><td>' + esc(p.insurance) + '</td><td class="td-allergy">' + esc(allergyStr) + '</td><td class="td-lane">L' + esc(p.vehicle.lane) + '</td><td class="td-questionnaire">' + qBadge + '</td><td class="td-actions"><button class="action-btn karte-btn" onclick="event.stopPropagation();openKarte(\'' + p.id + '\')">カルテ</button>' + (p.status === 'waiting' ? '<button class="action-btn call-btn" onclick="event.stopPropagation();callPatientFromList(\'' + p.id + '\')">呼出</button>' : '') + '</td></tr>';
   }).join('');
   document.getElementById('listWait').textContent = waitC;
   document.getElementById('listActive').textContent = activeC;
@@ -406,7 +409,7 @@ function processOcrImage(dataUrl) {
   }).catch(err => {
     progressArea.style.display = 'none';
     resultArea.style.display = 'block';
-    resultArea.innerHTML = '<div style="color:var(--danger);font-size:12px;">読取エラー: ' + err.message + '</div>';
+    resultArea.innerHTML = '<div style="color:var(--danger);font-size:12px;">読取エラー: ' + esc(err.message) + '</div>';
   });
 }
 
@@ -499,7 +502,7 @@ function renderOcrResult(f) {
       iconHtml = r.val ? ' <span class="ocr-field-warn">&#9888; 要確認</span>' : '';
       valueClass = 'ocr-field-value low-conf';
     }
-    html += '<div class="ocr-field-row"><span class="ocr-field-label">' + r.label + '</span><span class="' + valueClass + '">' + r.val + '</span>' + iconHtml + '</div>';
+    html += '<div class="ocr-field-row"><span class="ocr-field-label">' + esc(r.label) + '</span><span class="' + valueClass + '">' + esc(r.val) + '</span>' + iconHtml + '</div>';
   }
 
   // 漢字候補がある場合
@@ -507,8 +510,8 @@ function renderOcrResult(f) {
     const gc = f.nameGuessCandidates;
     if (gc.surnameCandidates.length > 1 || gc.givenCandidates.length > 1) {
       html += '<div style="font-size:10px;color:var(--text-muted);margin-top:4px;">漢字候補: ';
-      if (gc.surnameCandidates.length > 1) html += '姓=' + gc.surnameCandidates.join('/') + ' ';
-      if (gc.givenCandidates.length > 1) html += '名=' + gc.givenCandidates.join('/');
+      if (gc.surnameCandidates.length > 1) html += '姓=' + gc.surnameCandidates.map(esc).join('/') + ' ';
+      if (gc.givenCandidates.length > 1) html += '名=' + gc.givenCandidates.map(esc).join('/');
       html += '</div>';
     }
   }
@@ -677,7 +680,7 @@ function onNewInsurerNumberInput(val) {
   if (num.length !== 6 && num.length !== 8) { statusEl.innerHTML = '<span style="color:var(--danger);">桁数不正</span>'; return; }
   const parsed = parseInsurerNumber(num);
   if (parsed.valid) {
-    statusEl.innerHTML = '<span style="color:var(--success);">&#10003; ' + parsed.houbetsuName + '（' + (parsed.prefName || '') + '）</span>';
+    statusEl.innerHTML = '<span style="color:var(--success);">&#10003; ' + esc(parsed.houbetsuName) + '（' + esc(parsed.prefName || '') + '）</span>';
     // 保険種別セレクトを自動設定
     const sel = document.getElementById('newInsurance');
     const dob = document.getElementById('newDob').value;
@@ -698,7 +701,7 @@ function onNewInsurerNumberInput(val) {
       else sel.value = '社保3割';
     }
   } else {
-    statusEl.innerHTML = '<span style="color:var(--danger);">' + parsed.errors.join(', ') + '</span>';
+    statusEl.innerHTML = '<span style="color:var(--danger);">' + esc(parsed.errors.join(', ')) + '</span>';
   }
 }
 
@@ -838,7 +841,7 @@ function populateDoctorSelect(p) {
   ['院長', '副院長'].forEach(d => doctors.add(d));
   sel.innerHTML = '<option value="">---</option>';
   doctors.forEach(d => {
-    sel.innerHTML += '<option value="' + d + '">' + d + '</option>';
+    sel.innerHTML += '<option value="' + esc(d) + '">' + esc(d) + '</option>';
   });
   // DB患者の場合、来院データの担当医を自動選択
   if (p.dbSource && p.dbVisits && p.dbVisits.length > 0) {
@@ -867,29 +870,29 @@ function renderPatientInfoTab(p) {
   let h = '';
   switch (currentPatientTab) {
     case 'basic':
-      h += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;"><div class="patient-thumb">' + p.name.charAt(0) + '</div><div><div style="font-weight:700;font-size:12px;">' + p.name + '</div><div style="font-size:10px;color:var(--text-muted);">' + (p.nameKana||'') + '</div></div></div>';
-      h += '<div class="info-row"><span class="label">年齢</span><span class="value">' + p.age + '歳 (' + p.sex + ')</span></div>';
-      if (p.dob) h += '<div class="info-row"><span class="label">生年月日</span><span class="value">' + toWareki(p.dob) + ' <span style="font-size:10px;color:var(--text-muted);">(' + p.dob + ')</span></span></div>';
-      if (p.address) h += '<div class="info-row"><span class="label">住所</span><span class="value" style="font-size:10px;">' + p.address + '</span></div>';
-      if (p.phone) h += '<div class="info-row"><span class="label">電話</span><span class="value">' + p.phone + '</span></div>';
-      h += '<div class="info-row"><span class="label">保険</span><span class="value">' + p.insurance + '</span></div>';
+      h += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;"><div class="patient-thumb">' + esc(p.name.charAt(0)) + '</div><div><div style="font-weight:700;font-size:12px;">' + esc(p.name) + '</div><div style="font-size:10px;color:var(--text-muted);">' + esc(p.nameKana||'') + '</div></div></div>';
+      h += '<div class="info-row"><span class="label">年齢</span><span class="value">' + esc(p.age) + '歳 (' + esc(p.sex) + ')</span></div>';
+      if (p.dob) h += '<div class="info-row"><span class="label">生年月日</span><span class="value">' + esc(toWareki(p.dob)) + ' <span style="font-size:10px;color:var(--text-muted);">(' + esc(p.dob) + ')</span></span></div>';
+      if (p.address) h += '<div class="info-row"><span class="label">住所</span><span class="value" style="font-size:10px;">' + esc(p.address) + '</span></div>';
+      if (p.phone) h += '<div class="info-row"><span class="label">電話</span><span class="value">' + esc(p.phone) + '</span></div>';
+      h += '<div class="info-row"><span class="label">保険</span><span class="value">' + esc(p.insurance) + '</span></div>';
       h += '<div class="info-section" style="margin-top:6px;"><div class="info-section-title">問診票' + (p.questionnaire ? ' <span class="questionnaire-badge received">受信済</span>' : ' <span class="questionnaire-badge pending">未受信</span>') + '</div>';
       if (p.questionnaire) {
-        h += '<div class="questionnaire-data"><div class="q-row"><span class="q-label">症状</span><span>' + p.questionnaire.symptoms + '</span></div><div class="q-row"><span class="q-label">期間</span><span>' + p.questionnaire.duration + '</span></div></div>';
+        h += '<div class="questionnaire-data"><div class="q-row"><span class="q-label">症状</span><span>' + esc(p.questionnaire.symptoms) + '</span></div><div class="q-row"><span class="q-label">期間</span><span>' + esc(p.questionnaire.duration) + '</span></div></div>';
         h += '<button class="edit-btn" style="margin-top:3px;width:100%;text-align:center;" onclick="openQuestionnaireModal()">カルテに反映</button>';
       }
       h += '</div>';
       h += '<div class="info-section"><div class="info-section-title">前回処方（' + p.prevDays + '日分）</div>';
-      p.prevRx.forEach(rx => { const d = drugs.find(x => x.id === rx.drugId); if (d) h += '<div class="prev-rx-item"><span>' + d.name + '</span><span>' + rx.qty + rx.unit + '</span></div>'; });
+      p.prevRx.forEach(rx => { const d = drugs.find(x => x.id === rx.drugId); if (d) h += '<div class="prev-rx-item"><span>' + esc(d.name) + '</span><span>' + rx.qty + esc(rx.unit) + '</span></div>'; });
       if (p.prevRx.length > 0) h += '<button class="do-rx-btn" onclick="doRx()">Do処方（前回と同じ）</button>';
       h += '</div>';
-      h += '<div class="info-section"><div class="info-section-title">患者メモ</div><textarea class="patient-memo" id="patientMemo" placeholder="メモを入力...">' + (p.memo||'') + '</textarea></div>';
-      h += '<div class="info-section"><div class="info-section-title">車両情報</div><div class="vehicle-info"><div class="plate">' + p.vehicle.plate + '</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px;">レーン ' + p.vehicle.lane + '</div></div></div>';
+      h += '<div class="info-section"><div class="info-section-title">患者メモ</div><textarea class="patient-memo" id="patientMemo" placeholder="メモを入力...">' + esc(p.memo||'') + '</textarea></div>';
+      h += '<div class="info-section"><div class="info-section-title">車両情報</div><div class="vehicle-info"><div class="plate">' + esc(p.vehicle.plate) + '</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px;">レーン ' + esc(p.vehicle.lane) + '</div></div></div>';
       if (p.dbSource) {
         h += '<div class="info-section" style="margin-top:6px;"><div class="info-section-title" style="color:#2563eb;">DB情報</div>';
-        if (p.route) h += '<div class="info-row"><span class="label">流入経路</span><span class="value">' + p.route + '</span></div>';
-        if (p.type) h += '<div class="info-row"><span class="label">患者種別</span><span class="value">' + p.type + '</span></div>';
-        if (p.address) h += '<div class="info-row"><span class="label">エリア</span><span class="value">' + p.address + '</span></div>';
+        if (p.route) h += '<div class="info-row"><span class="label">流入経路</span><span class="value">' + esc(p.route) + '</span></div>';
+        if (p.type) h += '<div class="info-row"><span class="label">患者種別</span><span class="value">' + esc(p.type) + '</span></div>';
+        if (p.address) h += '<div class="info-row"><span class="label">エリア</span><span class="value">' + esc(p.address) + '</span></div>';
         h += '<div class="info-row"><span class="label">来院回数</span><span class="value">' + (p.dbVisits ? p.dbVisits.length : 0) + '回</span></div>';
         if (p.selfPayTotal) h += '<div class="info-row"><span class="label">自己負担累計</span><span class="value">&yen;' + p.selfPayTotal.toLocaleString() + '</span></div>';
         if (p.revenueTotal) h += '<div class="info-row"><span class="label">診療報酬累計</span><span class="value">' + p.revenueTotal.toLocaleString() + '点</span></div>';
@@ -902,19 +905,19 @@ function renderPatientInfoTab(p) {
       h += '<div class="insurance-photo-area" onclick="document.getElementById(\'insuranceFileInput\').click()">';
       h += p.insurancePhoto ? '<img src="' + p.insurancePhoto + '">' : '<span style="font-size:18px;">&#128247;</span><span style="font-size:10px;color:var(--text-muted);">タップして撮影</span>';
       h += '</div><input type="file" id="insuranceFileInput" accept="image/*" capture="environment" style="display:none" onchange="handleInsurancePhoto(this,false)">';
-      if (p.insuranceNumber) h += '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">No: ' + p.insuranceNumber + '</div>';
-      if (p.insurerNumber) h += '<div style="font-size:11px;color:var(--text-muted);margin-top:1px;">保険者番号: <span style="font-family:monospace;letter-spacing:0.1em;">' + p.insurerNumber + '</span></div>';
+      if (p.insuranceNumber) h += '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">No: ' + esc(p.insuranceNumber) + '</div>';
+      if (p.insurerNumber) h += '<div style="font-size:11px;color:var(--text-muted);margin-top:1px;">保険者番号: <span style="font-family:monospace;letter-spacing:0.1em;">' + esc(p.insurerNumber) + '</span></div>';
       h += '</div>';
-      h += '<div class="info-row"><span class="label">保険種別</span><span class="value">' + p.insurance + '</span></div>';
+      h += '<div class="info-row"><span class="label">保険種別</span><span class="value">' + esc(p.insurance) + '</span></div>';
       h += '<div class="info-row"><span class="label">負担割合</span><span class="value" style="font-weight:700;color:var(--primary);">' + (p.ratio * 100) + '%</span></div>';
-      if (p.kouhiNumber) h += '<div class="info-row"><span class="label">公費</span><span class="value">' + p.kouhiNumber + '</span></div>';
-      if (p.recipientNumber) h += '<div class="info-row"><span class="label">受給者番号</span><span class="value">' + p.recipientNumber + '</span></div>';
+      if (p.kouhiNumber) h += '<div class="info-row"><span class="label">公費</span><span class="value">' + esc(p.kouhiNumber) + '</span></div>';
+      if (p.recipientNumber) h += '<div class="info-row"><span class="label">受給者番号</span><span class="value">' + esc(p.recipientNumber) + '</span></div>';
       if (p.iryoType) {
         h += '<div class="info-section" style="margin-top:6px;"><div class="info-section-title" style="color:#7c3aed;">医療証</div>';
-        h += '<div class="info-row"><span class="label">種別</span><span class="value">' + p.iryoType + '</span></div>';
-        if (p.iryoRecipientNumber) h += '<div class="info-row"><span class="label">受給者番号</span><span class="value">' + p.iryoRecipientNumber + '</span></div>';
-        if (p.iryoValidFrom || p.iryoValidTo) h += '<div class="info-row"><span class="label">有効期間</span><span class="value">' + (p.iryoValidFrom||'') + ' 〜 ' + (p.iryoValidTo||'') + '</span></div>';
-        if (p.iryoMemo) h += '<div class="info-row"><span class="label">備考</span><span class="value" style="font-size:10px;">' + p.iryoMemo + '</span></div>';
+        h += '<div class="info-row"><span class="label">種別</span><span class="value">' + esc(p.iryoType) + '</span></div>';
+        if (p.iryoRecipientNumber) h += '<div class="info-row"><span class="label">受給者番号</span><span class="value">' + esc(p.iryoRecipientNumber) + '</span></div>';
+        if (p.iryoValidFrom || p.iryoValidTo) h += '<div class="info-row"><span class="label">有効期間</span><span class="value">' + esc(p.iryoValidFrom||'') + ' 〜 ' + esc(p.iryoValidTo||'') + '</span></div>';
+        if (p.iryoMemo) h += '<div class="info-row"><span class="label">備考</span><span class="value" style="font-size:10px;">' + esc(p.iryoMemo) + '</span></div>';
         if (p.iryoPhoto) h += '<div style="margin-top:4px;"><img src="' + p.iryoPhoto + '" style="max-height:80px;border-radius:4px;border:1px solid var(--border);"></div>';
         h += '</div>';
       }
@@ -922,10 +925,10 @@ function renderPatientInfoTab(p) {
 
     case 'allergy':
       h += '<div class="info-section"><div class="info-section-title">アレルギー・副作用</div>';
-      h += p.allergies.length > 0 ? p.allergies.map(a => '<span class="allergy-tag">' + a + '</span>').join('') : '<span style="font-size:11px;color:var(--text-muted);">登録なし</span>';
+      h += p.allergies.length > 0 ? p.allergies.map(a => '<span class="allergy-tag">' + esc(a) + '</span>').join('') : '<span style="font-size:11px;color:var(--text-muted);">登録なし</span>';
       h += '</div>';
       h += '<div class="info-section"><div class="info-section-title">既往歴</div>';
-      if (p.history.length > 0) p.history.forEach(x => { h += '<div class="history-item">' + x + '</div>'; });
+      if (p.history.length > 0) p.history.forEach(x => { h += '<div class="history-item">' + esc(x) + '</div>'; });
       else h += '<span style="font-size:11px;color:var(--text-muted);">なし</span>';
       h += '</div>';
       break;
@@ -934,7 +937,7 @@ function renderPatientInfoTab(p) {
       h += '<div class="info-section"><div class="info-section-title">バイタル履歴</div>';
       if (p.pastVitals && p.pastVitals.length > 0) {
         h += '<table style="width:100%;font-size:10px;border-collapse:collapse;"><tr style="background:var(--bg);"><th style="padding:3px;">日付</th><th>T</th><th>BP</th><th>SpO2</th><th>P</th></tr>';
-        p.pastVitals.forEach(v => { h += '<tr style="border-bottom:1px solid var(--border);"><td style="padding:3px;color:var(--primary);font-weight:600;">' + v.date + '</td><td>' + v.t + '</td><td>' + v.bp + '</td><td>' + v.spo2 + '</td><td>' + v.p + '</td></tr>'; });
+        p.pastVitals.forEach(v => { h += '<tr style="border-bottom:1px solid var(--border);"><td style="padding:3px;color:var(--primary);font-weight:600;">' + esc(v.date) + '</td><td>' + esc(v.t) + '</td><td>' + esc(v.bp) + '</td><td>' + esc(v.spo2) + '</td><td>' + esc(v.p) + '</td></tr>'; });
         h += '</table>';
       } else h += '<span style="font-size:11px;color:var(--text-muted);">履歴なし</span>';
       h += '</div>';
@@ -944,7 +947,7 @@ function renderPatientInfoTab(p) {
       h += '<div class="info-section"><div class="info-section-title">診療履歴</div>';
       if (p.pastKartes && p.pastKartes.length > 0) {
         p.pastKartes.forEach(k => {
-          h += '<div class="history-entry"><span class="history-date">' + k.date + '</span><span class="history-diag">' + (k.diag || '---') + '</span><span class="history-doc">' + (k.doc || '') + '</span></div>';
+          h += '<div class="history-entry"><span class="history-date">' + esc(k.date) + '</span><span class="history-diag">' + esc(k.diag || '---') + '</span><span class="history-doc">' + esc(k.doc || '') + '</span></div>';
         });
       } else h += '<span style="font-size:11px;color:var(--text-muted);">履歴なし</span>';
       h += '</div>';
@@ -953,7 +956,7 @@ function renderPatientInfoTab(p) {
         h += '<table style="width:100%;font-size:10px;border-collapse:collapse;"><tr style="background:var(--bg);"><th style="padding:3px;">日付</th><th>時間帯</th><th>担当医</th><th>検査</th><th>自己負担</th></tr>';
         p.dbVisits.sort((a, b) => compareDateStr(b.date, a.date)).forEach(v => {
           const tests = [v.covid ? 'C+' : '', v.flu ? 'Flu+' : '', v.strep ? '溶+' : ''].filter(Boolean).join(' ') || '-';
-          h += '<tr style="border-bottom:1px solid var(--border);"><td style="padding:3px;color:var(--primary);font-weight:600;">' + (v.date || '') + '</td><td>' + (v.time || '') + '</td><td>' + (v.doctor || '') + '</td><td>' + tests + '</td><td>' + (v.selfPay ? '&yen;' + v.selfPay.toLocaleString() : '-') + '</td></tr>';
+          h += '<tr style="border-bottom:1px solid var(--border);"><td style="padding:3px;color:var(--primary);font-weight:600;">' + esc(v.date || '') + '</td><td>' + esc(v.time || '') + '</td><td>' + esc(v.doctor || '') + '</td><td>' + esc(tests) + '</td><td>' + (v.selfPay ? '&yen;' + v.selfPay.toLocaleString() : '-') + '</td></tr>';
         });
         h += '</table></div>';
       }
@@ -968,15 +971,15 @@ function renderPatientInfoTab(p) {
             if (!k.rx) return;
             h += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
             h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">';
-            h += '<span style="color:var(--primary);font-weight:700;font-size:12px;">' + (k.date || '') + '</span>';
-            if (k.doc) h += '<span style="font-size:10px;color:var(--text-muted);">' + k.doc + '</span>';
+            h += '<span style="color:var(--primary);font-weight:700;font-size:12px;">' + esc(k.date || '') + '</span>';
+            if (k.doc) h += '<span style="font-size:10px;color:var(--text-muted);">' + esc(k.doc) + '</span>';
             h += '</div>';
             // rxが配列（{drug,qty}オブジェクト）か文字列かで分岐
             if (Array.isArray(k.rxItems) && k.rxItems.length > 0) {
               h += '<table style="width:100%;font-size:11px;border-collapse:collapse;">';
               k.rxItems.forEach(item => {
-                h += '<tr><td style="padding:2px 0;padding-right:12px;">' + item.drug + '</td>';
-                h += '<td style="padding:2px 0;white-space:nowrap;color:var(--primary);font-weight:600;text-align:right;width:60px;">' + (item.qty || '') + '</td></tr>';
+                h += '<tr><td style="padding:2px 0;padding-right:12px;">' + esc(item.drug) + '</td>';
+                h += '<td style="padding:2px 0;white-space:nowrap;color:var(--primary);font-weight:600;text-align:right;width:60px;">' + esc(item.qty || '') + '</td></tr>';
               });
               h += '</table>';
             } else if (typeof k.rx === 'string' && k.rx) {
@@ -984,7 +987,7 @@ function renderPatientInfoTab(p) {
               const rxList = k.rx.split(',').map(s => s.trim()).filter(s => s);
               h += '<table style="width:100%;font-size:11px;border-collapse:collapse;">';
               rxList.forEach(item => {
-                h += '<tr><td style="padding:2px 0;">' + item + '</td></tr>';
+                h += '<tr><td style="padding:2px 0;">' + esc(item) + '</td></tr>';
               });
               h += '</table>';
             }
@@ -1001,7 +1004,7 @@ function renderPatientInfoTab(p) {
         h += '<div class="info-section" style="margin-top:8px;"><div class="info-section-title" style="color:#2563eb;">来院別 診療報酬</div>';
         h += '<table style="width:100%;font-size:11px;border-collapse:collapse;"><tr style="background:var(--bg);"><th style="padding:4px 6px;text-align:left;">日付</th><th style="text-align:left;">担当医</th><th style="text-align:right;">診療報酬</th><th style="text-align:right;">自己負担</th></tr>';
         p.dbVisits.sort((a, b) => compareDateStr(b.date, a.date)).forEach(v => {
-          h += '<tr style="border-bottom:1px solid var(--border);"><td style="padding:4px 6px;color:var(--primary);font-weight:600;">' + (v.date || '') + '</td><td>' + (v.doctor || '') + '</td><td style="text-align:right;">' + (v.revenuePoints ? v.revenuePoints.toLocaleString() + '点' : '-') + '</td><td style="text-align:right;">' + (v.selfPay ? '&yen;' + v.selfPay.toLocaleString() : '-') + '</td></tr>';
+          h += '<tr style="border-bottom:1px solid var(--border);"><td style="padding:4px 6px;color:var(--primary);font-weight:600;">' + esc(v.date || '') + '</td><td>' + esc(v.doctor || '') + '</td><td style="text-align:right;">' + (v.revenuePoints ? v.revenuePoints.toLocaleString() + '点' : '-') + '</td><td style="text-align:right;">' + (v.selfPay ? '&yen;' + v.selfPay.toLocaleString() : '-') + '</td></tr>';
         });
         h += '</table></div>';
       }
@@ -1012,13 +1015,13 @@ function renderPatientInfoTab(p) {
       if (p.history && p.history.length > 0) {
         p.history.forEach(d => {
           const info = diseases.find(x => x.name === d);
-          h += '<div style="padding:3px 0;font-size:11px;border-bottom:1px solid var(--bg);">' + d + (info ? ' <span style="font-size:9px;color:var(--text-muted);">' + info.code + '</span>' : '') + '</div>';
+          h += '<div style="padding:3px 0;font-size:11px;border-bottom:1px solid var(--bg);">' + esc(d) + (info ? ' <span style="font-size:9px;color:var(--text-muted);">' + esc(info.code) + '</span>' : '') + '</div>';
         });
       } else h += '<span style="font-size:11px;color:var(--text-muted);">なし</span>';
       const k = karteData[currentPatientId];
       if (k && k.selectedDiseases.length > 0) {
         h += '<div class="info-section-title" style="margin-top:6px;">今回の傷病名</div>';
-        k.selectedDiseases.forEach(d => { h += '<div style="padding:3px 0;font-size:11px;">' + d.name + ' [' + (d.status==='suspected'?'疑い':'確定') + ']</div>'; });
+        k.selectedDiseases.forEach(d => { h += '<div style="padding:3px 0;font-size:11px;">' + esc(d.name) + ' [' + (d.status==='suspected'?'疑い':'確定') + ']</div>'; });
       }
       h += '</div>';
       break;
@@ -1048,7 +1051,7 @@ function renderDiseaseQuickBtns() {
   const p = patients.find(x => x.id === currentPatientId);
   let btns = '';
   if (p && p.history && p.history.length > 0) btns += '<button class="disease-quick-btn" style="background:var(--success-light);border-color:var(--success);color:var(--success);" onclick="copyPrevDiseases()">&#8635; 前回傷病引継</button>';
-  btns += quickDiseases.map(d => '<button class="disease-quick-btn" onclick="addDisease(\'' + d + '\')">' + d + '</button>').join('');
+  btns += quickDiseases.map(d => '<button class="disease-quick-btn" onclick="addDisease(\'' + esc(d) + '\')">' + esc(d) + '</button>').join('');
   document.getElementById('diseaseQuickBtns').innerHTML = btns;
 }
 function copyPrevDiseases() { const p = patients.find(x => x.id === currentPatientId); if (!p || !p.history) return; p.history.forEach(h => addDisease(h)); showToast('前回傷病名を引き継ぎました'); }
@@ -1057,7 +1060,7 @@ function searchDisease(q) {
   if (!q) { r.classList.remove('show'); return; }
   const f = diseases.filter(d => d.name.includes(q) || d.code.includes(q));
   if (!f.length) { r.classList.remove('show'); return; }
-  r.innerHTML = f.map(d => '<div class="disease-result-item" onclick="addDisease(\'' + d.name + '\')">' + d.name + ' <span style="color:var(--text-muted);font-size:10px;">' + d.code + '</span></div>').join('');
+  r.innerHTML = f.map(d => '<div class="disease-result-item" onclick="addDisease(\'' + esc(d.name) + '\')">' + esc(d.name) + ' <span style="color:var(--text-muted);font-size:10px;">' + esc(d.code) + '</span></div>').join('');
   r.classList.add('show');
 }
 function addDisease(name) {
@@ -1074,7 +1077,7 @@ function renderSelectedDiseases() {
   document.getElementById('selectedDiseases').innerHTML = k.selectedDiseases.map((d,i) => {
     const cls = d.status === 'suspected' ? 'disease-tag suspected' : 'disease-tag';
     const lbl = d.status === 'suspected' ? '疑' : '確';
-    return '<span class="' + cls + '"><span class="status-toggle" onclick="toggleDiseaseStatus(' + i + ')">[' + lbl + ']</span> ' + d.name + (d.code ? ' <span style="font-size:9px;opacity:0.7;">' + d.code + '</span>' : '') + ' <span class="remove" onclick="removeDisease(' + i + ')">&times;</span></span>';
+    return '<span class="' + cls + '"><span class="status-toggle" onclick="toggleDiseaseStatus(' + i + ')">[' + lbl + ']</span> ' + esc(d.name) + (d.code ? ' <span style="font-size:9px;opacity:0.7;">' + esc(d.code) + '</span>' : '') + ' <span class="remove" onclick="removeDisease(' + i + ')">&times;</span></span>';
   }).join('');
 }
 
@@ -1082,7 +1085,7 @@ function renderSelectedDiseases() {
 function renderSetOrders() {
   const el = document.getElementById('setOrderBtns');
   el.innerHTML = setOrders.map((s,i) =>
-    '<button class="set-order-btn" onclick="applySetOrder(' + i + ')">' + s.name + '</button>'
+    '<button class="set-order-btn" onclick="applySetOrder(' + i + ')">' + esc(s.name) + '</button>'
   ).join('') +
   '<button class="set-order-btn set-order-save" onclick="saveCurrentAsSet()" title="現在の処方をセットとして保存">&#128190; 保存</button>' +
   '<button class="set-order-btn set-order-manage" onclick="openSetOrderManager()" title="セット整理・削除">&#9881; 管理</button>';
@@ -1120,9 +1123,9 @@ function _renderSetManager() {
   m.innerHTML = '<h3>処方セット管理<button class="modal-close" onclick="document.getElementById(\'setManagerOverlay\').classList.remove(\'show\')">&times;</button></h3>' +
     '<div class="set-manager-list">' +
     setOrders.map(function(s,i) {
-      var drugNames = s.items.map(function(it) { var d = drugs.find(function(x) { return x.id === it.drugId; }); return d ? d.name + ' x' + it.qty : it.drugId; }).join(', ');
+      var drugNames = s.items.map(function(it) { var d = drugs.find(function(x) { return x.id === it.drugId; }); return d ? esc(d.name) + ' x' + it.qty : esc(it.drugId); }).join(', ');
       return '<div class="set-manager-item">' +
-        '<div class="set-manager-info"><span class="set-manager-name">' + s.name + (s.builtin ? ' <span style="font-size:9px;color:var(--text-muted);">(組込)</span>' : '') + '</span>' +
+        '<div class="set-manager-info"><span class="set-manager-name">' + esc(s.name) + (s.builtin ? ' <span style="font-size:9px;color:var(--text-muted);">(組込)</span>' : '') + '</span>' +
         '<span class="set-manager-detail">' + drugNames + ' / ' + s.days + '日分</span></div>' +
         '<div class="set-manager-actions">' +
         (!s.builtin ? '<button class="set-manager-del" onclick="deleteSetOrderFromManager(' + i + ')">削除</button>' : '') +
@@ -1135,7 +1138,7 @@ function deleteSetOrderFromManager(i) {
   if (!confirm(setOrders[i].name + ' を削除しますか？')) return;
   setOrders.splice(i,1); saveSetOrders(); renderSetOrders(); _renderSetManager(); showToast('セットを削除');
 }
-function searchDrug(q) { const r = document.getElementById('drugResults'); if (!q) { r.classList.remove('show'); return; } const f = drugs.filter(d => d.name.includes(q) || d.category.includes(q)); if (!f.length) { r.classList.remove('show'); return; } r.innerHTML = f.map(d => '<div class="drug-result-item" onclick="addDrug(\'' + d.id + '\')"><span>' + d.name + stockBadge(d.name) + '</span><span class="price">' + (d.price ? d.price.toFixed(1) + '円' : '') + '</span></div>').join(''); r.classList.add('show'); }
+function searchDrug(q) { const r = document.getElementById('drugResults'); if (!q) { r.classList.remove('show'); return; } const f = drugs.filter(d => d.name.includes(q) || d.category.includes(q)); if (!f.length) { r.classList.remove('show'); return; } r.innerHTML = f.map(d => '<div class="drug-result-item" onclick="addDrug(\'' + esc(d.id) + '\')"><span>' + esc(d.name) + stockBadge(d.name) + '</span><span class="price">' + (d.price ? d.price.toFixed(1) + '円' : '') + '</span></div>').join(''); r.classList.add('show'); }
 function addDrug(id) { const d = drugs.find(x => x.id === id); if (!d) return; const k = karteData[currentPatientId]; const ex = k.prescriptions.find(rx => rx.drug.id === id); if (ex) ex.qty += 1; else k.prescriptions.push({drug:d,qty:1,days:k.rxDays||7}); document.getElementById('drugSearch').value = ''; document.getElementById('drugResults').classList.remove('show'); renderRxList(); recalcBilling(); }
 function removeDrug(i) { karteData[currentPatientId].prescriptions.splice(i,1); renderRxList(); recalcBilling(); }
 function updateDrugQty(i,v) { karteData[currentPatientId].prescriptions[i].qty = Math.max(0.5, parseFloat(v)||1); recalcBilling(); }
@@ -1144,7 +1147,7 @@ function applyBulkDays(v) { const days = Math.max(1, parseInt(v)||7); const k = 
 function renderRxList() {
   const k = karteData[currentPatientId]; const list = document.getElementById('rxList');
   if (!k.prescriptions.length) { list.innerHTML = '<li style="color:var(--text-muted);font-size:12px;padding:8px 0;text-align:center;">処方なし</li>'; return; }
-  list.innerHTML = k.prescriptions.map((rx,i) => '<li class="rx-item"><span class="name">' + rx.drug.name + stockBadge(rx.drug.name) + '</span><input type="number" value="' + rx.qty + '" min="0.5" step="0.5" style="width:50px;" onchange="updateDrugQty(' + i + ',this.value)"><span class="unit">' + rx.drug.unit + '</span><input type="number" value="' + (rx.days||k.rxDays||7) + '" min="1" max="90" style="width:46px;margin-left:4px;" onchange="updateDrugDays(' + i + ',this.value)"><span class="unit" style="font-size:10px;">日</span><span class="remove-drug" onclick="removeDrug(' + i + ')">&times;</span></li>').join('');
+  list.innerHTML = k.prescriptions.map((rx,i) => '<li class="rx-item"><span class="name">' + esc(rx.drug.name) + stockBadge(rx.drug.name) + '</span><input type="number" value="' + rx.qty + '" min="0.5" step="0.5" style="width:50px;" onchange="updateDrugQty(' + i + ',this.value)"><span class="unit">' + esc(rx.drug.unit) + '</span><input type="number" value="' + (rx.days||k.rxDays||7) + '" min="1" max="90" style="width:46px;margin-left:4px;" onchange="updateDrugDays(' + i + ',this.value)"><span class="unit" style="font-size:10px;">日</span><span class="remove-drug" onclick="removeDrug(' + i + ')">&times;</span></li>').join('');
 }
 
 // ===== Exam =====
@@ -1152,7 +1155,7 @@ function renderExamCheckList() {
   const k = karteData[currentPatientId];
   document.getElementById('examCheckList').innerHTML = examItems.map(ex => {
     const chk = k.selectedExams.includes(ex.id) ? 'checked' : '';
-    return '<li class="exam-check-item"><input type="checkbox" id="exam_' + ex.id + '" ' + chk + ' onchange="toggleExam(\'' + ex.id + '\')"><label for="exam_' + ex.id + '">' + ex.name + '</label><span class="exam-points">' + ex.points + '点</span></li>';
+    return '<li class="exam-check-item"><input type="checkbox" id="exam_' + esc(ex.id) + '" ' + chk + ' onchange="toggleExam(\'' + esc(ex.id) + '\')"><label for="exam_' + esc(ex.id) + '">' + esc(ex.name) + '</label><span class="exam-points">' + ex.points + '点</span></li>';
   }).join('');
 }
 function toggleExam(id) { const k = karteData[currentPatientId]; const i = k.selectedExams.indexOf(id); if (i >= 0) k.selectedExams.splice(i,1); else k.selectedExams.push(id); recalcBilling(); }
@@ -1187,14 +1190,14 @@ function switchBillingTab(cat) {
 }
 function renderMyListTab() {
   var tab = document.querySelector('.bm-tab-mylist');
-  if (tab) tab.innerHTML = '&#9733; ' + currentMyList().name;
+  if (tab) tab.innerHTML = '&#9733; ' + esc(currentMyList().name);
 }
 function renderBillingMenu() {
   var el = document.getElementById('billingMenuItems');
   if (currentBillingTab === 'mylist') {
     var ml = currentMyList();
     var header = '<div class="bm-mylist-header">' +
-      '<span class="bm-mylist-name" onclick="renameBillingMyList()" title="クリックで名前変更">' + ml.name + '</span>' +
+      '<span class="bm-mylist-name" onclick="renameBillingMyList()" title="クリックで名前変更">' + esc(ml.name) + '</span>' +
       '<span class="bm-mylist-nav">' +
       (billingMyLists.length > 1 ? '<span class="bm-mylist-nav-btn" onclick="cycleMyList(-1)" title="前のリスト">&#9664;</span>' : '') +
       '<span style="font-size:10px;color:var(--text-muted);">' + (currentMyListIdx+1) + '/' + billingMyLists.length + '</span>' +
@@ -1212,7 +1215,7 @@ function renderBillingMenu() {
       var eName = it.name.replace(/'/g,"\\'");
       return '<div class="bm-item bm-mylist-item">' +
         '<span class="bm-mylist-del" onclick="removeBillingMyListItem(' + i + ')" title="削除">&times;</span>' +
-        '<span class="bm-item-label" onclick="addBillingItem(\'' + eName + '\',' + it.points + ')">' + it.name + '</span>' +
+        '<span class="bm-item-label" onclick="addBillingItem(\'' + eName + '\',' + it.points + ')">' + esc(it.name) + '</span>' +
         '<span class="bm-pts">' + it.points + '点</span></div>';
     }).join('');
     return;
@@ -1225,8 +1228,8 @@ function renderBillingMenu() {
     var eName = it.name.replace(/'/g,"\\'");
     var inMyList = ml.items.some(function(m) { return m.name === it.name; });
     return '<div class="bm-item">' +
-      '<span class="bm-fav-btn' + (inMyList ? ' bm-fav-active' : '') + '" onclick="event.stopPropagation();toggleBillingMyListItem(\'' + eName + '\',' + it.points + ')" title="' + ml.name + 'に登録/解除">&#9733;</span>' +
-      '<span class="bm-item-label" onclick="addBillingItem(\'' + eName + '\',' + it.points + ')">' + it.name + '</span>' +
+      '<span class="bm-fav-btn' + (inMyList ? ' bm-fav-active' : '') + '" onclick="event.stopPropagation();toggleBillingMyListItem(\'' + eName + '\',' + it.points + ')" title="' + esc(ml.name) + 'に登録/解除">&#9733;</span>' +
+      '<span class="bm-item-label" onclick="addBillingItem(\'' + eName + '\',' + it.points + ')">' + esc(it.name) + '</span>' +
       '<span class="bm-pts">' + it.points + '点</span></div>';
   }).join('');
 }
@@ -1361,7 +1364,7 @@ function renderWaitingList() {
     if (p.status === 'active') sc = 'status-active';
     if (p.status === 'done') { sc = 'status-done'; dc++; }
     if (p.status === 'waiting') wc++;
-    return '<div class="waiting-item' + (p.id === currentPatientId ? ' active' : '') + '" onclick="switchPatient(\'' + p.id + '\')"><div class="status-dot ' + sc + '"></div><div class="w-info"><div class="w-name">' + p.name + '</div><div class="w-detail">' + p.age + '歳 ' + p.sex + '</div></div><div class="w-lane">L' + p.vehicle.lane + '</div></div>';
+    return '<div class="waiting-item' + (p.id === currentPatientId ? ' active' : '') + '" onclick="switchPatient(\'' + p.id + '\')"><div class="status-dot ' + sc + '"></div><div class="w-info"><div class="w-name">' + esc(p.name) + '</div><div class="w-detail">' + esc(p.age) + '歳 ' + esc(p.sex) + '</div></div><div class="w-lane">L' + esc(p.vehicle.lane) + '</div></div>';
   }).join('');
   document.getElementById('waitCount').textContent = wc;
   document.getElementById('doneCount').textContent = dc;
@@ -1626,7 +1629,7 @@ function showRuleTab(tab) {
 function openQuestionnaireModal() {
   const p = patients.find(x => x.id === currentPatientId); if (!p.questionnaire) return;
   const q = p.questionnaire;
-  document.getElementById('questionnaireBody').innerHTML = '<div class="questionnaire-data" style="font-size:13px;"><div class="q-row" style="padding:4px 0;"><span class="q-label" style="min-width:80px;">受信時刻</span><span>' + q.receivedAt + '</span></div><div class="q-row" style="padding:4px 0;"><span class="q-label" style="min-width:80px;">主な症状</span><span>' + q.symptoms + '</span></div><div class="q-row" style="padding:4px 0;"><span class="q-label" style="min-width:80px;">発症期間</span><span>' + q.duration + '</span></div><div class="q-row" style="padding:4px 0;"><span class="q-label" style="min-width:80px;">体温</span><span>' + q.temperature + '℃</span></div>' + (q.otherComplaints ? '<div class="q-row" style="padding:4px 0;"><span class="q-label" style="min-width:80px;">その他</span><span>' + q.otherComplaints + '</span></div>' : '') + '</div>';
+  document.getElementById('questionnaireBody').innerHTML = '<div class="questionnaire-data" style="font-size:13px;"><div class="q-row" style="padding:4px 0;"><span class="q-label" style="min-width:80px;">受信時刻</span><span>' + esc(q.receivedAt) + '</span></div><div class="q-row" style="padding:4px 0;"><span class="q-label" style="min-width:80px;">主な症状</span><span>' + esc(q.symptoms) + '</span></div><div class="q-row" style="padding:4px 0;"><span class="q-label" style="min-width:80px;">発症期間</span><span>' + esc(q.duration) + '</span></div><div class="q-row" style="padding:4px 0;"><span class="q-label" style="min-width:80px;">体温</span><span>' + esc(q.temperature) + '℃</span></div>' + (q.otherComplaints ? '<div class="q-row" style="padding:4px 0;"><span class="q-label" style="min-width:80px;">その他</span><span>' + esc(q.otherComplaints) + '</span></div>' : '') + '</div>';
   document.getElementById('questionnaireModal').classList.add('show');
 }
 function applyQuestionnaire() {
@@ -1636,8 +1639,8 @@ function applyQuestionnaire() {
   const editor = document.getElementById('findingsEditor');
   if (editor && !editor.innerText.trim()) {
     let html = '<b>[現病歴]</b><br>';
-    if (q.duration) html += q.duration + '発症。<br>';
-    if (q.otherComplaints) html += q.otherComplaints + '<br>';
+    if (q.duration) html += esc(q.duration) + '発症。<br>';
+    if (q.otherComplaints) html += esc(q.otherComplaints) + '<br>';
     html += '<br><b>[身体所見]</b><br><br><b>[A&P]</b>';
     editor.innerHTML = html;
   }
@@ -1652,15 +1655,15 @@ function openDocModal(type) {
   let title = '', html = '';
   if (type === 'referral') {
     title = '診療情報提供書（紹介状）';
-    html = '<div class="form-group"><label class="form-label">紹介先医療機関</label><input type="text" class="form-input" placeholder="○○病院"></div><div class="form-group"><label class="form-label">紹介先診療科</label><input type="text" class="form-input" placeholder="内科"></div><div class="form-group"><label class="form-label">傷���名</label><input type="text" class="form-input" value="' + k.selectedDiseases.map(d=>d.name).join(', ') + '"></div><div class="form-group"><label class="form-label">紹介目的・経過</label><textarea class="form-textarea" rows="5">上記患者様を紹介申し上げます。\nご高診のほどよろしくお願い申し上げます。</textarea></div>';
+    html = '<div class="form-group"><label class="form-label">紹介先医療機関</label><input type="text" class="form-input" placeholder="○○病院"></div><div class="form-group"><label class="form-label">紹介先診療科</label><input type="text" class="form-input" placeholder="内科"></div><div class="form-group"><label class="form-label">傷���名</label><input type="text" class="form-input" value="' + esc(k.selectedDiseases.map(d=>d.name).join(', ')) + '"></div><div class="form-group"><label class="form-label">紹介目的・経過</label><textarea class="form-textarea" rows="5">上記患者様を紹介申し上げます。\nご高診のほどよろしくお願い申し上げます。</textarea></div>';
   } else if (type === 'diagnosis') {
     title = '診断書';
-    html = '<div class="form-group"><label class="form-label">患者氏名</label><input type="text" class="form-input" value="' + p.name + '" readonly></div><div class="form-group"><label class="form-label">傷病名</label><input type="text" class="form-input" value="' + k.selectedDiseases.map(d=>d.name).join(', ') + '"></div><div class="form-group"><label class="form-label">所��</label><textarea class="form-textarea" rows="4" placeholder="所見・経過を記載"></textarea></div>';
+    html = '<div class="form-group"><label class="form-label">患者氏名</label><input type="text" class="form-input" value="' + esc(p.name) + '" readonly></div><div class="form-group"><label class="form-label">傷病名</label><input type="text" class="form-input" value="' + esc(k.selectedDiseases.map(d=>d.name).join(', ')) + '"></div><div class="form-group"><label class="form-label">所��</label><textarea class="form-textarea" rows="4" placeholder="所見・経過を記載"></textarea></div>';
   } else if (type === 'prescription') {
     title = '院外処方箋';
-    html = '<div class="form-group"><label class="form-label">��者 / 保険</label><input type="text" class="form-input" value="' + p.name + ' / ' + p.insurance + '" readonly></div><div class="form-group"><label class="form-label">処方内容</label><div style="background:var(--bg);padding:8px;border-radius:var(--radius-sm);font-size:12px;">';
+    html = '<div class="form-group"><label class="form-label">��者 / 保険</label><input type="text" class="form-input" value="' + esc(p.name) + ' / ' + esc(p.insurance) + '" readonly></div><div class="form-group"><label class="form-label">処方内容</label><div style="background:var(--bg);padding:8px;border-radius:var(--radius-sm);font-size:12px;">';
     if (!k.prescriptions.length) html += '<div style="color:var(--text-muted);">処方なし</div>';
-    else k.prescriptions.forEach(rx => { html += '<div style="padding:2px 0;">' + rx.drug.name + ' ' + rx.qty + rx.drug.unit + ' x ' + k.rxDays + '日分</div>'; });
+    else k.prescriptions.forEach(rx => { html += '<div style="padding:2px 0;">' + esc(rx.drug.name) + ' ' + rx.qty + esc(rx.drug.unit) + ' x ' + k.rxDays + '日分</div>'; });
     html += '</div></div>';
   }
   document.getElementById('docModalTitle').innerHTML = title + ' <button class="modal-close" onclick="closeModal(\'docModal\')">&times;</button>';
@@ -1766,7 +1769,7 @@ function renderAddedBillingList() {
   if (!k || !k.addedBillingItems || !k.addedBillingItems.length) { if (container) container.style.display = 'none'; return; }
   container.style.display = '';
   itemsEl.innerHTML = k.addedBillingItems.map((it,i) =>
-    '<div class="added-billing-item"><span>' + it.name + '</span><span class="added-billing-pts">' + it.points + '点</span><span class="added-billing-del" onclick="removeAddedBilling(' + i + ')">&times;</span></div>'
+    '<div class="added-billing-item"><span>' + esc(it.name) + '</span><span class="added-billing-pts">' + it.points + '点</span><span class="added-billing-del" onclick="removeAddedBilling(' + i + ')">&times;</span></div>'
   ).join('');
 }
 function removeAddedBilling(i) {
@@ -1877,7 +1880,7 @@ function processInsuranceOcrImage(dataUrl) {
   }).catch(function(e) {
     document.getElementById('insuranceOcrProgressArea').style.display = 'none';
     document.getElementById('insuranceOcrResultArea').style.display = '';
-    document.getElementById('insuranceOcrResultArea').textContent = '読取エラー: ' + e.message;
+    document.getElementById('insuranceOcrResultArea').textContent = '読取エラー: ' + (e.message || '');
   });
 
   // 写真としても保存
