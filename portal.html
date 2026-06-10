@@ -160,8 +160,8 @@ body {
 
   <a class="card" href="https://soumu-lgtm.github.io/drive-through-pharmacy/karte_v09/index.html" target="_blank" style="border:2px solid #22c55e;">
     <span class="badge badge-emr">電子カルテ</span>
-    <h3>電子カルテ v0.9（Google認証＋セキュリティ強化版）</h3>
-    <p>v0.8にGoogleアカウントログイン機能を追加。Supabase Auth認証（メール/パスワード＋Google OAuth）・全23テーブルRLS有効化・医療データanon完全ブロック。v0.8全機能継承。</p>
+    <h3>電子カルテ v0.9（セキュリティ強化版）</h3>
+    <p>Supabase Auth認証（ログイン必須化）・全23テーブルRLS有効化・医療データanon完全ブロック・KPI DELETE禁止。v0.8全機能継承。</p>
     <span class="url">karte_v09/index.html</span>
   </a>
 
@@ -228,6 +228,13 @@ body {
     <span class="url">kpi_dashboard/index.html</span>
   </a>
 
+  <a class="card" href="https://soumu-lgtm.github.io/drive-through-pharmacy/rececom_demo/index.html" target="_blank" style="border-left: 4px solid #8b5cf6;">
+    <span class="badge" style="background:#ede9fe; color:#7c3aed;">レセコン連携</span>
+    <h3>WebORCA レセコン連携デモ</h3>
+    <p>WebORCA（日医標準レセコン）API連携デモ。患者一覧・診療行為・傷病名検索・レセプト概要をAPIパネルから操作可能。ダミー患者5名搭載。ローカルプロキシで実API接続対応。</p>
+    <span class="url">rececom_demo/index.html</span>
+  </a>
+
 </div>
 
 <h2 class="section-title">過去バージョン</h2>
@@ -280,11 +287,6 @@ body {
     <td>本番</td>
     <td><a target="_blank" href="https://karte.hdg-holdings.com/">https://karte.hdg-holdings.com/</a></td>
   </tr>
-  <tr style="background:#dcfce7;">
-    <td><strong>電子カルテ v0.9（Google認証＋セキュリティ強化版）</strong></td>
-    <td>アプリ</td>
-    <td><a target="_blank" href="https://soumu-lgtm.github.io/drive-through-pharmacy/karte_v09/index.html">karte_v09/index.html</a></td>
-  </tr>
   <tr>
     <td><strong>電子カルテ v0.8（GitHub Pages版）</strong></td>
     <td>アプリ</td>
@@ -330,6 +332,11 @@ body {
     <td>アプリ</td>
     <td><a target="_blank" href="https://soumu-lgtm.github.io/drive-through-pharmacy/kpi_dashboard/index.html">kpi_dashboard/index.html</a></td>
   </tr>
+  <tr>
+    <td><strong>WebORCA レセコン連携デモ</strong></td>
+    <td>デモ</td>
+    <td><a target="_blank" href="https://soumu-lgtm.github.io/drive-through-pharmacy/rececom_demo/index.html">rececom_demo/index.html</a></td>
+  </tr>
   <tr style="background:#f8fafc;"><td colspan="3" style="padding:6px 12px; font-size:12px; color:var(--text-muted); font-weight:600;">過去バージョン</td></tr>
   <tr>
     <td style="color:var(--text-muted);">電子カルテ v0.7（令8年改定対応）</td>
@@ -362,7 +369,7 @@ body {
 </div>
 
 <div class="footer">
-  ハンドレッドドクター 佐川制作プログラムポータル | 最終更新: 2026-06-09
+  ハンドレッドドクター 佐川制作プログラムポータル | 最終更新: 2026-06-10
 </div>
 
 </body>
