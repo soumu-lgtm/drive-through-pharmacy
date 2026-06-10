@@ -419,10 +419,43 @@ async function loadOrcaReceiptInline() {
 
   // ORCA IDマッピング（デモ: D001→00001, D002→00002...）
   const orcaId = p.id.replace('D', '').replace(/^0*/, '').padStart(5, '0');
-  const [medResult, receiptResult] = await Promise.all([
-    ORCA.getMedical(orcaId),
-    ORCA.getReceipt(orcaId)
-  ]);
+  let medResult, receiptResult;
+
+  if (ORCA.connected) {
+    [medResult, receiptResult] = await Promise.all([
+      ORCA.getMedical(orcaId),
+      ORCA.getReceipt(orcaId)
+    ]);
+  }
+
+  // プロキシ未接続 or データ取得失敗時はモックデータでフォールバック
+  if (!medResult || medResult.error) {
+    const mockInsurance = { 'D001': {name:'後期高齢者医療',rate:'10'}, 'D002': {name:'全国健康保険協会',rate:'30'}, 'D003': {name:'乳幼児医療',rate:'0'}, 'D004': {name:'国民健康保険',rate:'20'}, 'D005': {name:'全国健康保険協会',rate:'30'} };
+    const mockDisease = { 'D001': '本態性高血圧症', 'D002': '2型糖尿病', 'D003': '急性上気道炎', 'D004': '変形性膝関節症', 'D005': '腰痛症' };
+    const ins = mockInsurance[p.id] || {name:'社保',rate:'30'};
+    const rate = parseInt(ins.rate);
+    medResult = {
+      source: 'mock', patient_id: orcaId,
+      medical_records: [{
+        Perform_Date: new Date().toISOString().split('T')[0], Department: '内科',
+        Items: [
+          { Name: '再診料', Code: '112007410', Point: '73' },
+          { Name: '外来管理加算', Code: '112015670', Point: '52' },
+          { Name: '処方箋料', Code: '120002270', Point: '68' }
+        ],
+        Total_Point: '193', Patient_Burden: Math.round(193 * 10 * rate / 100)
+      }]
+    };
+    receiptResult = {
+      source: 'mock', patient_id: orcaId,
+      receipt: {
+        Year_Month: '2026-06', Patient_Name: p.name, Insurance: ins.name,
+        Rate: ins.rate + '%', Total_Point: '580',
+        Patient_Burden: Math.round(580 * 10 * rate / 100),
+        Visit_Count: '3', Diseases: [mockDisease[p.id] || '未登録']
+      }
+    };
+  }
 
   let html = '';
 
