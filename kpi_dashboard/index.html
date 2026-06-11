@@ -1256,7 +1256,31 @@ function renderSeoArticles(articles){
 }
 
 const GAS_SYNC_URL='https://script.google.com/macros/s/AKfycbwo4PPZSf5man_hn4eRB7SBTR2zI8wK21m3up4R7PG8OcjeXrzh4qmvYa3n34KIJvnw/exec';
-const SNS_SYNC_URL='http://127.0.0.1:3457';
+const SNS_API_URL='http://127.0.0.1:3456';
+
+// SNS収集データをSupabaseにupsert
+async function upsertSnsToSupabase(platform, data){
+  const today=new Date().toISOString().slice(0,10);
+  const am=data.account_metrics||{};
+  const friends=data.friends||{};
+  const row={
+    date:today, platform,
+    followers: data.followers||am.followers||friends.target_reach||0,
+    posts: data.posts||data.post_count||am.posts||0,
+    likes: data.likes||data.total_likes||data.interactions_30d||data.likes_7d||0,
+    comments: data.comments||data.comments_7d||0,
+    shares: data.shares||data.shares_7d||0,
+    impressions: data.impressions||am.views_90d||data.views_30d||data.video_views_7d||0,
+    reach: data.reach||am.reach_30d||data.reach_30d||0,
+    extra_json: JSON.stringify(data)
+  };
+  const r=await fetch(`${SB}/rest/v1/kpi_sns_metrics`,{
+    method:'POST',
+    headers:{...H,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
+    body:JSON.stringify(row)
+  });
+  return r.ok;
+}
 
 async function runSync(){
   const btn=document.getElementById('syncBtn');
@@ -1283,19 +1307,36 @@ async function runSync(){
     hasError=true;
   }
 
-  // 2. ローカルサーバー → SNS（開いていれば実行）
-  box.innerHTML='<strong>集計実行中...</strong> SNSデータを確認しています。';
+  // 2. SNS収集APIサーバー（Chrome起動時に自動起動）→ 収集 → Supabaseに直接書き込み
+  box.innerHTML='<strong>集計実行中...</strong> SNSデータを収集しています。';
   try{
-    const hc=await fetch(SNS_SYNC_URL+'/health',{cache:'no-store',signal:AbortSignal.timeout(5000)}).catch(()=>null);
-    if(hc&&hc.ok){
-      const sr=await fetch(SNS_SYNC_URL+'/sync-sns',{cache:'no-store',signal:AbortSignal.timeout(120000)});
-      const snsData=await sr.json();
-      results.sns=snsData.sns||{ok:false,skipped:true,reason:'レスポンスにSNSデータなし'};
+    const st=await fetch(SNS_API_URL+'/status',{cache:'no-store',signal:AbortSignal.timeout(3000)}).then(r=>r.json()).catch(()=>null);
+    if(st&&st.cdp&&st.cdp.available){
+      const openTabs=Object.entries(st.cdp.tabs).filter(([,v])=>v).map(([k])=>k);
+      if(openTabs.length>0){
+        const cr=await fetch(SNS_API_URL+'/collect',{cache:'no-store',signal:AbortSignal.timeout(120000)});
+        const cd=await cr.json();
+        if(cd.success&&cd.data){
+          let cnt=0;
+          for(const[p,d]of Object.entries(cd.data)){
+            if(d&&await upsertSnsToSupabase(p,d))cnt++;
+          }
+          results.sns={ok:true,count:cnt};
+          const closed=Object.entries(st.cdp.tabs).filter(([,v])=>!v).map(([k])=>k);
+          if(closed.length>0)results.sns.partial_skip='タブ未検出: '+closed.join(', ');
+        }else{
+          results.sns={ok:false,error:cd.error||'収集失敗'};
+        }
+      }else{
+        results.sns={ok:false,skipped:true,reason:'SNSタブが開いていません（LINE/Instagram/TikTok）'};
+      }
+    }else if(st){
+      results.sns={ok:false,skipped:true,reason:'Chrome CDPに接続できません（--remote-debugging-port=9222で起動してください）'};
     }else{
-      results.sns={ok:false,skipped:true,reason:'ローカルサーバー未起動（SNSはスキップ）'};
+      results.sns={ok:false,skipped:true,reason:'SNS収集サーバー未起動（Chrome起動.batから起動してください）'};
     }
   }catch(e){
-    results.sns={ok:false,skipped:true,reason:'SNS同期スキップ: '+e.message};
+    results.sns={ok:false,skipped:true,reason:'SNS収集エラー: '+e.message};
   }
 
   // 3. 結果表示
@@ -1304,7 +1345,9 @@ async function runSync(){
   for(const[k,v]of Object.entries(results)){
     const label=labels[k]||k;
     if(v.ok){
-      html+=`<span style="color:#16a34a">\u2713</span> ${label}: ${v.count||0}件同期<br>`;
+      html+=`<span style="color:#16a34a">\u2713</span> ${label}: ${v.count||0}件同期`;
+      if(v.partial_skip)html+=` <span style="color:#d97706">（${v.partial_skip}）</span>`;
+      html+='<br>';
     }else if(v.skipped){
       hasSkip=true;
       html+=`<span style="color:#d97706">\u25b3</span> ${label}: スキップ — ${v.reason}<br>`;
