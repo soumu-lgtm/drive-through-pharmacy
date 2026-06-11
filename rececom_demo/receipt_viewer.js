@@ -205,9 +205,17 @@ async function loadFile(file) {
     const reader = new FileReader();
     reader.onload = (e) => {
       let text;
+      // UTF-8を先に試行（uke_generatorからの生成データはUTF-8）
+      // Shift_JISファイルはBOM無し、0x80-0x9F範囲のバイトで判別
+      const bytes = new Uint8Array(e.target.result);
+      let hasShiftJIS = false;
+      for (let j = 0; j < Math.min(bytes.length, 1000); j++) {
+        if (bytes[j] >= 0x81 && bytes[j] <= 0x9F && bytes[j] !== 0x8A && bytes[j] !== 0x8B) { hasShiftJIS = true; break; }
+        if (bytes[j] >= 0xE0 && bytes[j] <= 0xEF && j+1 < bytes.length && bytes[j+1] >= 0x80 && bytes[j+1] <= 0xBF) { break; } // UTF-8 multibyte
+      }
       try {
-        const decoder = new TextDecoder('shift_jis');
-        text = decoder.decode(e.target.result);
+        const enc = hasShiftJIS ? 'shift_jis' : 'utf-8';
+        text = new TextDecoder(enc).decode(e.target.result);
       } catch {
         text = new TextDecoder('utf-8').decode(e.target.result);
       }

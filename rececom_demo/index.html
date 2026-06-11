@@ -29,7 +29,9 @@
     <span id="revisionBadge" style="display:none;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:600;margin-left:8px;"></span>
     <div class="spacer"></div>
     <span class="clock" id="clockList">00:00:00</span>
-    <button onclick="window.open('receipt.html','_blank')" style="font-size:11px;padding:4px 10px;background:#3a6b35;border:none;color:#fff;border-radius:6px;cursor:pointer;margin-left:4px;">&#128203; レセプト点検</button>
+    <button onclick="generateAndOpenReceipt()" style="font-size:11px;padding:4px 10px;background:#3a6b35;border:none;color:#fff;border-radius:6px;cursor:pointer;margin-left:4px;" title="確定済みカルテからUKE生成→レセプト点検">&#128203; レセプト送信</button>
+    <button onclick="generateDemoUKE()" style="font-size:11px;padding:4px 10px;background:#6b5b3a;border:none;color:#fff;border-radius:6px;cursor:pointer;margin-left:2px;" title="全患者ダミーデータでUKE生成（デモ用）">&#128196; デモUKE</button>
+    <button onclick="window.open('receipt.html','_blank')" style="font-size:11px;padding:4px 10px;background:#555;border:none;color:#fff;border-radius:6px;cursor:pointer;margin-left:2px;" title="UKEファイルを手動で読み込み">&#128194; ファイル点検</button>
     <span style="background:#dcfce7;color:#16a34a;padding:3px 10px;border-radius:6px;font-size:11px;margin-left:8px;">DEMO</span>
   </div>
 
@@ -750,5 +752,6 @@
 <script src="resizer.js"></script>
 <script src="billing_revision_2026.js?v=20260602"></script>
 <script src="app.js?v=demo_rececom"></script>
+<script src="uke_generator.js?v=1"></script>
 </body>
 </html>
