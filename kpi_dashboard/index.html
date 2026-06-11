@@ -1276,7 +1276,7 @@ async function upsertSnsToSupabase(platform, data){
   };
   const r=await fetch(`${SB}/rest/v1/kpi_sns_metrics`,{
     method:'POST',
-    headers:{...H,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
+    headers:{...H,'Authorization':'Bearer '+SK,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
     body:JSON.stringify(row)
   });
   return r.ok;
