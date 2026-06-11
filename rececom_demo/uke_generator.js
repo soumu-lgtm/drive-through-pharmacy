@@ -100,8 +100,8 @@ function generateUKE(confirmedPatients, billingMonth) {
   const prefCode = '13'; // 東京
 
   // 社保と国保で分ける
-  const shahoPatients = confirmedPatients.filter(p => getReviewOrg(p.insurance) === '1');
-  const kokuhoPatients = confirmedPatients.filter(p => getReviewOrg(p.insurance) === '2');
+  const shahoPatients = confirmedPatients.filter(p => getReviewOrg(p.patient.insurance) === '1');
+  const kokuhoPatients = confirmedPatients.filter(p => getReviewOrg(p.patient.insurance) === '2');
 
   const results = {};
 
