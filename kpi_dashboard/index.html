@@ -1274,7 +1274,7 @@ async function upsertSnsToSupabase(platform, data){
     reach: data.reach||am.reach_30d||data.reach_30d||0,
     extra_json: JSON.stringify(data)
   };
-  const r=await fetch(`${SB}/rest/v1/kpi_sns_metrics`,{
+  const r=await fetch(`${SB}/rest/v1/kpi_sns_metrics?on_conflict=date,platform`,{
     method:'POST',
     headers:{...H,'Authorization':'Bearer '+SK,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
     body:JSON.stringify(row)
