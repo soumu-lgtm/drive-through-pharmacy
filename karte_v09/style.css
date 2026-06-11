@@ -446,7 +446,15 @@ body.resizing img {
 .drug-result-item:hover { background: var(--primary-light); }
 .drug-result-item .price { color: var(--text-muted); font-size: 11px; }
 .rx-list { list-style: none; }
-.rx-item { display: flex; align-items: center; gap: 4px; padding: 4px 6px; background: var(--bg); border-radius: var(--radius-sm); margin-bottom: 2px; font-size: 12px; }
+.rx-item { display: flex; align-items: flex-start; gap: 4px; padding: 4px 6px; background: var(--bg); border-radius: var(--radius-sm); margin-bottom: 2px; font-size: 12px; flex-wrap: wrap; }
+.rx-item .rx-main { display: flex; align-items: center; gap: 4px; width: 100%; }
+.rx-item .rx-note-row { display: flex; align-items: center; gap: 4px; width: 100%; padding: 2px 0 0 0; }
+.rx-item .rx-note-input { flex: 1; border: 1px solid var(--border); border-radius: 3px; padding: 2px 6px; font-size: 11px; font-family: inherit; color: var(--text); background: #fff; }
+.rx-item .rx-note-input::placeholder { color: #bbb; }
+.rx-item .rx-note-input:focus { outline: none; border-color: var(--primary); }
+.rx-item .rx-note-save { font-size: 10px; color: var(--text-muted); cursor: pointer; white-space: nowrap; }
+.rx-item .rx-note-save:hover { color: var(--primary); }
+.rx-item .rx-note-save.saved { color: var(--success, #16a34a); }
 .rx-item .name { flex: 1; font-weight: 500; }
 .rx-item input { width: 36px; border: 1px solid var(--border); border-radius: 3px; padding: 2px 4px; text-align: center; font-size: 12px; font-family: inherit; }
 .rx-item input:focus { outline: none; border-color: var(--primary); }

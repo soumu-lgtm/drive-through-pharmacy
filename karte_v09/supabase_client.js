@@ -134,6 +134,7 @@ function toSupabasePrescriptions(prescriptions) {
     quantity: rx.qty || 0,
     unit: rx.drug ? rx.drug.unit || 'T' : 'T',
     sort_order: i,
+    note: rx.note || null,
   }));
 }
 

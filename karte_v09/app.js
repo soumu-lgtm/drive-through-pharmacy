@@ -1090,8 +1090,8 @@ function renderSetOrders() {
   '<button class="set-order-btn set-order-save" onclick="saveCurrentAsSet()" title="現在の処方をセットとして保存">&#128190; 保存</button>' +
   '<button class="set-order-btn set-order-manage" onclick="openSetOrderManager()" title="セット整理・削除">&#9881; 管理</button>';
 }
-function applySetOrder(i) { const s = setOrders[i]; const k = karteData[currentPatientId]; k.prescriptions = []; s.items.forEach(item => { const d = drugs.find(x => x.id === item.drugId); if (d) k.prescriptions.push({drug:d,qty:item.qty,days:s.days}); }); k.rxDays = s.days; document.getElementById('rxDays').value = s.days; renderRxList(); recalcBilling(); showToast(s.name + 'を適用'); }
-function doRx() { const p = patients.find(x => x.id === currentPatientId); const k = karteData[currentPatientId]; k.prescriptions = []; p.prevRx.forEach(rx => { const d = drugs.find(x => x.id === rx.drugId); if (d) k.prescriptions.push({drug:d,qty:rx.qty,days:p.prevDays}); }); k.rxDays = p.prevDays; document.getElementById('rxDays').value = p.prevDays; renderRxList(); recalcBilling(); showToast('Do処方を適用'); }
+function applySetOrder(i) { const s = setOrders[i]; const k = karteData[currentPatientId]; k.prescriptions = []; s.items.forEach(item => { const d = drugs.find(x => x.id === item.drugId); if (d) { const savedNote = getDrugSavedNote(item.drugId); k.prescriptions.push({drug:d,qty:item.qty,days:s.days,note:savedNote||''}); } }); k.rxDays = s.days; document.getElementById('rxDays').value = s.days; renderRxList(); recalcBilling(); showToast(s.name + 'を適用'); }
+function doRx() { const p = patients.find(x => x.id === currentPatientId); const k = karteData[currentPatientId]; k.prescriptions = []; p.prevRx.forEach(rx => { const d = drugs.find(x => x.id === rx.drugId); if (d) { const savedNote = getDrugSavedNote(rx.drugId); k.prescriptions.push({drug:d,qty:rx.qty,days:p.prevDays,note:savedNote||''}); } }); k.rxDays = p.prevDays; document.getElementById('rxDays').value = p.prevDays; renderRxList(); recalcBilling(); showToast('Do処方を適用'); }
 function deleteSetOrder(i) { if (!confirm(setOrders[i].name + ' を削除しますか？')) return; setOrders.splice(i,1); saveSetOrders(); renderSetOrders(); showToast('セットを削除'); }
 function saveCurrentAsSet() {
   const k = karteData[currentPatientId]; if (!k || !k.prescriptions.length) { showToast('処方がありません'); return; }
@@ -1139,15 +1139,48 @@ function deleteSetOrderFromManager(i) {
   setOrders.splice(i,1); saveSetOrders(); renderSetOrders(); _renderSetManager(); showToast('セットを削除');
 }
 function searchDrug(q) { const r = document.getElementById('drugResults'); if (!q) { r.classList.remove('show'); return; } const f = drugs.filter(d => d.name.includes(q) || d.category.includes(q)); if (!f.length) { r.classList.remove('show'); return; } r.innerHTML = f.map(d => '<div class="drug-result-item" onclick="addDrug(\'' + esc(d.id) + '\')"><span>' + esc(d.name) + stockBadge(d.name) + '</span><span class="price">' + (d.price ? d.price.toFixed(1) + '円' : '') + '</span></div>').join(''); r.classList.add('show'); }
-function addDrug(id) { const d = drugs.find(x => x.id === id); if (!d) return; const k = karteData[currentPatientId]; const ex = k.prescriptions.find(rx => rx.drug.id === id); if (ex) ex.qty += 1; else k.prescriptions.push({drug:d,qty:1,days:k.rxDays||7}); document.getElementById('drugSearch').value = ''; document.getElementById('drugResults').classList.remove('show'); renderRxList(); recalcBilling(); }
+function addDrug(id) { const d = drugs.find(x => x.id === id); if (!d) return; const k = karteData[currentPatientId]; const ex = k.prescriptions.find(rx => rx.drug.id === id); if (ex) ex.qty += 1; else { const savedNote = getDrugSavedNote(id); k.prescriptions.push({drug:d,qty:1,days:k.rxDays||7,note:savedNote||''}); } document.getElementById('drugSearch').value = ''; document.getElementById('drugResults').classList.remove('show'); renderRxList(); recalcBilling(); }
 function removeDrug(i) { karteData[currentPatientId].prescriptions.splice(i,1); renderRxList(); recalcBilling(); }
 function updateDrugQty(i,v) { karteData[currentPatientId].prescriptions[i].qty = Math.max(0.5, parseFloat(v)||1); recalcBilling(); }
 function updateDrugDays(i,v) { karteData[currentPatientId].prescriptions[i].days = Math.max(1, parseInt(v)||1); recalcBilling(); }
+function updateDrugNote(i,v,silent) { karteData[currentPatientId].prescriptions[i].note = v; }
+// 薬品ごとの備考記憶 (localStorage)
+function getDrugSavedNotes() { try { return JSON.parse(localStorage.getItem('karte_drugNotes') || '{}'); } catch(e) { return {}; } }
+function getDrugSavedNote(drugId) { return getDrugSavedNotes()[drugId] || ''; }
+function isDrugNoteSaved(drugId, currentNote) { const saved = getDrugSavedNote(drugId); return saved && saved === currentNote && currentNote !== ''; }
+function toggleSaveDrugNote(i) {
+  const rx = karteData[currentPatientId].prescriptions[i];
+  const notes = getDrugSavedNotes();
+  if (notes[rx.drug.id] && notes[rx.drug.id] === rx.note) {
+    delete notes[rx.drug.id];
+    showToast(rx.drug.name + ' の備考記憶を解除');
+  } else {
+    if (!rx.note) { showToast('備考が空です'); return; }
+    notes[rx.drug.id] = rx.note;
+    showToast(rx.drug.name + ' の備考を記憶しました');
+  }
+  localStorage.setItem('karte_drugNotes', JSON.stringify(notes));
+  renderRxList();
+}
 function applyBulkDays(v) { const days = Math.max(1, parseInt(v)||7); const k = karteData[currentPatientId]; k.rxDays = days; k.prescriptions.forEach(rx => { rx.days = days; }); renderRxList(); recalcBilling(); }
 function renderRxList() {
   const k = karteData[currentPatientId]; const list = document.getElementById('rxList');
   if (!k.prescriptions.length) { list.innerHTML = '<li style="color:var(--text-muted);font-size:12px;padding:8px 0;text-align:center;">処方なし</li>'; return; }
-  list.innerHTML = k.prescriptions.map((rx,i) => '<li class="rx-item"><span class="name">' + esc(rx.drug.name) + stockBadge(rx.drug.name) + '</span><input type="number" value="' + rx.qty + '" min="0.5" step="0.5" style="width:50px;" onchange="updateDrugQty(' + i + ',this.value)"><span class="unit">' + esc(rx.drug.unit) + '</span><input type="number" value="' + (rx.days||k.rxDays||7) + '" min="1" max="90" style="width:46px;margin-left:4px;" onchange="updateDrugDays(' + i + ',this.value)"><span class="unit" style="font-size:10px;">日</span><span class="remove-drug" onclick="removeDrug(' + i + ')">&times;</span></li>').join('');
+  list.innerHTML = k.prescriptions.map((rx,i) => {
+    const noteVal = esc(rx.note || '');
+    const isSaved = isDrugNoteSaved(rx.drug.id, rx.note);
+    return '<li class="rx-item">' +
+      '<div class="rx-main"><span class="name">' + esc(rx.drug.name) + stockBadge(rx.drug.name) + '</span>' +
+      '<input type="number" value="' + rx.qty + '" min="0.5" step="0.5" style="width:50px;" onchange="updateDrugQty(' + i + ',this.value)">' +
+      '<span class="unit">' + esc(rx.drug.unit) + '</span>' +
+      '<input type="number" value="' + (rx.days||k.rxDays||7) + '" min="1" max="90" style="width:46px;margin-left:4px;" onchange="updateDrugDays(' + i + ',this.value)">' +
+      '<span class="unit" style="font-size:10px;">日</span>' +
+      '<span class="remove-drug" onclick="removeDrug(' + i + ')">&times;</span></div>' +
+      '<div class="rx-note-row">' +
+      '<input type="text" class="rx-note-input" placeholder="備考（ジェネリック変更可、粉砕指示等）" value="' + noteVal + '" onchange="updateDrugNote(' + i + ',this.value)" oninput="updateDrugNote(' + i + ',this.value,true)">' +
+      '<span class="rx-note-save' + (isSaved ? ' saved' : '') + '" onclick="toggleSaveDrugNote(' + i + ')" title="この備考を薬品に記憶する">' + (isSaved ? '&#9733; 記憶済' : '&#9734; 記憶') + '</span>' +
+      '</div></li>';
+  }).join('');
 }
 
 // ===== Exam =====
@@ -1388,7 +1421,7 @@ function saveKarteDraft() {
   const timeSlotLabel = surchargeInfo ? surchargeInfo.type : '通常';
   const plainText = getEditorPlainText();
   postToApi('saveKarte', { 'カルテID': karteId, '患者ID': currentPatientId, '受診日': selectedDate, '診察開始時刻': examStartTime ? examStartTime.toLocaleTimeString('ja-JP') : '', '主訴': k.chiefComplaint, '所見': plainText, '体温': k.vitals.t, '収縮期血圧': k.vitals.bps, '拡張期血圧': k.vitals.bpd, 'SpO2': k.vitals.spo2, '脈拍': k.vitals.pulse, '初診フラグ': k.isFirstVisit ? 'TRUE' : 'FALSE', '時間区分': timeSlotLabel, 'ステータス': '一時保存' });
-  if (k.prescriptions.length > 0) k.prescriptions.forEach(rx => { postToApi('savePrescription', { 'カル���ID': karteId, '患者ID': currentPatientId, '薬品名': rx.drug.name, '薬品コード': rx.drug.id, '用量': rx.qty, '単位': rx.drug.unit||'錠', '日数': k.rxDays, '薬価': rx.drug.price||0 }); });
+  if (k.prescriptions.length > 0) k.prescriptions.forEach(rx => { postToApi('savePrescription', { 'カルテID': karteId, '患者ID': currentPatientId, '薬品名': rx.drug.name, '薬品コード': rx.drug.id, '用量': rx.qty, '単位': rx.drug.unit||'錠', '日数': rx.days||k.rxDays, '薬価': rx.drug.price||0, '備考': rx.note||'' }); });
   if (k.selectedDiseases.length > 0) k.selectedDiseases.forEach(d => { postToApi('saveDiagnosis', { 'カルテID': karteId, '患者ID': currentPatientId, '傷病名': d.name, 'ICD10コード': d.code||'', '確定区分': d.status === 'suspected' ? '疑い' : '確定' }); });
   if (k.selectedExams.length > 0) k.selectedExams.forEach(exId => { const exInfo = examItems.find(e => e.id === exId); if (exInfo) postToApi('saveExam', { 'カルテID': karteId, '患者ID': currentPatientId, '検査名': exInfo.name, '検査コード': exId }); });
   // Supabase二重書き込み（スプシと並行）
@@ -1402,7 +1435,7 @@ function confirmBilling() {
   const k = karteData[currentPatientId];
   const totalEl = document.getElementById('billTotal');
   const burdenEl = document.getElementById('billBurden');
-  const rxSummary = k.prescriptions.map(rx => rx.drug.name + ' ' + rx.qty + rx.drug.unit).join('\n  ');
+  const rxSummary = k.prescriptions.map(rx => rx.drug.name + ' ' + rx.qty + rx.drug.unit + (rx.note ? ' [' + rx.note + ']' : '')).join('\n  ');
   const diseaseSummary = k.selectedDiseases.map(d => d.name + (d.status === 'suspected' ? '(疑い)' : '')).join(', ');
   const confirmMsg = '【確定確認】\n患者: ' + p.name + '（' + p.insurance + '）\n主訴: ' + (k.chiefComplaint || '未入力') + '\n傷病名: ' + (diseaseSummary || 'なし') + '\n処方:\n  ' + (rxSummary || '��し') + '\n合計: ' + totalEl.textContent + '\n患者��担: ' + burdenEl.textContent + '\n\nこの内容で確定しますか？';
   if (!confirm(confirmMsg)) return;
@@ -1411,7 +1444,7 @@ function confirmBilling() {
   const timeSlotLabel = surchargeInfo ? surchargeInfo.type : '通常';
   const plainText = getEditorPlainText();
   postToApi('saveKarte', { 'カルテID': karteId, '患者ID': currentPatientId, '受診日': selectedDate, '診察開始時刻': examStartTime ? examStartTime.toLocaleTimeString('ja-JP') : '', '���察終了時刻': new Date().toLocaleTimeString('ja-JP'), '主訴': k.chiefComplaint, '所見': plainText, '体温': k.vitals.t, '収���期血圧': k.vitals.bps, '拡張期血圧': k.vitals.bpd, 'SpO2': k.vitals.spo2, '脈拍': k.vitals.pulse, '初診フラグ': k.isFirstVisit ? 'TRUE' : 'FALSE', '時間区分': timeSlotLabel, 'ステータス': '確定' });
-  if (k.prescriptions.length > 0) k.prescriptions.forEach(rx => { postToApi('savePrescription', { 'カルテID': karteId, '患者ID': currentPatientId, '薬品名': rx.drug.name, '��品コード': rx.drug.id, '用量': rx.qty, '単位': rx.drug.unit||'錠', '日数': k.rxDays, '薬価': rx.drug.price||0 }); });
+  if (k.prescriptions.length > 0) k.prescriptions.forEach(rx => { postToApi('savePrescription', { 'カルテID': karteId, '患者ID': currentPatientId, '薬品名': rx.drug.name, '薬品コード': rx.drug.id, '用量': rx.qty, '単位': rx.drug.unit||'錠', '日数': rx.days||k.rxDays, '薬価': rx.drug.price||0, '備考': rx.note||'' }); });
   if (k.selectedDiseases.length > 0) k.selectedDiseases.forEach(d => { postToApi('saveDiagnosis', { 'カルテID': karteId, '患���ID': currentPatientId, '傷病名': d.name, 'ICD10コード': d.code||'', '確定��分': d.status === 'suspected' ? '疑い' : '確定' }); });
   if (k.selectedExams.length > 0) k.selectedExams.forEach(exId => { const exInfo = examItems.find(e => e.id === exId); if (exInfo) postToApi('saveExam', { 'カルテID': karteId, '患者ID': currentPatientId, '検査名': exInfo.name, '検査コード': exId }); });
   const totalPoints = parseInt(totalEl.textContent) || 0;
@@ -1663,7 +1696,7 @@ function openDocModal(type) {
     title = '院外処方箋';
     html = '<div class="form-group"><label class="form-label">��者 / 保険</label><input type="text" class="form-input" value="' + esc(p.name) + ' / ' + esc(p.insurance) + '" readonly></div><div class="form-group"><label class="form-label">処方内容</label><div style="background:var(--bg);padding:8px;border-radius:var(--radius-sm);font-size:12px;">';
     if (!k.prescriptions.length) html += '<div style="color:var(--text-muted);">処方なし</div>';
-    else k.prescriptions.forEach(rx => { html += '<div style="padding:2px 0;">' + esc(rx.drug.name) + ' ' + rx.qty + esc(rx.drug.unit) + ' x ' + k.rxDays + '日分</div>'; });
+    else k.prescriptions.forEach(rx => { html += '<div style="padding:2px 0;">' + esc(rx.drug.name) + ' ' + rx.qty + esc(rx.drug.unit) + ' x ' + (rx.days||k.rxDays) + '日分' + (rx.note ? '<div style="font-size:11px;color:#666;padding-left:12px;">※ ' + esc(rx.note) + '</div>' : '') + '</div>'; });
     html += '</div></div>';
   }
   document.getElementById('docModalTitle').innerHTML = title + ' <button class="modal-close" onclick="closeModal(\'docModal\')">&times;</button>';
