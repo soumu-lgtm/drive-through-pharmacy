@@ -228,6 +228,24 @@ function buildUkeText(patientList, reviewOrg, instCode, instName, prefCode, bill
   return lines.join('\r\n');
 }
 
+// === UKEデータをsessionStorageに保存してreceipt.htmlを開く共通処理 ===
+function openReceiptWithUKE(ukeData, count) {
+  // sessionStorageにUKEデータを保存（receipt.html側で読み取り）
+  const payload = {};
+  if (ukeData.shaho)  payload.shaho  = ukeData.shaho;
+  if (ukeData.kokuho) payload.kokuho = ukeData.kokuho;
+  sessionStorage.setItem('pendingUKE', JSON.stringify(payload));
+
+  // receipt.htmlを開く
+  const w = window.open('receipt.html', '_blank');
+  if (!w) {
+    // ポップアップブロック時はリンクを表示
+    showToast('ポップアップがブロックされました。右クリック→新しいタブで receipt.html を開いてください');
+  } else {
+    showToast('UKEデータ生成完了（' + count + '名）→ レセプト点検を開きました');
+  }
+}
+
 // === UI統合: 確定済み患者からUKEを生成してreceipt.htmlに渡す ===
 function generateAndOpenReceipt() {
   // 確定済み患者を収集
@@ -251,34 +269,7 @@ function generateAndOpenReceipt() {
   }
 
   const ukeData = generateUKE(confirmed, billingMonth);
-
-  // receipt.htmlをポップアップで開いてデータを渡す
-  const w = window.open('receipt.html', '_blank');
-  if (!w) { showToast('ポップアップがブロックされました'); return; }
-
-  // 新しいウィンドウがロードされたらデータを送信
-  const timer = setInterval(() => {
-    try {
-      if (w.document.readyState === 'complete' && typeof w.handleFiles === 'function') {
-        clearInterval(timer);
-        const files = [];
-        if (ukeData.shaho) {
-          files.push(new File([new TextEncoder().encode(ukeData.shaho)], 'shaho_RECEIPTC.UKE', { type: 'application/octet-stream' }));
-        }
-        if (ukeData.kokuho) {
-          files.push(new File([new TextEncoder().encode(ukeData.kokuho)], 'kokuho_RECEIPTC.UKE', { type: 'application/octet-stream' }));
-        }
-        w.handleFiles(files);
-      }
-    } catch(e) {
-      // cross-origin等のエラーは無視（タイムアウトで終了）
-    }
-  }, 300);
-
-  // 10秒でタイムアウト
-  setTimeout(() => clearInterval(timer), 10000);
-
-  showToast('UKEデータ生成完了（' + confirmed.length + '名）→ レセプト点検を開きました');
+  openReceiptWithUKE(ukeData, confirmed.length);
 }
 
 // === デモ用: 全患者のダミーカルテを自動確定してUKE生成 ===
@@ -318,26 +309,5 @@ function generateDemoUKE() {
   }
 
   const ukeData = generateUKE(confirmed, billingMonth);
-
-  const w = window.open('receipt.html', '_blank');
-  if (!w) { showToast('ポップアップがブロックされました'); return; }
-
-  const timer = setInterval(() => {
-    try {
-      if (w.document.readyState === 'complete' && typeof w.handleFiles === 'function') {
-        clearInterval(timer);
-        const files = [];
-        if (ukeData.shaho) {
-          files.push(new File([new TextEncoder().encode(ukeData.shaho)], 'shaho_RECEIPTC.UKE', { type: 'application/octet-stream' }));
-        }
-        if (ukeData.kokuho) {
-          files.push(new File([new TextEncoder().encode(ukeData.kokuho)], 'kokuho_RECEIPTC.UKE', { type: 'application/octet-stream' }));
-        }
-        w.handleFiles(files);
-      }
-    } catch(e) {}
-  }, 300);
-  setTimeout(() => clearInterval(timer), 10000);
-
-  showToast('デモUKE生成（' + confirmed.length + '名）→ レセプト点検を開きました');
+  openReceiptWithUKE(ukeData, confirmed.length);
 }

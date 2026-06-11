@@ -788,6 +788,23 @@ function initReceiptViewer() {
     }
   });
 
+  // sessionStorageからUKEデータを自動読み込み（uke_generatorから渡される）
+  const pendingRaw = sessionStorage.getItem('pendingUKE');
+  if (pendingRaw) {
+    sessionStorage.removeItem('pendingUKE');
+    try {
+      const pending = JSON.parse(pendingRaw);
+      const files = [];
+      if (pending.shaho) {
+        files.push(new File([new TextEncoder().encode(pending.shaho)], 'shaho_RECEIPTC.UKE', { type: 'application/octet-stream' }));
+      }
+      if (pending.kokuho) {
+        files.push(new File([new TextEncoder().encode(pending.kokuho)], 'kokuho_RECEIPTC.UKE', { type: 'application/octet-stream' }));
+      }
+      if (files.length > 0) handleFiles(files);
+    } catch(e) { console.error('pendingUKE parse error:', e); }
+  }
+
   // Init auth
   initReceiptAuth();
 }
