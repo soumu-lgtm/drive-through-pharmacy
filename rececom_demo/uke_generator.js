@@ -234,7 +234,7 @@ function openReceiptWithUKE(ukeData, count) {
   const payload = {};
   if (ukeData.shaho)  payload.shaho  = ukeData.shaho;
   if (ukeData.kokuho) payload.kokuho = ukeData.kokuho;
-  sessionStorage.setItem('pendingUKE', JSON.stringify(payload));
+  localStorage.setItem('pendingUKE', JSON.stringify(payload));
 
   // receipt.htmlを開く
   const w = window.open('receipt.html', '_blank');

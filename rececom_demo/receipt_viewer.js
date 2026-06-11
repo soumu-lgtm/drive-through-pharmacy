@@ -721,9 +721,9 @@ function initReceiptViewer() {
   });
 
   // sessionStorageからUKEデータを自動読み込み（uke_generatorから渡される）
-  const pendingRaw = sessionStorage.getItem('pendingUKE');
+  const pendingRaw = localStorage.getItem('pendingUKE');
   if (pendingRaw) {
-    sessionStorage.removeItem('pendingUKE');
+    localStorage.removeItem('pendingUKE');
     try {
       const pending = JSON.parse(pendingRaw);
       const files = [];
