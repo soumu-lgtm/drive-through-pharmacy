@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ルルブアーカイブ - TRPG ルールブック共有</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ===== ログイン画面 ===== -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-box">
+    <h1>ルルブアーカイブ</h1>
+    <p class="login-sub">TRPG ルールブック共有システム</p>
+
+    <div id="loginForm">
+      <div class="form-group">
+        <label>メールアドレス</label>
+        <input type="email" id="loginEmail" placeholder="example@mail.com">
+      </div>
+      <div class="form-group">
+        <label>パスワード</label>
+        <input type="password" id="loginPassword" placeholder="パスワード">
+      </div>
+      <div class="form-group">
+        <label>表示名（新規登録時のみ）</label>
+        <input type="text" id="loginDisplayName" placeholder="プレイヤー名">
+      </div>
+      <div id="loginError" class="login-error"></div>
+      <button class="btn-login" onclick="doLogin()">ログイン</button>
+      <button class="btn-signup" onclick="doSignup()">新規登録</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== メイン画面 ===== -->
+<div id="mainApp" class="main-app" style="display:none;">
+
+  <!-- ヘッダー -->
+  <div class="header">
+    <h1>ルルブアーカイブ</h1>
+    <span class="header-sub">TRPG ルールブック共有</span>
+    <div class="user-info">
+      <span id="currentUser"></span>
+      <button class="btn-logout" onclick="doLogout()">ログアウト</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- サイドバー -->
+    <div class="sidebar" id="sidebar">
+      <input type="text" class="search-box" id="searchBox" placeholder="タグ・ページ番号で検索...">
+
+      <div class="tag-section">
+        <div class="tag-section-title">システム（ルールブック）</div>
+        <div class="tag-list" id="systemTags"></div>
+      </div>
+
+      <div class="tag-section">
+        <div class="tag-section-title">章・カテゴリ</div>
+        <div class="tag-list" id="chapterTags"></div>
+      </div>
+
+      <div class="tag-section">
+        <div class="tag-section-title">内容タグ</div>
+        <div class="tag-list" id="contentTags"></div>
+      </div>
+
+      <div class="tag-section">
+        <div class="tag-section-title">ページ番号</div>
+        <div class="tag-list" id="pageTags"></div>
+      </div>
+
+      <div class="filter-info" id="filterInfo">
+        <span id="filterText"></span>
+        <br>
+        <button class="clear-btn" onclick="clearFilters()">フィルタ解除</button>
+      </div>
+    </div>
+
+    <!-- メインエリア -->
+    <div class="main">
+      <div class="toolbar">
+        <span class="result-count" id="resultCount"></span>
+        <button class="sidebar-toggle" onclick="toggleSidebar()">フィルタ</button>
+        <button class="upload-btn" onclick="openUpload()">+ スクショをアップロード</button>
+      </div>
+      <div id="loadingIndicator" class="loading" style="display:none;">読み込み中...</div>
+      <div class="grid" id="cardGrid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== アップロードモーダル ===== -->
+<div class="modal-overlay" id="uploadModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>スクリーンショットをアップロード</h2>
+      <button class="modal-close" onclick="closeUpload()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <p style="font-size:32px; margin-bottom:8px;">+</p>
+        <p>ここに画像をドラッグ＆ドロップ</p>
+        <p>または <span class="browse">ファイルを選択</span></p>
+        <p style="font-size:11px; margin-top:8px; color:var(--text-dim);">複数枚OK（PNG / JPG / WebP）</p>
+      </div>
+      <input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="handleFiles(this.files)">
+      <div class="upload-preview" id="uploadPreview"></div>
+
+      <div class="form-group">
+        <label>ルールブック（システム）</label>
+        <select id="uploadSystem"></select>
+      </div>
+
+      <div class="form-group">
+        <label>ページ番号</label>
+        <div class="hint">半角数字を入力（例: 142）。範囲は「142-145」のように</div>
+        <input type="text" id="uploadPage" placeholder="例: 142">
+      </div>
+
+      <div class="form-group">
+        <label>タグ</label>
+        <div class="hint">Enterキーで追加。下のボタンからも追加できます</div>
+        <div class="tag-input-wrap" id="tagInputWrap" onclick="document.getElementById('tagInput').focus()">
+          <input type="text" id="tagInput" placeholder="タグを入力してEnter...">
+        </div>
+        <div class="quick-tags" id="quickTags"></div>
+      </div>
+
+      <div class="form-group">
+        <label>タイトル / メモ（任意）</label>
+        <input type="text" id="uploadMemo" placeholder="例: エンジェルハイロゥのコンボ参考用">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <span class="upload-status" id="uploadStatus"></span>
+      <div style="display:flex; gap:8px;">
+        <button class="btn-cancel" onclick="closeUpload()">キャンセル</button>
+        <button class="btn-submit" id="submitBtn" onclick="submitUpload()" disabled>アップロード</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ライトボックス ===== -->
+<div class="lightbox" id="lightbox">
+  <button class="lb-close" onclick="closeLightbox()">&times;</button>
+  <button class="lb-nav lb-prev" onclick="navLightbox(-1)">&lsaquo;</button>
+  <button class="lb-nav lb-next" onclick="navLightbox(1)">&rsaquo;</button>
+  <div class="lb-img-wrap" id="lbImgWrap"></div>
+  <div class="lb-info">
+    <h3 id="lbTitle"></h3>
+    <div class="lb-tags" id="lbTags"></div>
+    <p class="lb-meta" id="lbMeta"></p>
+    <button class="btn-delete" id="lbDeleteBtn" onclick="deleteScreenshot()" style="display:none;">この画像を削除</button>
+  </div>
+</div>
+
+<script src="app.js?v=2"></script>
+</body>
+</html>
