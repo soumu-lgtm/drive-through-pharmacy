@@ -44,80 +44,92 @@ const defaultTagMaster = [
   { name: 'ワールド', system_name: null, category: 'chapter', sort_order: 4 },
 ];
 
-// ===== 認証 =====
+// ===== 認証（カスタムユーザーテーブル方式） =====
 async function checkSession() {
   if (isLocalMode) {
-    // ローカルモード: ログインスキップ
-    currentUser = { id: 'local', user_metadata: { display_name: 'ローカルユーザー' }, email: 'local@test' };
+    currentUser = { id: 0, username: 'local', display_name: 'ローカルユーザー' };
     showMainApp();
     return;
   }
-  const { data: { session } } = await sb.auth.getSession();
-  if (session) {
-    currentUser = session.user;
+  const saved = localStorage.getItem('rulebook_user');
+  if (saved) {
+    currentUser = JSON.parse(saved);
     showMainApp();
   }
 }
 
 async function doLogin() {
-  const email = document.getElementById('loginEmail').value.trim();
+  const username = document.getElementById('loginUsername').value.trim();
   const password = document.getElementById('loginPassword').value;
   const errEl = document.getElementById('loginError');
   errEl.textContent = '';
 
-  if (!email || !password) {
-    errEl.textContent = 'メールアドレスとパスワードを入力してください';
+  if (!username || !password) {
+    errEl.textContent = 'IDとパスワードを入力してください';
     return;
   }
 
-  const { data, error } = await sb.auth.signInWithPassword({ email, password });
-  if (error) {
-    errEl.textContent = 'ログインに失敗しました: ' + error.message;
+  const { data, error } = await sb.rpc('rulebook_login', {
+    p_username: username,
+    p_password: password
+  });
+
+  if (error || !data || data.length === 0) {
+    errEl.textContent = 'IDまたはパスワードが正しくありません';
     return;
   }
-  currentUser = data.user;
+
+  currentUser = data[0];
+  localStorage.setItem('rulebook_user', JSON.stringify(currentUser));
   showMainApp();
 }
 
 async function doSignup() {
-  const email = document.getElementById('loginEmail').value.trim();
+  const username = document.getElementById('loginUsername').value.trim();
   const password = document.getElementById('loginPassword').value;
   const displayName = document.getElementById('loginDisplayName').value.trim();
   const errEl = document.getElementById('loginError');
   errEl.textContent = '';
 
-  if (!email || !password) {
-    errEl.textContent = 'メールアドレスとパスワードを入力してください';
+  if (!username || !password) {
+    errEl.textContent = 'IDとパスワードを入力してください';
     return;
   }
   if (!displayName) {
     errEl.textContent = '表示名を入力してください';
     return;
   }
-
-  const { data, error } = await sb.auth.signUp({
-    email,
-    password,
-    options: { data: { display_name: displayName } }
-  });
-  if (error) {
-    errEl.textContent = '登録に失敗しました: ' + error.message;
+  if (username.length < 3) {
+    errEl.textContent = 'IDは3文字以上にしてください';
+    return;
+  }
+  if (password.length < 4) {
+    errEl.textContent = 'パスワードは4文字以上にしてください';
     return;
   }
 
-  // メール確認不要設定の場合はそのままログイン
-  if (data.session) {
-    currentUser = data.user;
-    showMainApp();
-  } else {
-    errEl.textContent = '';
-    errEl.style.color = 'var(--success)';
-    errEl.textContent = '登録しました。確認メールを送信した場合はメール内のリンクをクリックしてください。';
+  const { data, error } = await sb.rpc('rulebook_register', {
+    p_username: username,
+    p_password: password,
+    p_display_name: displayName
+  });
+
+  if (error) {
+    if (error.message.includes('unique') || error.message.includes('duplicate')) {
+      errEl.textContent = 'そのIDは既に使われています';
+    } else {
+      errEl.textContent = '登録に失敗しました: ' + error.message;
+    }
+    return;
   }
+
+  currentUser = data[0];
+  localStorage.setItem('rulebook_user', JSON.stringify(currentUser));
+  showMainApp();
 }
 
-async function doLogout() {
-  await sb.auth.signOut();
+function doLogout() {
+  localStorage.removeItem('rulebook_user');
   currentUser = null;
   document.getElementById('mainApp').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'flex';
@@ -125,7 +137,7 @@ async function doLogout() {
 
 function getDisplayName() {
   if (!currentUser) return '不明';
-  return currentUser.user_metadata?.display_name || currentUser.email?.split('@')[0] || '不明';
+  return currentUser.display_name || currentUser.username || '不明';
 }
 
 // ===== メイン画面表示 =====
@@ -561,7 +573,7 @@ async function submitUpload() {
       }
 
       // 2. DBにレコード追加
-      const { error: dbError } = await supabase
+      const { error: dbError } = await sb
         .from('rulebook_screenshots')
         .insert({
           title,
@@ -570,7 +582,6 @@ async function submitUpload() {
           tags: currentTags,
           memo,
           image_path: filePath,
-          uploader_id: currentUser.id,
           uploader_name: getDisplayName(),
         });
 

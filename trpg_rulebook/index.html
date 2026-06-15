@@ -18,16 +18,16 @@
 
     <div id="loginForm">
       <div class="form-group">
-        <label>メールアドレス</label>
-        <input type="email" id="loginEmail" placeholder="example@mail.com">
+        <label>ユーザーID</label>
+        <input type="text" id="loginUsername" placeholder="英数字3文字以上" autocomplete="username">
       </div>
       <div class="form-group">
         <label>パスワード</label>
-        <input type="password" id="loginPassword" placeholder="パスワード">
+        <input type="password" id="loginPassword" placeholder="4文字以上" autocomplete="current-password">
       </div>
       <div class="form-group">
         <label>表示名（新規登録時のみ）</label>
-        <input type="text" id="loginDisplayName" placeholder="プレイヤー名">
+        <input type="text" id="loginDisplayName" placeholder="セッションで表示される名前">
       </div>
       <div id="loginError" class="login-error"></div>
       <button class="btn-login" onclick="doLogin()">ログイン</button>
@@ -160,6 +160,6 @@
   </div>
 </div>
 
-<script src="app.js?v=2"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>
