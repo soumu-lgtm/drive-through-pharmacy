@@ -996,7 +996,7 @@ function renderSnsLineContent(ln){
 function renderSnsLineCharts(ln){
   if(ln.length===0) return;
   // ターゲットリーチ推移
-  snsCreateChart('cSnsLnReach',{type:'line',data:{labels:ln.map(d=>d.date),datasets:[{label:'ターゲットリーチ',data:ln.map(d=>(d.friends||{}).target_reach||0),borderColor:'#06C755',backgroundColor:'rgba(6,199,85,0.1)',fill:true,tension:.3,pointRadius:ln.map(d=>d.is_dummy?2:5),pointBackgroundColor:ln.map(d=>d.is_dummy?'#06C755':'#ff6600')}]},options:{responsive:true,maintainAspectRatio:false,plugins:{datalabels:{display:false}}}});
+  snsCreateChart('cSnsLnReach',{type:'line',data:{labels:ln.map(d=>d.date),datasets:[{label:'ターゲットリーチ',data:ln.map(d=>{const v=(d.friends||{}).target_reach;return v?v:null;}),borderColor:'#06C755',backgroundColor:'rgba(6,199,85,0.1)',fill:true,tension:.3,spanGaps:true,pointRadius:ln.map(d=>{const v=(d.friends||{}).target_reach;return v?5:0;}),pointBackgroundColor:'#06C755'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{datalabels:{display:false}}}});
 
   const demo=ln[ln.length-1].demographics||{};
   const gender=demo.gender||{};
