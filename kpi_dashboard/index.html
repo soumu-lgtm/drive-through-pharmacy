@@ -164,13 +164,13 @@ function destroyC(id){if(charts[id]){charts[id].destroy();delete charts[id]}}
 async function init(){
   try{
     [D,O,G,S,I,SY,SEO,SEO_ART]=await Promise.all([
-      sbGet('kpi_daily_summary','select=*&order=date.desc&limit=2000'),
-      sbGet('kpi_orders','select=*&order=order_date.desc&limit=5000'),
+      sbGet('kpi_daily_summary','select=*&order=date.desc&limit=2000',2000),
+      sbGet('kpi_orders','select=*&order=order_date.desc&limit=5000',5000),
       sbGet('kpi_ga4_metrics','select=*&order=date.desc&limit=500'),
       sbGet('kpi_sns_metrics','select=*&order=date.desc&limit=300'),
       sbGet('kpi_inventory','select=*&order=snapshot_date.desc&limit=100'),
       sbGet('kpi_sync_status','select=*'),
-      sbGet('kpi_seo_daily','select=*&order=date.asc&limit=5000'),
+      sbGet('kpi_seo_daily','select=*&order=date.asc&limit=5000',5000),
       sbGet('kpi_seo_articles','select=*&order=clicks.desc&limit=3000',3000),
     ]);
     const ds=D.map(d=>d.date).sort();
