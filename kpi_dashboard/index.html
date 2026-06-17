@@ -393,12 +393,12 @@ function renderReport(d,o){
     report+=`■ ${name}\n`;
     report+='【売上数量】\n';
     let totalQty=0,totalRev=0;
-    ['shopify','employee','wholesale','amazon','qoo10'].forEach(c=>{
+    ['shopify','employee','wholesale','amazon','qoo10','rakuten'].forEach(c=>{
       if(chs[c]){report+=`${chIcons[c]||c}: ${chs[c].qty}個\n`;totalQty+=chs[c].qty}
     });
     report+=`📊 合計: ${totalQty}個\n\n`;
     report+='【売上金額】\n';
-    ['shopify','employee','wholesale','amazon','qoo10'].forEach(c=>{
+    ['shopify','employee','wholesale','amazon','qoo10','rakuten'].forEach(c=>{
       if(chs[c]){report+=`${chIcons[c]||c}: ¥${chs[c].rev.toLocaleString()}\n`;totalRev+=chs[c].rev}
     });
     report+=`📊 合計: ¥${totalRev.toLocaleString()}\n\n`;
