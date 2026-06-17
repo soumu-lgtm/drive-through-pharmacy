@@ -14,7 +14,7 @@
 :root {
   --bg: #f5f7fa; --card: #fff; --text: #333; --sub: #888; --border: #e5e7eb;
   --shopify: #96bf48; --employee: #f59e0b; --wholesale: #6366f1;
-  --amazon: #ff9900; --qoo10: #e31937; --accent: #667eea; --accent2: #764ba2;
+  --amazon: #ff9900; --qoo10: #e31937; --rakuten: #bf0000; --accent: #667eea; --accent2: #764ba2;
   --green: #4ade80; --red: #f87171; --blue: #60a5fa; --purple: #a78bfa;
   --font: 'Segoe UI','Hiragino Sans','Noto Sans JP',sans-serif;
 }
@@ -61,7 +61,7 @@ tr:hover td{background:#f8f9fb}
 .badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700;color:#fff}
 .badge-shopify{background:var(--shopify)}.badge-employee{background:var(--employee)}
 .badge-wholesale{background:var(--wholesale)}.badge-amazon{background:var(--amazon)}
-.badge-qoo10{background:var(--qoo10)}.badge-ok{background:rgba(74,222,128,.15);color:#16a34a}
+.badge-qoo10{background:var(--qoo10)}.badge-rakuten{background:var(--rakuten)}.badge-ok{background:rgba(74,222,128,.15);color:#16a34a}
 .badge-ng{background:rgba(248,113,113,.15);color:#dc2626}
 .badge-info{background:rgba(96,165,250,.15);color:#2563eb;font-size:10px;padding:2px 8px;border-radius:10px}
 
@@ -140,17 +140,12 @@ const SB='https://dyjhxkqzxibcpgoefbiv.supabase.co',SK='sb_publishable_bOK3qqLHk
 let D=[],O=[],G=[],S=[],I=[],SY=[],SEO=[],SEO_ART=[];
 let dS=null,dE=null,charts={};
 
-async function sbGet(t,q='',maxRows=0){
-  if(maxRows<=1000){const r=await fetch(`${SB}/rest/v1/${t}?${q}`,{headers:H,cache:'no-store'});if(!r.ok)throw new Error(`${t}:${r.status}`);return r.json();}
-  let all=[],from=0;const pgSize=1000;
-  while(from<maxRows){const hdrs={...H,'Range':from+'-'+(from+pgSize-1)};const r=await fetch(`${SB}/rest/v1/${t}?${q}`,{headers:hdrs,cache:'no-store'});if(!r.ok&&r.status!==206)throw new Error(`${t}:${r.status}`);const d=await r.json();all=all.concat(d);if(d.length<pgSize)break;from+=pgSize;}
-  return all;
-}
+async function sbGet(t,q='',maxRows=0){const hdrs={...H};if(maxRows>1000)hdrs['Range']='0-'+(maxRows-1);const r=await fetch(`${SB}/rest/v1/${t}?${q}`,{headers:hdrs,cache:'no-store'});if(!r.ok&&r.status!==206)throw new Error(`${t}:${r.status}`);return r.json();}
 function fmt(n){return n!=null?Number(n).toLocaleString('ja-JP'):'-'}
 function yen(n){return n!=null?'¥'+Number(n).toLocaleString('ja-JP'):'-'}
 function pct(a,b){return b>0?((a/b)*100).toFixed(1)+'%':'-'}
-function chBadge(ch){const m={shopify:'badge-shopify',employee:'badge-employee',wholesale:'badge-wholesale',amazon:'badge-amazon',qoo10:'badge-qoo10'};return `<span class="badge ${m[ch]||'badge-info'}">${chName(ch)}</span>`}
-function chName(ch){return{shopify:'Shopify',employee:'社割',wholesale:'卸売',amazon:'Amazon',qoo10:'Qoo10'}[ch]||ch}
+function chBadge(ch){const m={shopify:'badge-shopify',employee:'badge-employee',wholesale:'badge-wholesale',amazon:'badge-amazon',qoo10:'badge-qoo10',rakuten:'badge-rakuten'};return `<span class="badge ${m[ch]||'badge-info'}">${chName(ch)}</span>`}
+function chName(ch){return{shopify:'Shopify',employee:'社割',wholesale:'卸売',amazon:'Amazon',qoo10:'Qoo10',rakuten:'楽天'}[ch]||ch}
 function normProd(n){if(!n)return'不明';return n.replace(/\s*\(Shopify\)|\s*\(卸売\)|\s*\(社割\)/g,'').trim()}
 
 function showTab(id){
@@ -169,13 +164,13 @@ function destroyC(id){if(charts[id]){charts[id].destroy();delete charts[id]}}
 async function init(){
   try{
     [D,O,G,S,I,SY,SEO,SEO_ART]=await Promise.all([
-      sbGet('kpi_daily_summary','select=*&order=date.desc&limit=2000',2000),
-      sbGet('kpi_orders','select=*&order=order_date.desc&limit=5000',5000),
+      sbGet('kpi_daily_summary','select=*&order=date.desc&limit=2000'),
+      sbGet('kpi_orders','select=*&order=order_date.desc&limit=5000'),
       sbGet('kpi_ga4_metrics','select=*&order=date.desc&limit=500'),
       sbGet('kpi_sns_metrics','select=*&order=date.desc&limit=300'),
-      sbGet('kpi_inventory','select=*&order=snapshot_date.desc&limit=500'),
+      sbGet('kpi_inventory','select=*&order=snapshot_date.desc&limit=100'),
       sbGet('kpi_sync_status','select=*'),
-      sbGet('kpi_seo_daily','select=*&order=date.asc&limit=5000',5000),
+      sbGet('kpi_seo_daily','select=*&order=date.asc&limit=5000'),
       sbGet('kpi_seo_articles','select=*&order=clicks.desc&limit=3000',3000),
     ]);
     const ds=D.map(d=>d.date).sort();
@@ -291,7 +286,7 @@ function renderCharts(d,o){
   destroyC('cDailyRev');destroyC('cChannelPie');destroyC('cMonthlyBar');destroyC('cPrefBar');
   const cOpt={responsive:true,maintainAspectRatio:false,plugins:{datalabels:{display:false},legend:{labels:{font:{size:11}}}}};
   charts.cDailyRev=new Chart(document.getElementById('cDailyRev'),{type:'line',data:{labels:dates,datasets:[{label:'売上',data:dates.map(d=>byDate[d].rev),borderColor:'#667eea',backgroundColor:'rgba(102,126,234,.1)',fill:true,tension:.3,pointRadius:1}]},options:{...cOpt,scales:{x:{ticks:{maxTicksLimit:15,font:{size:10}},grid:{display:false}},y:{ticks:{callback:v=>'¥'+(v/1000).toFixed(0)+'k',font:{size:10}},grid:{color:'rgba(0,0,0,.05)'}}}}});
-  const chKeys=Object.keys(ch),chColors=['#96bf48','#f59e0b','#6366f1','#ff9900','#e31937','#667eea'];
+  const chKeys=Object.keys(ch),chColors=['#96bf48','#f59e0b','#6366f1','#ff9900','#e31937','#bf0000','#667eea'];
   charts.cChannelPie=new Chart(document.getElementById('cChannelPie'),{type:'doughnut',data:{labels:chKeys.map(chName),datasets:[{data:chKeys.map(k=>ch[k]),backgroundColor:chColors}]},options:{...cOpt,plugins:{...cOpt.plugins,datalabels:{color:'#fff',font:{weight:'bold',size:11},formatter:(v,ctx)=>{const t=ctx.dataset.data.reduce((a,b)=>a+b,0);return t>0?((v/t)*100).toFixed(0)+'%':''}},legend:{position:'bottom',labels:{padding:10,font:{size:11}}}}}});
   charts.cMonthlyBar=new Chart(document.getElementById('cMonthlyBar'),{type:'bar',data:{labels:months,datasets:[{label:'売上',data:months.map(m=>byM[m].rev),backgroundColor:'rgba(102,126,234,.6)',borderColor:'#667eea',borderWidth:1}]},options:{...cOpt,scales:{x:{ticks:{font:{size:10}},grid:{display:false}},y:{ticks:{callback:v=>'¥'+(v/1000).toFixed(0)+'k',font:{size:10}},grid:{color:'rgba(0,0,0,.05)'}}}}});
   if(prefArr.length>0){
@@ -317,7 +312,7 @@ function renderProduct(o){
   o.forEach(x=>{const c=x.channel||'不明';if(!chTotals[c])chTotals[c]={rev:0,qty:0};chTotals[c].rev+=Number(x.total||0);chTotals[c].qty+=(x.quantity||0)});
   const totalRev=o.reduce((s,x)=>s+Number(x.total||0),0);
   const totalQty=o.reduce((s,x)=>s+(x.quantity||0),0);
-  const chOrder=['shopify','employee','wholesale','amazon','qoo10'];
+  const chOrder=['shopify','employee','wholesale','amazon','qoo10','rakuten'];
   let chCards=chOrder.map(c=>{const v=chTotals[c]||{rev:0,qty:0};return`
     <div class="card" style="text-align:center"><h2>${chBadge(c)}</h2>
       <div style="font-size:18px;font-weight:700">${fmt(v.qty)}個</div>
@@ -384,7 +379,7 @@ function renderReport(d,o){
     prods[n][c].qty+=(x.quantity||0);prods[n][c].rev+=Number(x.total||0);
   });
 
-  const chIcons={shopify:'🛒 ECサイト',employee:'👥 社割購入',wholesale:'🏥 クリニック卸売',amazon:'🅰️ Amazon',qoo10:'🔵 Qoo10'};
+  const chIcons={shopify:'🛒 ECサイト',employee:'👥 社割購入',wholesale:'🏥 クリニック卸売',amazon:'🅰️ Amazon',qoo10:'🔵 Qoo10',rakuten:'🔴 楽天'};
   const startD=dS||D.map(x=>x.date).sort()[0]||'';
   const endD=dE||D.map(x=>x.date).sort().pop()||'';
   let report=`売上報告(${startD} ~ ${endD})\n${'='.repeat(40)}\n\n`;
@@ -1255,113 +1250,55 @@ function renderSeoArticles(articles){
   wrap.innerHTML=h;
 }
 
-const GAS_SYNC_URL='https://script.google.com/macros/s/AKfycbwo4PPZSf5man_hn4eRB7SBTR2zI8wK21m3up4R7PG8OcjeXrzh4qmvYa3n34KIJvnw/exec';
-const SNS_API_URL='http://127.0.0.1:3456';
-
-// SNS収集データをSupabaseにupsert
-async function upsertSnsToSupabase(platform, data){
-  const today=new Date().toISOString().slice(0,10);
-  const am=data.account_metrics||{};
-  const friends=data.friends||{};
-  const row={
-    date:today, platform,
-    followers: data.followers||am.followers||friends.target_reach||0,
-    posts: data.posts||data.post_count||am.posts||0,
-    likes: data.likes||data.total_likes||data.interactions_30d||data.likes_7d||0,
-    comments: data.comments||data.comments_7d||0,
-    shares: data.shares||data.shares_7d||0,
-    impressions: data.impressions||am.views_90d||data.views_30d||data.video_views_7d||0,
-    reach: data.reach||am.reach_30d||data.reach_30d||0,
-    extra_json: JSON.stringify(data)
-  };
-  const r=await fetch(`${SB}/rest/v1/kpi_sns_metrics?on_conflict=date,platform`,{
-    method:'POST',
-    headers:{...H,'Authorization':'Bearer '+SK,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
-    body:JSON.stringify(row)
-  });
-  return r.ok;
-}
-
+const SYNC_URL='http://127.0.0.1:3457';
 async function runSync(){
   const btn=document.getElementById('syncBtn');
   const box=document.getElementById('syncResult');
   btn.disabled=true;btn.textContent='同期中...';
   box.style.display='block';
   box.style.background='#f0f4ff';box.style.border='1px solid #c7d2fe';
-  box.innerHTML='<strong>集計実行中...</strong> スプレッドシート・GA4のデータをSupabaseに同期しています。';
+  box.innerHTML='<strong>集計実行中...</strong> スプレッドシート・GA4・SNSのデータを取得しています。しばらくお待ちください。';
 
-  const labels={daily_summary:'日次サマリー',orders:'注文データ',ga4:'GA4',inventory:'在庫',sns:'SNS'};
-  let results={};
-  let hasError=false;
-
-  // 1. GAS Web App → EC/GA4/在庫 をSupabaseに同期
   try{
-    const r=await fetch(GAS_SYNC_URL,{redirect:'follow',signal:AbortSignal.timeout(120000)});
-    const gasData=await r.json();
-    Object.assign(results,gasData);
-  }catch(e){
-    results.daily_summary={ok:false,error:'GAS同期失敗: '+e.message};
-    results.orders={ok:false,error:'GAS同期失敗: '+e.message};
-    results.ga4={ok:false,error:'GAS同期失敗: '+e.message};
-    results.inventory={ok:false,error:'GAS同期失敗: '+e.message};
-    hasError=true;
-  }
+    // ヘルスチェック
+    const hc=await fetch(SYNC_URL+'/health',{cache:'no-store',signal:AbortSignal.timeout(3000)}).catch(()=>null);
+    if(!hc||!hc.ok){
+      box.style.background='#fef2f2';box.style.border='1px solid #fca5a5';
+      box.innerHTML='<strong>同期サーバー未接続</strong><br>このPCでは同期サーバーが起動していません。<code>run_sync_server.bat</code> を実行してください。';
+      btn.disabled=false;btn.textContent='\u21bb 集計更新';return;
+    }
 
-  // 2. SNS収集APIサーバー（Chrome起動時に自動起動）→ 収集 → Supabaseに直接書き込み
-  box.innerHTML='<strong>集計実行中...</strong> SNSデータを収集しています。';
-  try{
-    const st=await fetch(SNS_API_URL+'/status',{cache:'no-store',signal:AbortSignal.timeout(3000)}).then(r=>r.json()).catch(()=>null);
-    if(st&&st.cdp&&st.cdp.available){
-      const openTabs=Object.entries(st.cdp.tabs).filter(([,v])=>v).map(([k])=>k);
-      if(openTabs.length>0){
-        const cr=await fetch(SNS_API_URL+'/collect',{cache:'no-store',signal:AbortSignal.timeout(120000)});
-        const cd=await cr.json();
-        if(cd.success&&cd.data){
-          let cnt=0;
-          for(const[p,d]of Object.entries(cd.data)){
-            if(d&&await upsertSnsToSupabase(p,d))cnt++;
-          }
-          results.sns={ok:true,count:cnt};
-          const closed=Object.entries(st.cdp.tabs).filter(([,v])=>!v).map(([k])=>k);
-          if(closed.length>0)results.sns.partial_skip='タブ未検出: '+closed.join(', ');
-        }else{
-          results.sns={ok:false,error:cd.error||'収集失敗'};
-        }
+    const r=await fetch(SYNC_URL+'/sync',{cache:'no-store',signal:AbortSignal.timeout(300000)});
+    const data=await r.json();
+
+    // 結果表示
+    const labels={daily_summary:'日次サマリー',orders:'注文データ',ga4:'GA4',sns:'SNS',inventory:'在庫',seo:'SEO (4サイト)',seo_articles:'SEO記事別'};
+    let html='<strong>同期完了</strong><br>';
+    let hasSkip=false;
+    for(const[k,v]of Object.entries(data)){
+      const label=labels[k]||k;
+      if(v.ok){
+        html+=`<span style="color:#16a34a">\u2713</span> ${label}: ${v.count||0}件同期`;
+        if(v.partial_skip)html+=` <span style="color:#d97706">（${v.partial_skip}）</span>`;
+        html+='<br>';
+      }else if(v.skipped){
+        hasSkip=true;
+        html+=`<span style="color:#d97706">\u25b3</span> ${label}: スキップ — ${v.reason}<br>`;
       }else{
-        results.sns={ok:false,skipped:true,reason:'SNSタブが開いていません（LINE/Instagram/TikTok）'};
+        html+=`<span style="color:#dc2626">\u2717</span> ${label}: エラー — ${v.error||'不明'}<br>`;
       }
-    }else if(st){
-      results.sns={ok:false,skipped:true,reason:'Chrome CDPに接続できません（--remote-debugging-port=9222で起動してください）'};
-    }else{
-      results.sns={ok:false,skipped:true,reason:'SNS収集サーバー未起動（Chrome起動.batから起動してください）'};
     }
+    box.style.background=hasSkip?'#fffbeb':'#f0fdf4';
+    box.style.border=hasSkip?'1px solid #fcd34d':'1px solid #86efac';
+    box.innerHTML=html;
+
+    // データ再読み込み
+    await init();
+
   }catch(e){
-    results.sns={ok:false,skipped:true,reason:'SNS収集エラー: '+e.message};
+    box.style.background='#fef2f2';box.style.border='1px solid #fca5a5';
+    box.innerHTML=`<strong>同期エラー</strong><br>${e.message}`;
   }
-
-  // 3. 結果表示
-  let html='<strong>同期完了</strong><br>';
-  let hasSkip=false;
-  for(const[k,v]of Object.entries(results)){
-    const label=labels[k]||k;
-    if(v.ok){
-      html+=`<span style="color:#16a34a">\u2713</span> ${label}: ${v.count||0}件同期`;
-      if(v.partial_skip)html+=` <span style="color:#d97706">（${v.partial_skip}）</span>`;
-      html+='<br>';
-    }else if(v.skipped){
-      hasSkip=true;
-      html+=`<span style="color:#d97706">\u25b3</span> ${label}: スキップ — ${v.reason}<br>`;
-    }else{
-      hasError=true;
-      html+=`<span style="color:#dc2626">\u2717</span> ${label}: エラー — ${v.error||'不明'}<br>`;
-    }
-  }
-  box.style.background=hasError?'#fef2f2':hasSkip?'#fffbeb':'#f0fdf4';
-  box.style.border=hasError?'1px solid #fca5a5':hasSkip?'1px solid #fcd34d':'1px solid #86efac';
-  box.innerHTML=html;
-
-  // 4. Supabaseからデータ再読み込み
-  try{ await init(); }catch(e){}
   btn.disabled=false;btn.textContent='\u21bb 集計更新';
 }
 
