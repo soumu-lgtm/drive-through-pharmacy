@@ -1735,11 +1735,16 @@
             const data = await sbFetch('pharmacy_medicines?select=code,name,current_stock,unit,threshold,category&order=code');
             if (!data || data.length === 0) return false;
             let matched = 0;
+            let hasNonZero = false;
             stockData.forEach(m => {
                 const sb = data.find(d => d.code === m.code);
-                if (sb) { m.stock = sb.current_stock; matched++; }
+                if (sb) { m.stock = sb.current_stock; matched++; if (sb.current_stock > 0) hasNonZero = true; }
             });
-            console.log('Supabase在庫同期: ' + matched + '/' + stockData.length + '件マッチ');
+            console.log('Supabase在庫同期: ' + matched + '/' + stockData.length + '件マッチ, 非ゼロ=' + hasNonZero);
+            if (matched > 0 && !hasNonZero) {
+                console.log('Supabase全品在庫0（未初期化）→ GASフォールバック');
+                return false;
+            }
             return matched > 0;
         }
 
@@ -3445,12 +3450,28 @@
             });
         });
 
+        async function initialSyncToSupabase() {
+            console.log('Supabase初回在庫同期開始...');
+            let synced = 0;
+            for (const m of stockData) {
+                if (m.stock > 0) {
+                    await sbFetch('pharmacy_medicines?code=eq.' + m.code, {
+                        method: 'PATCH',
+                        body: JSON.stringify({ current_stock: m.stock, last_updated: new Date().toISOString() })
+                    });
+                    synced++;
+                }
+            }
+            console.log('Supabase初回同期完了: ' + synced + '件更新');
+        }
+
         (async function initLoad() {
             showToast('データを読み込み中...', '');
             const sbOk = await loadStockFromSupabase();
             if (!sbOk && USE_GAS) {
                 console.log('Supabase失敗、GASフォールバック');
                 await loadStockFromGAS();
+                initialSyncToSupabase();
             }
             if (USE_GAS) loadHistoryFromGAS();
             renderStockList();
