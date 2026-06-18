@@ -2777,8 +2777,8 @@
                 const matchWeight = !wMap || wMap.codes.includes(m.code);
                 return matchText && matchCat && matchWeight;
             });
-            const csvItems = filtered.filter(m => m.csvGroup === 'csv');
-            const otherItems = filtered.filter(m => m.csvGroup !== 'csv');
+            const csvItems = filtered.filter(m => m.csvGroup === 'csv' || m.csvGroup === 'master');
+            const otherItems = filtered.filter(m => m.csvGroup !== 'csv' && m.csvGroup !== 'master');
 
             let html = '';
             if (wMap) {
