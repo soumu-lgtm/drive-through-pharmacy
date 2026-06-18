@@ -1717,6 +1717,55 @@
         const GAS_URL = 'https://script.google.com/macros/s/AKfycby1zgHFyfsxTyqXTf-UXhu25ef5Hhp2ZvSkQ9ETYzCJIJumoYiKkuQl2IclDHpfrfuJ9w/exec';
         const USE_GAS = true;
 
+        // ===== Supabase連携設定 =====
+        const SB_URL = 'https://dyjhxkqzxibcpgoefbiv.supabase.co';
+        const SB_KEY = 'sb_publishable_bOK3qqLHkM1fFOojh3slpg_glKQoP3g';
+        const SB_HEADERS = { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' };
+
+        async function sbFetch(path, opts = {}) {
+            try {
+                const res = await fetch(SB_URL + '/rest/v1/' + path, { ...opts, headers: { ...SB_HEADERS, ...(opts.headers || {}) } });
+                if (!res.ok) throw new Error('SB ' + res.status);
+                const text = await res.text();
+                return text ? JSON.parse(text) : null;
+            } catch (e) { console.warn('Supabase error:', e.message); return null; }
+        }
+
+        async function loadStockFromSupabase() {
+            const data = await sbFetch('pharmacy_medicines?select=code,name,current_stock,unit,threshold,category&order=code');
+            if (!data || data.length === 0) return false;
+            let matched = 0;
+            stockData.forEach(m => {
+                const sb = data.find(d => d.code === m.code);
+                if (sb) { m.stock = sb.current_stock; matched++; }
+            });
+            console.log('Supabase在庫同期: ' + matched + '/' + stockData.length + '件マッチ');
+            return matched > 0;
+        }
+
+        async function syncToSupabase(items) {
+            if (!items || items.length === 0) return;
+            const txRows = items.map(item => ({
+                medicine_code: item.medicine.code,
+                transaction_type: item.mode,
+                quantity: item.quantity,
+                patient_id: item.patient?.id || null,
+                patient_name: item.patient?.name || null,
+                note: item.operator ? '担当:' + item.operator : null
+            }));
+            await sbFetch('pharmacy_transactions', { method: 'POST', body: JSON.stringify(txRows) });
+            for (const item of items) {
+                const code = item.medicine.code;
+                const idx = stockData.findIndex(m => normalizeCode(m.code) === normalizeCode(code));
+                if (idx < 0) continue;
+                const newStock = stockData[idx].stock;
+                await sbFetch('pharmacy_medicines?code=eq.' + code, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ current_stock: newStock, last_updated: new Date().toISOString() })
+                });
+            }
+        }
+
         // ===== GAS API関数 =====
         async function gasGet(action, params = {}) {
             if (!USE_GAS) return null;
@@ -2436,6 +2485,9 @@
                     patient: item.patient?.name || null
                 });
             }
+
+            // Supabaseにもトランザクション記録+在庫更新
+            syncToSupabase(batchItems).catch(e => console.warn('Supabase sync error:', e));
 
             const modeLabel = currentMode === 'in' ? '入庫' : currentMode === 'adjust' ? '棚卸修正' : '出庫';
             showToast(`${successCount}件の${modeLabel}を送信しました`, 'success');
@@ -3393,11 +3445,16 @@
             });
         });
 
-        if (USE_GAS) {
+        (async function initLoad() {
             showToast('データを読み込み中...', '');
-            loadStockFromGAS();
-            loadHistoryFromGAS();
-        }
+            const sbOk = await loadStockFromSupabase();
+            if (!sbOk && USE_GAS) {
+                console.log('Supabase失敗、GASフォールバック');
+                await loadStockFromGAS();
+            }
+            if (USE_GAS) loadHistoryFromGAS();
+            renderStockList();
+        })();
     </script>
 </body>
 </html>
