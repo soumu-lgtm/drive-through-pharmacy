@@ -2383,7 +2383,8 @@
                     }
                 });
                 try {
-                    const result = await gasGet('batch', { items: JSON.stringify(batchData) });
+                    // POST送信（GETだとURLクエリパラメータの長さ制限で棚卸等の大量データが失敗する)
+                    const result = await gasPost('batch', { items: batchData });
                     if (result && result.success) {
                         successCount = batchItems.length;
                     } else if (result && result.results) {
