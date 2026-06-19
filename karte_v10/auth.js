@@ -48,6 +48,12 @@ function showApp() {
   if (typeof loadDbData === 'function' && !dbLoaded) {
     loadDbData();
   }
+  // SSKマスター読込（傷病名27,684件等をバックグラウンドで）
+  if (typeof MasterLoader !== 'undefined' && !MasterLoader.isLoaded()) {
+    MasterLoader.loadAll('master/').then(() => {
+      console.log('[MasterLoader] カルテ用マスター読込完了:', MasterLoader.getStats());
+    }).catch(e => console.warn('[MasterLoader] 読込失敗:', e));
+  }
 }
 
 async function handleLogin() {

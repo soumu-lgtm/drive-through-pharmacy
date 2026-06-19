@@ -137,6 +137,21 @@ const MasterLoader = (() => {
     return masters.z?.get(code) || '';
   }
 
+  /** 傷病名検索: 名称またはコードの部分一致で検索 (カルテ傷病名入力用) */
+  function searchDiseases(query, limit) {
+    if (!masters.b || !query) return [];
+    limit = limit || 50;
+    const results = [];
+    const q = query.toLowerCase();
+    for (const [code, entry] of masters.b) {
+      if (results.length >= limit) break;
+      if (entry.name.includes(query) || code.includes(query)) {
+        results.push({ code, name: entry.name, icd: entry.icd || '' });
+      }
+    }
+    return results;
+  }
+
   // === テーブルアクセサ ===
 
   /** 背反チェック: 指定タイプで code1-code2 ペアが背反か判定 */
@@ -212,6 +227,7 @@ const MasterLoader = (() => {
     getDiseaseName,
     getDisease,
     getModifierName,
+    searchDiseases,
     isHaihan,
     findHaihanPairs,
     findHoukatsuGroup,

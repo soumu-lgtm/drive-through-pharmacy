@@ -1057,15 +1057,40 @@ function renderDiseaseQuickBtns() {
 function copyPrevDiseases() { const p = patients.find(x => x.id === currentPatientId); if (!p || !p.history) return; p.history.forEach(h => addDisease(h)); showToast('前回傷病名を引き継ぎました'); }
 function searchDisease(q) {
   const r = document.getElementById('diseaseResults');
-  if (!q) { r.classList.remove('show'); return; }
-  const f = diseases.filter(d => d.name.includes(q) || d.code.includes(q));
+  if (!q || q.length < 2) { r.classList.remove('show'); return; }
+  // 1. ローカル辞書から検索
+  let f = diseases.filter(d => d.name.includes(q) || d.code.includes(q));
+  // 2. SSKマスター(27,684件)から検索（MasterLoaderが読込済みの場合）
+  if (typeof MasterLoader !== 'undefined' && MasterLoader.isLoaded()) {
+    const stats = MasterLoader.getStats();
+    if (stats.b > 0) {
+      const localCodes = new Set(f.map(d => d.code));
+      const masterResults = MasterLoader.searchDiseases(q, 50);
+      masterResults.forEach(d => {
+        if (!localCodes.has(d.code)) f.push(d);
+      });
+    }
+  }
   if (!f.length) { r.classList.remove('show'); return; }
-  r.innerHTML = f.map(d => '<div class="disease-result-item" onclick="addDisease(\'' + esc(d.name) + '\')">' + esc(d.name) + ' <span style="color:var(--text-muted);font-size:10px;">' + esc(d.code) + '</span></div>').join('');
+  // 最大50件表示
+  const display = f.slice(0, 50);
+  r.innerHTML = display.map(d => '<div class="disease-result-item" onclick="addDisease(\'' + esc(d.name) + '\',\'' + esc(d.code) + '\')">' + esc(d.name) + ' <span style="color:var(--text-muted);font-size:10px;">' + esc(d.code) + '</span></div>').join('');
   r.classList.add('show');
 }
-function addDisease(name) {
+function addDisease(name, code) {
   const k = karteData[currentPatientId];
-  if (!k.selectedDiseases.find(d => d.name === name)) { const info = diseases.find(d => d.name === name); k.selectedDiseases.push({name, code: info ? info.code : '', status:'confirmed'}); }
+  if (!k.selectedDiseases.find(d => d.name === name)) {
+    // コードが渡されなかった場合はローカル辞書 → SSKマスターの順で検索
+    if (!code) {
+      const info = diseases.find(d => d.name === name);
+      code = info ? info.code : '';
+      if (!code && typeof MasterLoader !== 'undefined' && MasterLoader.isLoaded()) {
+        const results = MasterLoader.searchDiseases(name, 1);
+        if (results.length > 0 && results[0].name === name) code = results[0].code;
+      }
+    }
+    k.selectedDiseases.push({name, code: code || '', status:'confirmed'});
+  }
   document.getElementById('diseaseSearch').value = '';
   document.getElementById('diseaseResults').classList.remove('show');
   renderSelectedDiseases();
