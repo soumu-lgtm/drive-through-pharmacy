@@ -1423,7 +1423,7 @@ function renderInvoice(){
   const sender=INVOICE_SENDER;
 
   // 商品×チャネル別に集計して明細行を作成
-  const lineItems=buildInvoiceLines(invoiceData.orders, docName);
+  const {items:lineItems, hasBundleOrders}=buildInvoiceLines(invoiceData.orders, docName);
   const subtotal=lineItems.reduce((s,l)=>s+l.amount,0);
   const tax=Math.round(subtotal*10/110);
   const total=subtotal;
@@ -1528,6 +1528,9 @@ function renderInvoice(){
   // 備考
   h+='<div class="inv-note">';
   h+='<strong>備考</strong><br>';
+  if(hasBundleOrders){
+    h+='※ 単価欄に「@」表記のある行は、同一注文内で複数商品をご購入いただいた際の按分単価です。<br>';
+  }
   h+='記載内容に相違がございましたら、3営業日以内にご連絡ください。<br>';
   h+='期日までにご連絡がない場合は、本通知記載の金額にて<br>';
   h+='振り込み手続きを進めさせていただきます。';
@@ -1537,6 +1540,10 @@ function renderInvoice(){
 }
 
 function buildInvoiceLines(orders, docName){
+  // 同一注文ID内の商品数を集計（同梱判定用）
+  const orderItemCount={};
+  orders.forEach(o=>{const k=o.order_id+'|'+o.channel;orderItemCount[k]=(orderItemCount[k]||0)+1});
+  let hasBundleOrders=false;
   // 商品×チャネル×割引パターンで集計
   const map={};
   orders.forEach(o=>{
@@ -1550,8 +1557,11 @@ function buildInvoiceLines(orders, docName){
     const r=calcOrder(o);
     if(!r)return;
     const docFeePerUnit=qty>0?Math.floor(r.docFee/qty):0;
+    // 同梱数
+    const bundleCount=orderItemCount[o.order_id+'|'+o.channel]||1;
+    if(bundleCount>1) hasBundleOrders=true;
     // 明細キー: 商品名+チャネル+単価
-    const desc=buildLineDesc(p, cName, o);
+    const desc=buildLineDesc(p, cName, o, bundleCount);
     const key=desc+'_'+docFeePerUnit;
     if(!map[key]){
       map[key]={description:desc, qty:0, unitPrice:docFeePerUnit, amount:0};
@@ -1559,17 +1569,16 @@ function buildInvoiceLines(orders, docName){
     map[key].qty+=qty;
     map[key].amount+=r.docFee;
   });
-  return Object.values(map).sort((a,b)=>{
-    // チャネル順→商品順
-    return a.description.localeCompare(b.description,'ja');
-  });
+  const items=Object.values(map).sort((a,b)=>a.description.localeCompare(b.description,'ja'));
+  return {items, hasBundleOrders};
 }
 
-function buildLineDesc(product, channel, order){
+function buildLineDesc(product, channel, order, bundleCount){
   const name=product.name;
   const isSet=product.isSet;
   const single=isSet?'':'単品';
   const qty=order.quantity||1;
+  bundleCount=bundleCount||1;
   // クリニック/縁故は独自フォーマット
   if(channel==='クリニック') return name+'クリニック販売'+(qty>1?'（'+qty+'個口）':'');
   if(channel==='縁故') return name+'縁故販売'+(qty>1?'（'+qty+'個口）':'');
@@ -1603,7 +1612,7 @@ function buildLineDesc(product, channel, order){
   }
   // 定期購入で割引なし
   if(!discLabel&&isSub) discLabel='定期';
-  // 定価と異なる実売単価（割引・定期以外）— セール価格等
+  // 定価と異なる実売単価（割引・定期以外）
   if(!discLabel&&unitPrice>0&&price>0&&Math.abs(unitPrice-price)>price*0.02){
     discLabel='@'+unitPrice.toLocaleString()+'円';
   }
