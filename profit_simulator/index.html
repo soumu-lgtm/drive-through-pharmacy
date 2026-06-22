@@ -501,11 +501,13 @@ th .src{vertical-align:baseline}
     <input type="month" id="invoiceMonth" onchange="renderInvoice()">
     <button class="btn-fetch" onclick="fetchInvoiceData()" style="margin-left:8px">データ取得</button>
     <button class="btn-p" onclick="printInvoice()" style="margin-left:auto">印刷 / PDF</button>
+    <button class="btn-p" onclick="showCalcBreakdown()" style="margin-left:6px">内訳計算</button>
     <span class="status" id="invoiceStatus"></span>
   </div>
   <div id="invoiceArea" style="margin-top:14px">
     <div class="no-data-msg">医師を選択し「データ取得」を押してください</div>
   </div>
+  <div id="calcBreakdownArea" class="no-print" style="display:none;margin-top:14px"></div>
 </div>
 
 </div>
@@ -1624,6 +1626,123 @@ function buildLineDesc(product, channel, order, bundleCount){
     return name+chLabel+single+discLabel+'販売'+qtyLabel;
   }
   return name+chLabel+single+'定価販売'+qtyLabel;
+}
+
+function showCalcBreakdown(){
+  const area=document.getElementById('calcBreakdownArea');
+  if(!invoiceData.loaded){alert('先にデータを取得してください');return}
+  // トグル表示
+  if(area.style.display!=='none'){area.style.display='none';return}
+  area.style.display='block';
+
+  const docName=invoiceData.doctor;
+  const orders=invoiceData.orders;
+  let h='<div style="background:#fff;border:1px solid var(--sen);padding:20px">';
+  h+='<h3 style="margin-bottom:12px;border-bottom:2px solid var(--ai);padding-bottom:6px">報酬計算 内訳詳細</h3>';
+
+  // 計算式の説明
+  h+='<div style="background:var(--kinari);padding:12px;margin-bottom:16px;font-size:12px;line-height:1.8;border-left:3px solid var(--wasu)">';
+  h+='<strong>計算式</strong><br>';
+  h+='① 売上 = 注文合計額 − 割引額<br>';
+  h+='② 手数料 = floor(売上 × チャネル手数料率)<br>';
+  h+='③ 原価合計 = 商品原価×数量 + 手数料 + 送料 + 梱包費<br>';
+  h+='④ 粗利 = 売上 − 原価合計<br>';
+  h+='⑤ <strong>医師報酬 = floor(粗利 × 報酬率)</strong>　※端数切捨て<br>';
+  h+='⑥ HD報酬 = 粗利 − 医師報酬';
+  h+='</div>';
+
+  // マスタ情報表示
+  const docProducts=P.filter(p=>p.doc===docName);
+  h+='<div style="margin-bottom:16px">';
+  h+='<strong>マスタ情報（'+docName+'先生 担当商品）</strong>';
+  h+='<table style="font-size:11px;margin-top:6px"><thead><tr><th>商品</th><th class="num">定価</th><th class="num">原価</th><th class="num">梱包費</th><th class="num">報酬率</th></tr></thead><tbody>';
+  docProducts.forEach(p=>{
+    h+='<tr><td>'+p.name+'</td><td class="num">'+yen(p.price)+'</td><td class="num">'+yen(p.cost)+'</td><td class="num">'+yen(p.box)+'</td><td class="num">'+(p.dr*100)+'%</td></tr>';
+  });
+  h+='</tbody></table>';
+  h+='</div>';
+
+  // チャネル手数料率
+  h+='<div style="margin-bottom:16px">';
+  h+='<strong>チャネル手数料率・送料</strong>';
+  h+='<table style="font-size:11px;margin-top:6px"><thead><tr><th>チャネル</th><th class="num">手数料率</th><th class="num">送料</th><th class="num">梱包</th></tr></thead><tbody>';
+  C.forEach(c=>{
+    h+='<tr><td>'+c.name+'</td><td class="num">'+(c.fee*100).toFixed(1)+'%</td><td class="num">'+(c.hasShipping?yen(SHIP):'−')+'</td><td class="num">'+(c.hasBox?'商品別':'−')+'</td></tr>';
+  });
+  h+='</tbody></table>';
+  h+='</div>';
+
+  // 注文別明細
+  h+='<strong>注文別 計算内訳（全'+orders.length+'件）</strong>';
+  h+='<div style="overflow-x:auto;margin-top:6px"><table style="font-size:11px">';
+  h+='<thead><tr><th>日付</th><th>注文ID</th><th>商品</th><th>CH</th><th class="num">数量</th>';
+  h+='<th class="num">①売上</th><th class="num">割引</th>';
+  h+='<th class="num">原価×数</th><th class="num">②手数料</th><th class="num">送料</th><th class="num">梱包</th>';
+  h+='<th class="num">③原価計</th><th class="num">④粗利</th><th class="num">率</th><th class="num">⑤医師報酬</th><th class="num">⑥HD</th>';
+  h+='<th>計算式</th></tr></thead><tbody>';
+
+  let totalDoc=0, totalHd=0;
+  orders.forEach(o=>{
+    const r=calcOrder(o);
+    if(!r)return;
+    const pi=r.pi,ci=r.ci;
+    const p=pi>=0?P[pi]:null;
+    const c=ci>=0?C[ci]:null;
+    const qty=r.qty||1;
+    const disc=r.discount||0;
+    const pName=p?p.name:(pi===-2?'トライアルセット':'?');
+    const cName=c?c.name:'?';
+    const drPct=p?(p.dr*100)+'%':'0%';
+    totalDoc+=r.docFee; totalHd+=r.hdFee;
+
+    // 計算式テキスト
+    let formula='';
+    if(pi===-2){
+      formula='トライアル: 報酬=0';
+    } else {
+      formula='粗利'+Math.floor(r.gp)+'×'+drPct+'='+r.docFee;
+    }
+
+    h+='<tr>';
+    h+='<td>'+o.order_date+'</td>';
+    h+='<td style="font-size:10px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+o.order_id+'">'+o.order_id+'</td>';
+    h+='<td>'+pName+'</td>';
+    h+='<td>'+cName+'</td>';
+    h+='<td class="num">'+qty+'</td>';
+    h+='<td class="num">'+yen(r.rev)+'</td>';
+    h+='<td class="num">'+(disc>0?yen(disc):'−')+'</td>';
+    h+='<td class="num">'+yen(r.costGoods)+'</td>';
+    h+='<td class="num">'+yen(r.fee)+'</td>';
+    h+='<td class="num">'+(r.ship>0?yen(r.ship):'−')+'</td>';
+    h+='<td class="num">'+(r.box>0?yen(r.box):'−')+'</td>';
+    h+='<td class="num">'+yen(r.costTotal)+'</td>';
+    h+='<td class="num">'+yenS(r.gp)+'</td>';
+    h+='<td class="num">'+drPct+'</td>';
+    h+='<td class="num" style="font-weight:700">'+yen(r.docFee)+'</td>';
+    h+='<td class="num">'+yen(r.hdFee)+'</td>';
+    h+='<td style="font-size:10px;color:var(--nezumi)">'+formula+'</td>';
+    h+='</tr>';
+  });
+  h+='<tr style="font-weight:700;background:var(--kinari)"><td colspan="14">合計</td>';
+  h+='<td class="num">'+yen(totalDoc)+'</td><td class="num">'+yen(totalHd)+'</td><td></td></tr>';
+  h+='</tbody></table></div>';
+
+  // 支払通知書との照合
+  h+='<div style="margin-top:12px;padding:10px;background:#f0f7ff;border:1px solid var(--wasu);font-size:12px">';
+  h+='<strong>照合チェック</strong><br>';
+  const invoiceTotal=invoiceData.orders.reduce((s,o)=>{const r=calcOrder(o);return s+(r?r.docFee:0)},0);
+  const tax=Math.round(invoiceTotal*10/110);
+  h+='内訳計算 医師報酬合計: <strong>'+yen(totalDoc)+'</strong>（税込）<br>';
+  h+='うち消費税相当額: '+yen(tax)+'<br>';
+  if(totalDoc===invoiceTotal){
+    h+='<span style="color:var(--matcha);font-weight:700">✓ 支払通知書の合計と一致</span>';
+  } else {
+    h+='<span style="color:var(--beni);font-weight:700">✗ 支払通知書の合計（'+yen(invoiceTotal)+'）と不一致 — 差額: '+yen(Math.abs(totalDoc-invoiceTotal))+'</span>';
+  }
+  h+='</div>';
+
+  h+='</div>';
+  area.innerHTML=h;
 }
 
 function printInvoice(){
