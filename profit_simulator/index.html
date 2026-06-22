@@ -1554,9 +1554,10 @@ function buildLineDesc(product, channel, order){
   const name=product.name;
   const isSet=product.isSet;
   const single=isSet?'':'単品';
+  const qty=order.quantity||1;
   // クリニック/縁故は独自フォーマット
-  if(channel==='クリニック') return name+'クリニック販売';
-  if(channel==='縁故') return name+'縁故販売';
+  if(channel==='クリニック') return name+'クリニック販売'+(qty>1?'（'+qty+'個口）':'');
+  if(channel==='縁故') return name+'縁故販売'+(qty>1?'（'+qty+'個口）':'');
   // 定期購入判定
   const isSub=order.is_subscription===true||order.is_subscription==='true';
   // 割引検出（discount=割引額, total=定価ベース）
@@ -1565,7 +1566,6 @@ function buildLineDesc(product, channel, order){
   const unitPrice=Number(order.unit_price)||0;
   const price=product.price;
   if(disc>0){
-    const qty=order.quantity||1;
     const rawTotal=Number(order.total)||0;
     const actualUnit=qty>0?(rawTotal-disc)/qty:rawTotal-disc;
     if(price>0&&actualUnit>0){
@@ -1586,16 +1586,20 @@ function buildLineDesc(product, channel, order){
     const ratio=Math.round((1-unitPrice/price)*100);
     discLabel='定期'+ratio+'%OFF';
   }
+  // 定期購入で割引なし
+  if(!discLabel&&isSub) discLabel='定期';
+  // 定価と異なる実売単価（割引・定期以外）— セール価格等
+  if(!discLabel&&unitPrice>0&&price>0&&Math.abs(unitPrice-price)>price*0.02){
+    discLabel='@'+unitPrice.toLocaleString()+'円';
+  }
   // チャネル名（Shopifyは省略）
   const chLabel=(channel&&channel!=='Shopify')?channel:'';
-  const subLabel=isSub&&!discLabel?'定期':'';
+  // まとめ買い表記（qty>1で送料按分が変わる）
+  const qtyLabel=qty>1?'（'+qty+'個口）':'';
   if(discLabel){
-    return name+chLabel+single+discLabel+'販売';
+    return name+chLabel+single+discLabel+'販売'+qtyLabel;
   }
-  if(subLabel){
-    return name+chLabel+single+subLabel+'販売';
-  }
-  return name+chLabel+single+'定価販売';
+  return name+chLabel+single+'定価販売'+qtyLabel;
 }
 
 function printInvoice(){
