@@ -775,7 +775,7 @@ async function fetchAndApply(){
   document.getElementById('btnFetch').disabled=true;
   setStatus('取得中...','');
   try{
-    const orders=await sbGetAll('kpi_orders',`order_date=gte.${from}&order_date=lte.${to}&select=order_id,channel,order_date,product_name,sku,quantity,unit_price,total,discount`);
+    const orders=await sbGetAll('kpi_orders',`order_date=gte.${from}&order_date=lte.${to}&select=order_id,channel,order_date,product_name,sku,quantity,unit_price,total,discount,is_subscription`);
     // 計算
     G={loaded:true,orders,calc:[],from,to,byPI:{},byCI:{},byDate:{},byPC:{},unmatched:{prod:{},ch:{}}};
     orders.forEach(o=>{
@@ -1383,7 +1383,7 @@ async function fetchInvoiceData(){
   const to=monthVal+'-'+String(lastDay).padStart(2,'0');
   statusEl.textContent='取得中...';statusEl.className='status';
   try{
-    const orders=await sbGetAll('kpi_orders',`order_date=gte.${from}&order_date=lte.${to}&select=order_id,channel,order_date,product_name,sku,quantity,unit_price,total,discount`);
+    const orders=await sbGetAll('kpi_orders',`order_date=gte.${from}&order_date=lte.${to}&select=order_id,channel,order_date,product_name,sku,quantity,unit_price,total,discount,is_subscription`);
     // 該当医師の商品のみフィルタ
     const docProducts=P.filter(p=>p.doc===docName);
     const docProdNames=new Set(docProducts.map(p=>p.name));
@@ -1557,11 +1557,14 @@ function buildLineDesc(product, channel, order){
   // クリニック/縁故は独自フォーマット
   if(channel==='クリニック') return name+'クリニック販売';
   if(channel==='縁故') return name+'縁故販売';
+  // 定期購入判定
+  const isSub=order.is_subscription===true||order.is_subscription==='true';
   // 割引検出（discount=割引額, total=定価ベース）
   let discLabel='';
   const disc=Number(order.discount)||0;
+  const unitPrice=Number(order.unit_price)||0;
+  const price=product.price;
   if(disc>0){
-    const price=product.price;
     const qty=order.quantity||1;
     const rawTotal=Number(order.total)||0;
     const actualUnit=qty>0?(rawTotal-disc)/qty:rawTotal-disc;
@@ -1573,15 +1576,24 @@ function buildLineDesc(product, channel, order){
       else if(Math.abs(ratio-0.1)<0.05) discLabel='10%OFFキャンペーン';
       else{
         const diff=price-actualUnit;
-        if(Math.abs(diff-1000)<50) discLabel='定価1000円OFFキャンペーン';
+        if(Math.abs(diff-1000)<50) discLabel='1000円OFFキャンペーン';
         else if(disc>0) discLabel=Math.round(ratio*100)+'%OFFキャンペーン';
       }
     }
   }
+  // 定期購入で単価が定価より低い場合（定期割引）
+  if(!discLabel&&isSub&&unitPrice>0&&price>0&&unitPrice<price*0.98){
+    const ratio=Math.round((1-unitPrice/price)*100);
+    discLabel='定期'+ratio+'%OFF';
+  }
   // チャネル名（Shopifyは省略）
   const chLabel=(channel&&channel!=='Shopify')?channel:'';
+  const subLabel=isSub&&!discLabel?'定期':'';
   if(discLabel){
     return name+chLabel+single+discLabel+'販売';
+  }
+  if(subLabel){
+    return name+chLabel+single+subLabel+'販売';
   }
   return name+chLabel+single+'定価販売';
 }
