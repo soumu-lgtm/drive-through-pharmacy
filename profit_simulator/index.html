@@ -527,6 +527,19 @@ async function sbGetAll(table,params=''){
   }
   return all;
 }
+/* 重複データ除去: Shopify旧ハッシュID除外 + 完全重複行除外 */
+function dedupOrders(orders){
+  // Shopify旧フォーマット（#で始まらない数字ID）を除外
+  let clean=orders.filter(o=>!(o.channel==='shopify'&&/^\d+$/.test(o.order_id)));
+  // 完全重複行を除外（order_id+channel+product_name+order_date）
+  const seen=new Set();
+  clean=clean.filter(o=>{
+    const k=`${o.order_id}|${o.channel}|${o.product_name}|${o.order_date}`;
+    if(seen.has(k))return false;
+    seen.add(k);return true;
+  });
+  return clean;
+}
 
 /* ===== データ定義（ハードコードフォールバック） ===== */
 let P=[
@@ -775,7 +788,8 @@ async function fetchAndApply(){
   document.getElementById('btnFetch').disabled=true;
   setStatus('取得中...','');
   try{
-    const orders=await sbGetAll('kpi_orders',`order_date=gte.${from}&order_date=lte.${to}&select=order_id,channel,order_date,product_name,sku,quantity,unit_price,total,discount,is_subscription`);
+    const rawOrders=await sbGetAll('kpi_orders',`order_date=gte.${from}&order_date=lte.${to}&select=order_id,channel,order_date,product_name,sku,quantity,unit_price,total,discount,is_subscription`);
+    const orders=dedupOrders(rawOrders);
     // 計算
     G={loaded:true,orders,calc:[],from,to,byPI:{},byCI:{},byDate:{},byPC:{},unmatched:{prod:{},ch:{}}};
     orders.forEach(o=>{
@@ -1383,7 +1397,8 @@ async function fetchInvoiceData(){
   const to=monthVal+'-'+String(lastDay).padStart(2,'0');
   statusEl.textContent='取得中...';statusEl.className='status';
   try{
-    const orders=await sbGetAll('kpi_orders',`order_date=gte.${from}&order_date=lte.${to}&select=order_id,channel,order_date,product_name,sku,quantity,unit_price,total,discount,is_subscription`);
+    const rawOrders=await sbGetAll('kpi_orders',`order_date=gte.${from}&order_date=lte.${to}&select=order_id,channel,order_date,product_name,sku,quantity,unit_price,total,discount,is_subscription`);
+    const orders=dedupOrders(rawOrders);
     // 該当医師の商品のみフィルタ
     const docProducts=P.filter(p=>p.doc===docName);
     const docProdNames=new Set(docProducts.map(p=>p.name));
