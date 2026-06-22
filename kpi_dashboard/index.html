@@ -193,6 +193,8 @@ async function init(){
       sbGet('kpi_seo_daily','select=*&order=date.asc&limit=5000',5000),
       sbGet('kpi_seo_articles','select=*&order=clicks.desc&limit=3000',3000),
     ]);
+    // order_id+channelで重複除去（SKU違いの古いレコード対策）
+    O=(()=>{const seen=new Set();return O.filter(o=>{const k=o.order_id+"|"+o.channel;if(seen.has(k))return false;seen.add(k);return true})})();
     const ds=D.map(d=>d.date).sort();
     if(ds.length){
       const el=id=>document.getElementById(id);
