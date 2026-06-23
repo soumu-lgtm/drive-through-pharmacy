@@ -1651,13 +1651,15 @@ function buildLineDesc(product, channel, order, bundleCount){
     discLabel='定期'+ratio+'%OFF';
   }
   if(!discLabel&&isSub) discLabel='定期';
-  // 自動割引検出（unit_price < 定価: Amazon等のキャンペーン）
-  if(!discLabel&&unitPrice>0&&price>0&&unitPrice<price*0.98){
+  // 自動割引検出（unit_price < 定価: Amazon等のキャンペーン）※クリニック/縁故は固定価格なので除外
+  if(!discLabel&&unitPrice>0&&price>0&&unitPrice<price*0.98&&channel!=='クリニック'&&channel!=='縁故'){
     const ratio=Math.round((1-unitPrice/price)*100);
     discLabel=ratio+'%OFF';
   }
-  // 販売種別を組み立て
-  let saleType=discLabel?discLabel+'販売':'定価販売';
+  // 販売種別を組み立て（クリニック/縁故は「販売」のみ）
+  let saleType;
+  if(channel==='クリニック'||channel==='縁故') saleType='販売';
+  else saleType=discLabel?discLabel+'販売':'定価販売';
   return chTag+' '+name+' '+saleType+qtyLabel;
 }
 
