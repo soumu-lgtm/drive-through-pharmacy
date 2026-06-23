@@ -1631,7 +1631,7 @@ function buildLineDesc(product, channel, order, bundleCount){
   else if(channel==='クリニック') chTag='(クリニック)';
   else if(channel==='縁故') chTag='(縁故)';
   else if(channel==='Qoo10メガポ') chTag='(メガポ)';
-  const qtyLabel=qty>1?' ('+qty+'個口)':'';
+  const qtyLabel=''; // 個口表記廃止: 単価同一のため1個購入行に数量合算
   // 定期購入判定
   const isSub=order.is_subscription===true||order.is_subscription==='true';
   // 割引検出
