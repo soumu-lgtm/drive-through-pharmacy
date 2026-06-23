@@ -572,7 +572,7 @@ let C=[
   {id:'enko',name:'縁故',fee:0,color:'var(--c-enko)',hasShipping:false,hasBox:false,allowsDiscount:false,allows50off:false},
   {id:'mega',name:'Qoo10メガポ',fee:.059,color:'var(--c-mega)',hasShipping:true,hasBox:true,allowsDiscount:true,allows50off:true},
 ];
-const CHANNEL_MAP={'shopify':0,'Shopify':0,'amazon':1,'Amazon':1,'qoo10':2,'Qoo10':2,'楽天':3,'rakuten':3,'Rakuten':3,'tiktok':4,'TikTok':4,'TikTokショップ':4,'クリニック':5,'clinic':5,'直販':5,'縁故':6,'enko':6,'知人':6,'employee':6,'社員':6,'Qoo10メガポ':7,'メガポ':7};
+const CHANNEL_MAP={'shopify':0,'Shopify':0,'amazon':1,'Amazon':1,'qoo10':2,'Qoo10':2,'楽天':3,'rakuten':3,'Rakuten':3,'tiktok':4,'TikTok':4,'TikTokショップ':4,'クリニック':5,'clinic':5,'直販':5,'wholesale':5,'卸':5,'縁故':6,'enko':6,'知人':6,'employee':6,'社員':6,'Qoo10メガポ':7,'メガポ':7};
 function findCI(ch){
   if(!ch)return-1;const n=String(ch).trim();
   if(CHANNEL_MAP[n]!==undefined)return CHANNEL_MAP[n];
@@ -734,14 +734,30 @@ function calcOrder(o){
   }
   if(pi<0||ci<0)return null;
   const p=P[pi],c=C[ci],qty=o.quantity||1;
-  const rawTotal=Number(o.total)||(Number(o.unit_price)||p.price)*qty;
-  const disc=Number(o.discount)||0;
-  const rev=disc>0?rawTotal-disc:rawTotal;  // 割引後の実売上で計算
+  // unit_price解釈: qty>1の場合unit_priceがライン合計の可能性あり
+  let unitPrice=Number(o.unit_price)||p.price;
+  if(qty>1&&unitPrice>p.price*1.1) unitPrice=Math.round(unitPrice/qty); // ライン合計→実単価
+  // 割引自動判定: 実単価と定価を比較（明示的discount優先）
+  let disc=Number(o.discount)||0;
+  let autoDisc=0;
+  if(disc===0&&unitPrice>0&&p.price>0&&unitPrice<p.price*0.98){
+    autoDisc=(p.price-unitPrice)*qty; // 定価との差額×数量
+  }
+  // 売上計算: total→unit_price×qty→定価×qtyの優先順
+  let rev=Number(o.total)||(unitPrice*qty);
+  // totalがunit_price×qtyより大幅に大きい場合はtotal不正→unit_price×qtyを使う
+  if(qty>1&&rev>unitPrice*qty*1.5) rev=unitPrice*qty;
+  if(disc>0) rev=rev-disc;
+  if(autoDisc>0) rev=unitPrice*qty; // 自動判定時はunit_price基準
+  // Amazonクーポン: 割引がある場合に加算
+  const hasAmzCoupon=(c.id==='amazon'&&(disc>0||autoDisc>0||unitPrice<p.price*0.98));
+  const amzCoupon=hasAmzCoupon?150:0;
   const unitCost=getCost(p,c);
   const fee=Math.floor(rev*c.fee),ship=c.hasShipping?SHIP:0,box=c.hasBox?p.box:0;
-  const cog=unitCost*qty,costTotal=cog+fee+ship+box,gp=rev-costTotal,gm=rev>0?gp/rev*100:0;
-  const docFee=Math.floor(gp*p.dr),hdFee=gp-docFee;
-  return{pi,ci,rev,fee,ship,box,costGoods:cog,costTotal,gp,gm,docFee,hdFee,qty,date:o.order_date,discount:disc};
+  const cog=unitCost*qty,costTotal=cog+fee+ship+box+amzCoupon,gp=rev-costTotal,gm=rev>0?gp/rev*100:0;
+  const docFee=Math.floor(gp*p.dr);
+  const hdFee=gp-docFee;
+  return{pi,ci,rev,fee,ship,box,amzCoupon,costGoods:cog,costTotal,gp,gm,docFee,hdFee,qty,date:o.order_date,discount:disc,autoDisc,unitPrice};
 }
 
 /* ===== フォーマッター ===== */
@@ -1572,6 +1588,18 @@ function buildInvoiceLines(orders, docName){
     map[key].amount+=r.docFee;
   });
   const items=Object.values(map).sort((a,b)=>a.description.localeCompare(b.description,'ja'));
+  // 原価行: 開発投資医師(dr>=0.5)のみ、全数量に対して原価(cost-initial)を加算
+  let totalQty=0;
+  items.forEach(l=>totalQty+=l.qty);
+  const docProds=P.filter(p=>p.doc===docName&&p.dr>=0.5);
+  if(docProds.length>0&&totalQty>0){
+    docProds.forEach(p=>{
+      const genka=p.detail?(p.detail.prod||0)+(p.detail.bottle||0)+(p.detail.casebox||0):0;
+      if(genka>0){
+        items.push({description:'原価', qty:totalQty, unitPrice:genka, amount:genka*totalQty});
+      }
+    });
+  }
   return {items, hasBundleOrders};
 }
 
