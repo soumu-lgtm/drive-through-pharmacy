@@ -183,7 +183,8 @@ function destroyC(id){if(charts[id]){charts[id].destroy();delete charts[id]}}
 
 async function init(){
   try{
-    [D,O,G,S,I,SY,SEO,SEO_ART]=await Promise.all([
+    var EX=[];
+    [D,O,G,S,I,SY,SEO,SEO_ART,EX]=await Promise.all([
       sbGet('kpi_daily_summary','select=*&order=date.desc&limit=2000',2000),
       sbGet('kpi_orders','select=*&order=order_date.desc&limit=5000',5000),
       sbGet('kpi_ga4_metrics','select=*&order=date.desc&limit=500'),
@@ -192,7 +193,11 @@ async function init(){
       sbGet('kpi_sync_status','select=*'),
       sbGet('kpi_seo_daily','select=*&order=date.asc&limit=5000',5000),
       sbGet('kpi_seo_articles','select=*&order=clicks.desc&limit=3000',3000),
+      sbGet('kpi_excluded_orders','select=order_id'),
     ]);
+    // 社員テスト購入を除外
+    const exSet=new Set(EX.map(e=>e.order_id));
+    if(exSet.size){const b=O.length;O=O.filter(o=>!exSet.has(o.order_id));if(b-O.length)console.log(`[除外]${b-O.length}件の社員テスト購入を除外`)}
     // order_id+channelで重複除去（SKU違いの古いレコード対策）
     O=(()=>{const seen=new Set();return O.filter(o=>{const k=o.order_id+"|"+o.channel;if(seen.has(k))return false;seen.add(k);return true})})();
     const ds=D.map(d=>d.date).sort();
