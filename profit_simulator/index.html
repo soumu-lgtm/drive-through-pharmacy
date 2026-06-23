@@ -496,9 +496,9 @@ th .src{vertical-align:baseline}
 <div class="panel" id="p7">
   <div class="ctrl no-print">
     <label>医師/宛先:</label>
-    <select id="invoiceDoctor" onchange="renderInvoice()"></select>
+    <select id="invoiceDoctor" onchange="fetchInvoiceData()"></select>
     <label>対象月:</label>
-    <input type="month" id="invoiceMonth" onchange="renderInvoice()">
+    <input type="month" id="invoiceMonth" onchange="fetchInvoiceData()">
     <button class="btn-fetch" onclick="fetchInvoiceData()" style="margin-left:8px">データ取得</button>
     <button class="btn-p" onclick="printInvoice()" style="margin-left:auto">印刷 / PDF</button>
     <button class="btn-p" onclick="showCalcBreakdown()" style="margin-left:6px">内訳計算</button>
@@ -1679,10 +1679,10 @@ function showCalcBreakdown(){
   h+='<div style="background:var(--kinari);padding:12px;margin-bottom:16px;font-size:12px;line-height:1.8;border-left:3px solid var(--wasu)">';
   h+='<strong>計算式</strong><br>';
   h+='① 売上 = 注文合計額 − 割引額<br>';
-  h+='② 手数料 = floor(売上 × チャネル手数料率)<br>';
+  h+='② 手数料 = 売上 × チャネル手数料率（小数保持）<br>';
   h+='③ 原価合計 = 商品原価×数量 + 手数料 + 送料 + 梱包費<br>';
   h+='④ 粗利 = 売上 − 原価合計<br>';
-  h+='⑤ <strong>医師報酬 = floor(粗利 × 報酬率)</strong>　※端数切捨て<br>';
+  h+='⑤ <strong>医師報酬 = round(粗利 × 報酬率)</strong>　※四捨五入<br>';
   h+='⑥ HD報酬 = 粗利 − 医師報酬';
   h+='</div>';
 
