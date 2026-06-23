@@ -717,10 +717,10 @@ function calc(pi,ci,di,qty=1){
   const unitCost=getCost(p,c);
   let feeBase=rev,feeRate=c.fee;
   if(di===6&&c.id==='mega'){feeRate=.059;feeBase=(p.isSet?p.price-1000:p.price)*qty}
-  const fee=Math.floor(feeBase*feeRate),ship=c.hasShipping?SHIP:0,box=c.hasBox?p.box:0;
+  const fee=feeBase*feeRate,ship=c.hasShipping?SHIP:0,box=c.hasBox?p.box:0;
   const amzCoupon=(c.id==='amazon'&&di>=1&&di<=4)?150:0;
   const costTotal=unitCost*qty+fee+ship+box+amzCoupon,gp=rev-costTotal,gm=rev>0?gp/rev*100:0;
-  const docFee=Math.floor(gp*p.dr),hdFee=gp-docFee;
+  const docFee=Math.round(gp*p.dr),hdFee=gp-docFee;
   return{rev,sp,fee,ship,box,amzCoupon,costGoods:unitCost*qty,costTotal,gp,gm,docFee,hdFee,feeRate};
 }
 function calcOrder(o){
@@ -736,28 +736,32 @@ function calcOrder(o){
   const p=P[pi],c=C[ci],qty=o.quantity||1;
   // unit_price解釈: qty>1の場合unit_priceがライン合計の可能性あり
   let unitPrice=Number(o.unit_price)||p.price;
-  if(qty>1&&unitPrice>p.price*1.1) unitPrice=Math.round(unitPrice/qty); // ライン合計→実単価
+  if(qty>1&&unitPrice>p.price*1.1) unitPrice=Math.round(unitPrice/qty);
   // 割引自動判定: 実単価と定価を比較（明示的discount優先）
   let disc=Number(o.discount)||0;
+  let discPerUnit=disc>0&&qty>0?disc/qty:0;
   let autoDisc=0;
   if(disc===0&&unitPrice>0&&p.price>0&&unitPrice<p.price*0.98){
-    autoDisc=(p.price-unitPrice)*qty; // 定価との差額×数量
+    autoDisc=(p.price-unitPrice); // 1個あたりの割引額
   }
-  // 売上計算: total→unit_price×qty→定価×qtyの優先順
-  let rev=Number(o.total)||(unitPrice*qty);
-  // totalがunit_price×qtyより大幅に大きい場合はtotal不正→unit_price×qtyを使う
-  if(qty>1&&rev>unitPrice*qty*1.5) rev=unitPrice*qty;
-  if(disc>0) rev=rev-disc;
-  if(autoDisc>0) rev=unitPrice*qty; // 自動判定時はunit_price基準
+  // 1個あたりの売上
+  let unitRev=unitPrice;
+  if(discPerUnit>0) unitRev=unitPrice-discPerUnit;
   // Amazonクーポン: 割引がある場合に加算
   const hasAmzCoupon=(c.id==='amazon'&&(disc>0||autoDisc>0||unitPrice<p.price*0.98));
   const amzCoupon=hasAmzCoupon?150:0;
+  // 1個単位で独立計算（送料・梱包も1個ごと）
   const unitCost=getCost(p,c);
-  const fee=Math.floor(rev*c.fee),ship=c.hasShipping?SHIP:0,box=c.hasBox?p.box:0;
-  const cog=unitCost*qty,costTotal=cog+fee+ship+box+amzCoupon,gp=rev-costTotal,gm=rev>0?gp/rev*100:0;
-  const docFee=Math.floor(gp*p.dr);
-  const hdFee=gp-docFee;
-  return{pi,ci,rev,fee,ship,box,amzCoupon,costGoods:cog,costTotal,gp,gm,docFee,hdFee,qty,date:o.order_date,discount:disc,autoDisc,unitPrice};
+  const fee1=unitRev*c.fee,ship1=c.hasShipping?SHIP:0,box1=c.hasBox?p.box:0;
+  const ct1=unitCost+fee1+ship1+box1+amzCoupon;
+  const gp1=unitRev-ct1;
+  const docFee1=Math.round(gp1*p.dr);
+  const hdFee1=gp1-docFee1;
+  // 合計（qty倍）
+  const rev=unitRev*qty,fee=fee1*qty,ship=ship1*qty,box=box1*qty;
+  const cog=unitCost*qty,costTotal=ct1*qty,gp=gp1*qty,gm=rev>0?gp/rev*100:0;
+  const docFee=docFee1*qty,hdFee=hdFee1*qty;
+  return{pi,ci,rev,fee,ship,box,amzCoupon:amzCoupon*qty,costGoods:cog,costTotal,gp,gm,docFee,hdFee,qty,date:o.order_date,discount:disc,autoDisc:autoDisc*qty,unitPrice,unitRev,docFee1};
 }
 
 /* ===== フォーマッター ===== */
@@ -1571,15 +1575,16 @@ function buildInvoiceLines(orders, docName){
     const ci=findCI(o.channel);
     const cName=ci>=0?C[ci].name:'';
     const qty=o.quantity||1;
-    // 医師報酬単価を計算
+    // 医師報酬単価を計算（1個独立計算）
     const r=calcOrder(o);
     if(!r)return;
-    const docFeePerUnit=qty>0?Math.floor(r.docFee/qty):0;
+    const docFeePerUnit=r.docFee1!==undefined?r.docFee1:(qty>0?Math.floor(r.docFee/qty):0);
     // 同梱数
     const bundleCount=orderItemCount[o.order_id+'|'+o.channel]||1;
     if(bundleCount>1) hasBundleOrders=true;
-    // 明細キー: 商品名+チャネル+単価
-    const desc=buildLineDesc(p, cName, o, bundleCount);
+    // 明細キー: 商品名+チャネル+単価（補正後unitPriceを渡す）
+    const oForDesc=Object.assign({},o,{unit_price:r.unitPrice||o.unit_price});
+    const desc=buildLineDesc(p, cName, oForDesc, bundleCount);
     const key=desc+'_'+docFeePerUnit;
     if(!map[key]){
       map[key]={description:desc, qty:0, unitPrice:docFeePerUnit, amount:0};
