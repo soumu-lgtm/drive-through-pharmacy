@@ -1572,49 +1572,137 @@ function renderInvoice(){
 }
 
 function buildInvoiceLines(orders, docName){
-  // 同一注文ID内の商品数を集計（同梱判定用）
-  const orderItemCount={};
-  orders.forEach(o=>{const k=o.order_id+'|'+o.channel;orderItemCount[k]=(orderItemCount[k]||0)+1});
+  /* === 固定テンプレート方式 ===
+     参考PDF準拠: 全商品×チャネル×割引の組み合わせを数量0含めて全行表示
+     各行の単価は calc() で事前計算した医師報酬単価（固定） */
+  const docProds=P.filter(p=>p.doc===docName);
+  if(!docProds.length) return {items:[], hasBundleOrders:false};
+
+  // テンプレート行定義: {chTag, chLabel, ci, discLabel, discIdx, prodFilter}
+  // discIdx: DISC配列のインデックス (0=定価,1=10%OFF,2=20%OFF,3=30%OFF,4=50%OFF)
+  const tiers=[
+    {ci:0, chTag:'(EC)',       discIdx:0, label:'定価販売'},
+    {ci:0, chTag:'(EC)',       discIdx:1, label:'10％OFFキャンペーン販売'},
+    {ci:1, chTag:'(Amazon)',   discIdx:0, label:'定価販売'},
+    {ci:1, chTag:'(Amazon)',   discIdx:2, label:'20％OFFキャンペーン販売'},
+    {ci:2, chTag:'(Qoo10)',    discIdx:0, label:'定価販売'},
+    {ci:5, chTag:'(クリニック)', discIdx:null, label:'販売'},
+    {ci:6, chTag:'(縁故)',      discIdx:null, label:'販売'},
+  ];
+
+  const items=[];
+  tiers.forEach(t=>{
+    docProds.forEach(p=>{
+      const pi=P.indexOf(p);
+      const c=C[t.ci];
+      // クリニック/縁故: 価格が設定されている商品のみ
+      if(t.ci===5 && !p.clinicPrice) return;
+      if(t.ci===6 && !p.enkoPrice) return;
+      // 医師報酬単価を calc() で計算
+      let docFeePerUnit=0;
+      if(t.discIdx!==null){
+        const r=calc(pi, t.ci, t.discIdx, 1);
+        docFeePerUnit=Math.round(r.gp * p.dr);
+      } else {
+        // クリニック/縁故: 直接計算
+        const rev=(t.ci===5)?p.clinicPrice:p.enkoPrice;
+        const unitCost=getCost(p, c);
+        const gp=rev-unitCost;
+        docFeePerUnit=Math.round(gp * p.dr);
+      }
+      const desc=t.chTag+' '+p.name+t.label;
+      items.push({description:desc, qty:0, unitPrice:docFeePerUnit, amount:0,
+        _pi:pi, _ci:t.ci, _discIdx:t.discIdx});
+    });
+  });
+
+  // 実注文をテンプレート行にマッチング
   let hasBundleOrders=false;
-  // 商品×チャネル×割引パターンで集計
-  const map={};
+  const unmatched=[];
   orders.forEach(o=>{
     const pi=findPI(o.product_name);
-    if(pi<0)return;
-    const p=P[pi];
+    if(pi<0) return;
     const ci=findCI(o.channel);
-    const cName=ci>=0?C[ci].name:'';
+    if(ci<0) return;
     const qty=o.quantity||1;
-    // 医師報酬単価を計算（1個独立計算）
     const r=calcOrder(o);
-    if(!r)return;
-    const docFeePerUnit=r.docFee1!==undefined?r.docFee1:(qty>0?Math.floor(r.docFee/qty):0);
-    // 同梱数
-    const bundleCount=orderItemCount[o.order_id+'|'+o.channel]||1;
-    if(bundleCount>1) hasBundleOrders=true;
-    // 明細キー: 商品名+チャネル+単価（補正後unitPriceを渡す）
-    const oForDesc=Object.assign({},o,{unit_price:r.unitPrice||o.unit_price});
-    const desc=buildLineDesc(p, cName, oForDesc, bundleCount);
-    const key=desc+'_'+docFeePerUnit;
-    if(!map[key]){
-      map[key]={description:desc, qty:0, unitPrice:docFeePerUnit, amount:0};
+    if(!r) return;
+    // 割引インデックス判定
+    let discIdx=0; // デフォルト=定価
+    if(ci===5||ci===6){
+      // クリニック/縁故: discIdx=null → _ciで直接マッチ
+      const row=items.find(it=>it._pi===pi && it._ci===ci);
+      if(row){row.qty+=qty; row.amount=row.unitPrice*row.qty;}
+      else unmatched.push(o);
+      return;
     }
-    map[key].qty+=qty;
-    map[key].amount+=r.docFee;
+    // 割引率判定
+    const unitPrice=r.unitPrice||Number(o.unit_price)||0;
+    const price=P[pi].price;
+    if(price>0 && unitPrice>0 && unitPrice<price*0.98){
+      const ratio=1-unitPrice/price;
+      if(Math.abs(ratio-0.5)<0.05) discIdx=4;
+      else if(Math.abs(ratio-0.3)<0.05) discIdx=3;
+      else if(Math.abs(ratio-0.2)<0.05) discIdx=2;
+      else if(Math.abs(ratio-0.1)<0.05) discIdx=1;
+      else {
+        // 最も近い割引段階にマッチ
+        const disc=Number(o.discount)||0;
+        if(disc>0){
+          const rawTotal=Number(o.total)||0;
+          const actualUnit=qty>0?(rawTotal-disc)/qty:rawTotal-disc;
+          if(price>0&&actualUnit>0){
+            const r2=1-actualUnit/price;
+            if(Math.abs(r2-0.5)<0.05) discIdx=4;
+            else if(Math.abs(r2-0.3)<0.05) discIdx=3;
+            else if(Math.abs(r2-0.2)<0.05) discIdx=2;
+            else if(Math.abs(r2-0.1)<0.05) discIdx=1;
+          }
+        }
+      }
+    }
+    // 定期購入で割引がある場合もキャンペーン扱い
+    const isSub=o.is_subscription===true||o.is_subscription==='true';
+    if(discIdx===0 && isSub && unitPrice>0 && price>0 && unitPrice<price*0.98){
+      const ratio=1-unitPrice/price;
+      if(Math.abs(ratio-0.1)<0.05) discIdx=1;
+      else if(Math.abs(ratio-0.2)<0.05) discIdx=2;
+    }
+    // テンプレート行にマッチ
+    const row=items.find(it=>it._pi===pi && it._ci===ci && it._discIdx===discIdx);
+    if(row){
+      row.qty+=qty;
+      // 金額はテンプレートの固定単価×数量（PDF準拠）
+      row.amount=row.unitPrice*row.qty;
+    } else {
+      // テンプレートに無い組み合わせ（想定外の割引等）→ 動的行追加
+      const docFee1=r.docFee1!==undefined?r.docFee1:(qty>0?Math.floor(r.docFee/qty):0);
+      unmatched.push({description:'(その他) '+P[pi].name+' '+C[ci].name, qty, unitPrice:docFee1, amount:r.docFee});
+    }
   });
-  const items=Object.values(map).sort((a,b)=>a.description.localeCompare(b.description,'ja'));
-  // 原価行: 開発投資医師(dr>=0.5)のみ、全数量に対して原価(cost-initial)を加算
+
+  // テンプレート行の金額を再計算（固定単価×数量）
+  items.forEach(it=>{it.amount=it.unitPrice*it.qty});
+
+  // マッチしなかった注文を末尾に追加
+  unmatched.forEach(u=>{
+    if(u.description) items.push(u);
+  });
+
+  // 原価行: 開発投資医師(dr>=0.5)のみ
   let totalQty=0;
   items.forEach(l=>totalQty+=l.qty);
-  const docProds=P.filter(p=>p.doc===docName&&p.dr>=0.5);
-  if(docProds.length>0&&totalQty>0){
-    docProds.forEach(p=>{
+  const devProds=docProds.filter(p=>p.dr>=0.5);
+  if(devProds.length>0&&totalQty>0){
+    devProds.forEach(p=>{
       const genka=p.detail?(p.detail.prod||0)+(p.detail.bottle||0)+(p.detail.casebox||0):0;
       if(genka>0){
         items.push({description:'原価', qty:totalQty, unitPrice:genka, amount:genka*totalQty});
       }
     });
   }
+  // _で始まる内部プロパティを削除
+  items.forEach(it=>{delete it._pi;delete it._ci;delete it._discIdx});
   return {items, hasBundleOrders};
 }
 
