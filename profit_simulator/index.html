@@ -1588,15 +1588,26 @@ function buildInvoiceLines(orders, docName){
     return true;
   });
 
-  // 1b: ローション+セラム同一注文 → セットにペア化
+  // 1b: ローション+セラム同一注文 → セットにペア化（EC/Amazon/Qoo10のみ、クリニック/縁故は個別のまま）
   const setProduct=docProds.find(p=>p.isSet);
   const lotionProduct=docProds.find(p=>p.name.includes('ローション')&&!p.isSet);
   const serumProduct=docProds.find(p=>p.name.includes('セラム')&&!p.isSet);
   if(setProduct && lotionProduct && serumProduct){
     const lotionPI=P.indexOf(lotionProduct), serumPI=P.indexOf(serumProduct);
+    // ペア化対象チャネル: EC(0),Amazon(1),Qoo10(2),楽天(3),TikTok(4),Qoo10メガポ(7)
+    const pairableChannels=new Set([0,1,2,3,4,7]);
     const byOrder={};
-    processed.forEach(o=>{const oid=o.order_id;if(!byOrder[oid])byOrder[oid]=[];byOrder[oid].push(o);});
+    processed.forEach(o=>{
+      const ci=findCI(o.channel);
+      if(!pairableChannels.has(ci)){return;} // クリニック/縁故はペア化対象外→後で直接追加
+      const oid=o.order_id;if(!byOrder[oid])byOrder[oid]=[];byOrder[oid].push(o);
+    });
     const paired=[];
+    // ペア化対象外の注文をそのまま追加
+    processed.forEach(o=>{
+      const ci=findCI(o.channel);
+      if(!pairableChannels.has(ci)) paired.push(o);
+    });
     Object.entries(byOrder).forEach(([oid,items])=>{
       const lotions=items.filter(o=>findPI(o.product_name)===lotionPI);
       const serums=items.filter(o=>findPI(o.product_name)===serumPI);
