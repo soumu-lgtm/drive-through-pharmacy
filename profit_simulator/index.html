@@ -605,13 +605,18 @@ async function loadMasters(){
     if(doctors.length){
       D=doctors.map(r=>({id:r.id,name:r.name,displayName:r.display_name,rate:Number(r.rate),color:r.color||'#333',sortOrder:r.sort_order}));
     }
-    /* P[]再構築 */
+    /* P[]再構築（ハードコードのclinicPrice/enkoPrice/tiktokCostを保持） */
+    const oldP=P.slice(); // ハードコード値のバックアップ
     P=prods.map(r=>{
       const docInfo=D.find(d=>d.id===r.doctor_id)||D.find(d=>d.name===r.doctor_name)||{name:r.doctor_name,rate:Number(r.doctor_rate),id:null,color:'#333'};
+      const old=oldP.find(op=>op.id===r.id)||{};
       return {
         id:r.id, name:r.name, price:r.price, cost:r.cost, box:r.box,
         doc:docInfo.name, dr:docInfo.rate, doctorId:docInfo.id, doctorColor:docInfo.color,
         isSet:r.is_set, has50off:r.has_50off,
+        clinicPrice:r.clinic_price||old.clinicPrice||null,
+        enkoPrice:r.enko_price||old.enkoPrice||null,
+        tiktokCost:r.tiktok_cost||old.tiktokCost||null,
         detail:{prod:r.detail_prod,bottle:r.detail_bottle,casebox:r.detail_casebox,initial:r.detail_initial},
       };
     });
