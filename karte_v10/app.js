@@ -1262,6 +1262,7 @@ function renderBillingMenu() {
       (billingMyLists.length > 1 ? '<span class="bm-mylist-nav-btn" onclick="cycleMyList(1)" title="次のリスト">&#9654;</span>' : '') +
       '</span>' +
       '<span class="bm-mylist-actions">' +
+      '<span class="bm-mylist-action-btn bm-mylist-action-add-all" onclick="addAllMyListItems()" title="全て追加">&#9660; 全追加</span>' +
       '<span class="bm-mylist-action-btn" onclick="addNewBillingMyList()" title="新規リスト">+</span>' +
       (billingMyLists.length > 1 ? '<span class="bm-mylist-action-btn bm-mylist-action-del" onclick="deleteBillingMyList()" title="このリストを削除">&#128465;</span>' : '') +
       '</span></div>';
@@ -1332,6 +1333,20 @@ function deleteBillingMyList() {
   if (currentMyListIdx >= billingMyLists.length) currentMyListIdx = billingMyLists.length - 1;
   saveBillingMyLists(); renderMyListTab(); renderBillingMenu();
   showToast('リストを削除');
+}
+function addAllMyListItems() {
+  var ml = currentMyList();
+  if (!ml.items.length) { showToast('リストが空です'); return; }
+  var k = karteData[currentPatientId];
+  var added = 0;
+  ml.items.forEach(function(it) {
+    if (!k.addedBillingItems.find(function(x) { return x.name === it.name; })) {
+      k.addedBillingItems.push({name:it.name, points:it.points});
+      added++;
+    }
+  });
+  if (added > 0) { recalcBilling(); showToast(ml.name + ' から ' + added + '件追加'); }
+  else { showToast('全て追加済みです'); }
 }
 function renameBillingMyList() {
   var ml = currentMyList();

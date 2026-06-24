@@ -950,6 +950,8 @@ body.resizing img {
 .bm-mylist-actions { display: flex; gap: 2px; }
 .bm-mylist-action-btn { cursor: pointer; font-size: 13px; color: #d97706; padding: 1px 5px; border-radius: 3px; line-height: 1.2; }
 .bm-mylist-action-btn:hover { background: #fde68a; }
+.bm-mylist-action-add-all { background: #fde68a; color: #92400e; font-size: 11px !important; padding: 2px 6px !important; font-weight: 600; }
+.bm-mylist-action-add-all:hover { background: #fbbf24; }
 .bm-mylist-action-del { color: var(--danger); }
 .bm-mylist-action-del:hover { background: var(--danger-light); }
 
