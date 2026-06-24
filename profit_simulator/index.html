@@ -1644,33 +1644,33 @@ function buildLineDesc(product, channel, order, bundleCount){
     const actualUnit=qty>0?(rawTotal-disc)/qty:rawTotal-disc;
     if(price>0&&actualUnit>0){
       const ratio=1-actualUnit/price;
-      if(Math.abs(ratio-0.5)<0.05) discLabel='50%OFF';
-      else if(Math.abs(ratio-0.3)<0.05) discLabel='30%OFF';
-      else if(Math.abs(ratio-0.2)<0.05) discLabel='20%OFF';
-      else if(Math.abs(ratio-0.1)<0.05) discLabel='10%OFF';
+      if(Math.abs(ratio-0.5)<0.05) discLabel='50％OFFキャンペーン';
+      else if(Math.abs(ratio-0.3)<0.05) discLabel='30％OFFキャンペーン';
+      else if(Math.abs(ratio-0.2)<0.05) discLabel='20％OFFキャンペーン';
+      else if(Math.abs(ratio-0.1)<0.05) discLabel='10％OFFキャンペーン';
       else{
         const diff=price-actualUnit;
-        if(Math.abs(diff-1000)<50) discLabel='1,000円OFF';
-        else if(disc>0) discLabel=Math.round(ratio*100)+'%OFF';
+        if(Math.abs(diff-1000)<50) discLabel='1,000円OFFキャンペーン';
+        else if(disc>0) discLabel=Math.round(ratio*100)+'％OFFキャンペーン';
       }
     }
   }
-  // 定期購入で単価が定価より低い場合
+  // 定期購入で単価が定価より低い場合（キャンペーン扱い）
   if(!discLabel&&isSub&&unitPrice>0&&price>0&&unitPrice<price*0.98){
     const ratio=Math.round((1-unitPrice/price)*100);
-    discLabel='定期'+ratio+'%OFF';
+    discLabel=ratio+'％OFFキャンペーン';
   }
-  if(!discLabel&&isSub) discLabel='定期';
+  // 定期のみ（割引なし）は定価販売扱い → discLabel空のまま
   // 自動割引検出（unit_price < 定価: Amazon等のキャンペーン）※クリニック/縁故は固定価格なので除外
   if(!discLabel&&unitPrice>0&&price>0&&unitPrice<price*0.98&&channel!=='クリニック'&&channel!=='縁故'){
     const ratio=Math.round((1-unitPrice/price)*100);
-    discLabel=ratio+'%OFF';
+    discLabel=ratio+'％OFFキャンペーン';
   }
   // 販売種別を組み立て（クリニック/縁故は「販売」のみ）
   let saleType;
   if(channel==='クリニック'||channel==='縁故') saleType='販売';
   else saleType=discLabel?discLabel+'販売':'定価販売';
-  return chTag+' '+name+' '+saleType+qtyLabel;
+  return chTag+' '+name+saleType+qtyLabel;
 }
 
 function showCalcBreakdown(){
