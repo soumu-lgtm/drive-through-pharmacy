@@ -142,12 +142,16 @@ th .src{vertical-align:baseline}
   .hm-50,.hm-40,.hm-30,.hm-20,.hm-10,.hm-0,.hm-neg{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   tr{break-inside:avoid}
   canvas{display:none}
-  .invoice-sheet{border:none;padding:12mm 14mm;max-width:100%;font-size:12px;page-break-inside:avoid}
+  .invoice-sheet{border:none;padding:8mm 12mm;max-width:100%;font-size:10.5px;page-break-inside:avoid;line-height:1.4}
   .invoice-sheet th,.invoice-sheet .inv-total-row td{background:#f0f0ec !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .invoice-sheet table{font-size:11px}
-  .invoice-sheet .inv-title{font-size:20px;margin-bottom:16px}
-  .invoice-sheet .inv-amount-box .amount{font-size:20px}
-  .invoice-sheet .inv-note{font-size:10px}
+  .invoice-sheet table{font-size:9.5px}
+  .invoice-sheet th,.invoice-sheet td{padding:3px 6px}
+  .invoice-sheet .inv-title{font-size:18px;margin-bottom:10px}
+  .invoice-sheet .inv-date{margin-bottom:8px}
+  .invoice-sheet .inv-header{margin-bottom:12px}
+  .invoice-sheet .inv-amount-box{margin-bottom:14px;padding:6px 14px}
+  .invoice-sheet .inv-amount-box .amount{font-size:18px}
+  .invoice-sheet .inv-note{font-size:9px;margin-top:10px;padding-top:8px;line-height:1.4}
 }
 </style>
 </head>
@@ -508,6 +512,19 @@ th .src{vertical-align:baseline}
     <div class="no-data-msg">医師を選択し「データ取得」を押してください</div>
   </div>
   <div id="calcBreakdownArea" class="no-print" style="display:none;margin-top:14px"></div>
+  <!-- Amazon取引CSVインポート -->
+  <details class="no-print" style="margin-top:20px;border:1px solid #ccc;border-radius:4px;padding:8px">
+    <summary style="cursor:pointer;font-weight:700;color:var(--kon)">Amazon取引CSVインポート（クーポン割引反映）</summary>
+    <div style="margin-top:10px;font-size:13px;color:#666">
+      Amazon Seller Central の「トランザクション」CSVをアップロードすると、プロモーション割引をSupabase kpi_ordersに反映します。
+    </div>
+    <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
+      <input type="file" id="amzCsvFile" accept=".csv">
+      <button class="btn-fetch" onclick="importAmazonTransactionCsv()">インポート実行</button>
+      <label style="font-size:12px"><input type="checkbox" id="amzCsvDryRun" checked> ドライラン（実際に更新しない）</label>
+    </div>
+    <div id="amzCsvResult" style="margin-top:8px;font-size:13px;max-height:400px;overflow:auto"></div>
+  </details>
 </div>
 
 </div>
@@ -1552,8 +1569,9 @@ function renderInvoice(){
     h+='<td class="num">'+(l.amount?l.amount.toLocaleString():'')+'</td>';
     h+='</tr>';
   });
-  // 空行（最大行数を調整して1ページに収める）
-  const emptyRows=Math.max(0, 12-lineItems.length);
+  // 空行（明細行数に応じて調整、1ページに収める）
+  const maxRows=lineItems.length<=8?12:lineItems.length<=12?lineItems.length:0;
+  const emptyRows=Math.max(0, maxRows-lineItems.length);
   for(let i=0;i<emptyRows;i++){
     h+='<tr><td></td><td></td><td></td><td></td><td></td></tr>';
   }
@@ -1694,11 +1712,25 @@ function buildInvoiceLines(orders, docName){
       else unmatched.push(o);
       return;
     }
-    // 割引判定: unit_priceと定価を比較
+    // 割引判定: discount値(クーポン割引額) または unit_priceと定価を比較
     let discIdx=0;
     const unitPrice=Number(o.unit_price)||0;
     const price=P[pi].price;
-    if(price>0&&unitPrice>0&&unitPrice<price*0.98){
+    const discountAmt=Number(o.discount)||0;
+    // 方法1: Supabaseのdiscount列にクーポン割引額が入っている場合
+    if(discountAmt>0&&price>0){
+      const ratio=discountAmt/price;
+      if(Math.abs(ratio-0.5)<0.05) discIdx=4;
+      else if(Math.abs(ratio-0.3)<0.05) discIdx=3;
+      else if(Math.abs(ratio-0.2)<0.05) discIdx=2;
+      else if(Math.abs(ratio-0.1)<0.05) discIdx=1;
+      else{
+        const chanDiscRows=items.filter(it=>it._pi===pi&&it._ci===ci&&it._discIdx>0);
+        if(chanDiscRows.length===1) discIdx=chanDiscRows[0]._discIdx;
+      }
+    }
+    // 方法2: unit_price自体が定価より低い場合(Shopify定期購入など)
+    else if(price>0&&unitPrice>0&&unitPrice<price*0.98){
       const ratio=1-unitPrice/price;
       if(Math.abs(ratio-0.5)<0.05) discIdx=4;
       else if(Math.abs(ratio-0.3)<0.05) discIdx=3;
@@ -1908,6 +1940,104 @@ function showCalcBreakdown(){
 
   h+='</div>';
   area.innerHTML=h;
+}
+
+/* ===== Amazon取引CSVインポート ===== */
+async function importAmazonTransactionCsv(){
+  const fileInput=document.getElementById('amzCsvFile');
+  const dryRun=document.getElementById('amzCsvDryRun').checked;
+  const resultEl=document.getElementById('amzCsvResult');
+  if(!fileInput.files.length){resultEl.innerHTML='<span style="color:red">CSVファイルを選択してください</span>';return}
+  resultEl.innerHTML='読み込み中...';
+  const text=await fileInput.files[0].text();
+  // CSV解析（UTF-8 BOM対応）
+  const lines=text.replace(/^\uFEFF/,'').split('\n').filter(l=>l.trim());
+  if(lines.length<2){resultEl.innerHTML='<span style="color:red">データなし</span>';return}
+  const headers=parseCSVLine(lines[0]);
+  const iDate=headers.indexOf('日付'),iType=headers.indexOf('トランザクションの種類');
+  const iOrderId=headers.indexOf('注文番号'),iPromo=headers.indexOf('プロモーション割引合計');
+  const iPrice=headers.indexOf('商品価格合計'),iProduct=headers.indexOf('商品の詳細');
+  if(iOrderId<0||iPromo<0){resultEl.innerHTML='<span style="color:red">必須列が見つかりません（注文番号, プロモーション割引合計）</span>';return}
+  // プロモ割引ありの注文を収集
+  const promoOrders=[];
+  for(let i=1;i<lines.length;i++){
+    const cols=parseCSVLine(lines[i]);
+    const promo=parseInt(cols[iPromo]||'0',10);
+    const txnType=cols[iType]||'';
+    if(promo!==0&&txnType.includes('注文')){
+      promoOrders.push({date:cols[iDate]||'',orderId:cols[iOrderId]||'',promo,price:cols[iPrice]||'',product:(cols[iProduct]||'').substring(0,40)});
+    }
+  }
+  resultEl.innerHTML=`CSV解析完了: ${lines.length-1}行中 ${promoOrders.length}件のプロモーション割引あり<br>Supabase照合中...`;
+  // Supabaseの全Amazon注文を取得
+  const allAmz=await sbGetAll('kpi_orders','channel=eq.amazon&select=order_id,sku,unit_price,quantity,discount');
+  const amzMap={};
+  allAmz.forEach(o=>{const k=o.order_id;if(!amzMap[k])amzMap[k]=[];amzMap[k].push(o)});
+  // 照合＆更新候補作成
+  const updates=[];
+  const notFound=[];
+  for(const po of promoOrders){
+    const rows=amzMap[po.orderId];
+    if(!rows){notFound.push(po);continue}
+    const absPromo=Math.abs(po.promo);
+    // 全行の合計数量
+    const totalQty=rows.reduce((s,r)=>s+r.quantity,0);
+    // 商品価格合計(税抜)から税込割引単価を計算
+    for(const r of rows){
+      // 按分: 各行のunit_price比率で割引を配分
+      const totalPrice=rows.reduce((s,x)=>s+x.unit_price,0);
+      const ratio=totalPrice>0?r.unit_price/totalPrice:1/rows.length;
+      const linePromo=absPromo*ratio;
+      // 税込み変換 & 数量あたり
+      const perUnitDisc=Math.round(linePromo*1.1/r.quantity);
+      const currentDisc=Number(r.discount)||0;
+      if(perUnitDisc!==currentDisc){
+        updates.push({orderId:r.order_id,sku:r.sku,oldDisc:currentDisc,newDisc:perUnitDisc,qty:r.quantity,unitPrice:r.unit_price,promoRaw:po.promo,date:po.date});
+      }
+    }
+  }
+  // 結果表示
+  let h=`<strong>照合結果:</strong> 割引注文${promoOrders.length}件, 更新対象${updates.length}件, 未一致${notFound.length}件<br>`;
+  if(updates.length>0){
+    h+='<table style="font-size:12px;border-collapse:collapse;margin-top:6px;width:100%"><tr style="background:#f0f0f0"><th>注文ID</th><th>SKU</th><th>数量</th><th>単価</th><th>現在disc</th><th>→新disc</th><th>CSV promo</th><th>日付</th></tr>';
+    updates.forEach(u=>{
+      const changed=u.oldDisc!==u.newDisc;
+      h+=`<tr style="${changed?'background:#fff3cd':''}"><td>${u.orderId}</td><td>${u.sku}</td><td>${u.qty}</td><td>¥${u.unitPrice.toLocaleString()}</td><td>${u.oldDisc}</td><td><strong>${u.newDisc}</strong></td><td>${u.promoRaw}</td><td>${u.date}</td></tr>`;
+    });
+    h+='</table>';
+  }
+  if(notFound.length>0){
+    h+='<details style="margin-top:6px"><summary>未一致 '+notFound.length+'件</summary><ul style="font-size:12px">';
+    notFound.forEach(n=>{h+=`<li>${n.date} ${n.orderId} promo=${n.promo} ${n.product}</li>`});
+    h+='</ul></details>';
+  }
+  if(dryRun){
+    h+=`<div style="margin-top:8px;padding:6px;background:#e8f5e9;border-radius:4px"><strong>ドライラン:</strong> 上記${updates.length}件を確認後、チェックを外して再実行するとSupabaseに反映します</div>`;
+  }else if(updates.length>0){
+    h+='<div style="margin-top:8px">Supabase更新中...</div>';
+    resultEl.innerHTML=h;
+    let ok=0,fail=0;
+    for(const u of updates){
+      try{
+        const url=`${SB}/rest/v1/kpi_orders?order_id=eq.${encodeURIComponent(u.orderId)}&sku=eq.${encodeURIComponent(u.sku)}&channel=eq.amazon`;
+        const r=await fetch(url,{method:'PATCH',headers:{...H,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({discount:u.newDisc})});
+        if(r.ok)ok++;else fail++;
+      }catch(e){fail++}
+    }
+    h+=`<div style="margin-top:8px;padding:6px;background:${fail?'#ffebee':'#e8f5e9'};border-radius:4px"><strong>更新完了:</strong> 成功${ok}件, 失敗${fail}件</div>`;
+  }
+  resultEl.innerHTML=h;
+}
+function parseCSVLine(line){
+  const result=[];let cur='',inQ=false;
+  for(let i=0;i<line.length;i++){
+    const c=line[i];
+    if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++}else inQ=!inQ}
+    else if(c===','&&!inQ){result.push(cur.trim());cur=''}
+    else if(c==='\r'){}
+    else cur+=c;
+  }
+  result.push(cur.trim());return result;
 }
 
 function printInvoice(){
