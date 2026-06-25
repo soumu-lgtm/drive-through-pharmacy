@@ -198,8 +198,8 @@ async function init(){
     // 社員テスト購入を除外
     const exSet=new Set(EX.map(e=>e.order_id));
     if(exSet.size){const b=O.length;O=O.filter(o=>!exSet.has(o.order_id));if(b-O.length)console.log(`[除外]${b-O.length}件の社員テスト購入を除外`)}
-    // order_id+channelで重複除去（SKU違いの古いレコード対策）
-    O=(()=>{const seen=new Set();return O.filter(o=>{const k=o.order_id+"|"+o.channel;if(seen.has(k))return false;seen.add(k);return true})})();
+    // order_id+channel+skuで重複除去（完全一致行のみ除去、商品別明細は維持）
+    O=(()=>{const seen=new Set();return O.filter(o=>{const k=o.order_id+"|"+o.channel+"|"+(o.sku||o.product_name||"");if(seen.has(k))return false;seen.add(k);return true})})();
     const ds=D.map(d=>d.date).sort();
     if(ds.length){
       const el=id=>document.getElementById(id);
@@ -1336,7 +1336,7 @@ async function runSync(){
     if(st&&st.cdp&&st.cdp.available){
       const openTabs=Object.entries(st.cdp.tabs).filter(([,v])=>v).map(([k])=>k);
       if(openTabs.length>0){
-        const cr=await fetch(SNS_API_URL+'/collect',{cache:'no-store',signal:AbortSignal.timeout(120000)});
+        const cr=await fetch(SNS_API_URL+'/collect',{cache:'no-store',signal:AbortSignal.timeout(180000)});
         const cd=await cr.json();
         if(cd.success&&cd.data){
           let cnt=0;
