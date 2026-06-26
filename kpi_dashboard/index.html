@@ -1419,6 +1419,7 @@ function renderSnsThreadsContent(th){
   const gender=demo.gender||{};
   const age=demo.age||{};
   const loc=demo.location||{};
+  const engRate=am.views_30d>0?((am.interactions_30d||0)/am.views_30d*100).toFixed(2):'--';
 
   return `
     <div class="grid grid-2">
@@ -1437,9 +1438,27 @@ function renderSnsThreadsContent(th){
         <div style="position:relative;height:180px"><canvas id="sns-threads-engagement"></canvas></div>
       </div>
       <div class="card">
-        <h3>📝 投稿パフォーマンス</h3>
-        <div id="sns-threads-posts"></div>
+        <h3>📈 エンゲージメント率推移</h3>
+        <div style="position:relative;height:180px"><canvas id="sns-threads-eng-rate"></canvas></div>
       </div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>📊 閲覧ソース（最新）</h3>
+        <div style="position:relative;height:180px"><canvas id="sns-threads-sources"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>📊 閲覧ソース推移</h3>
+        <div style="position:relative;height:180px"><canvas id="sns-threads-sources-trend"></canvas></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>📝 投稿パフォーマンス</h3>
+      <div id="sns-threads-posts"></div>
+    </div>
+    <div class="card">
+      <h3>📊 投稿別閲覧数比較</h3>
+      <div style="position:relative;height:200px"><canvas id="sns-threads-post-views"></canvas></div>
     </div>
     <div class="grid grid-2">
       <div class="card">
@@ -1448,6 +1467,7 @@ function renderSnsThreadsContent(th){
           <tr><td>フォロワー</td><td><strong>${(am.followers||0).toLocaleString()}</strong></td></tr>
           <tr><td>閲覧数 (30d)</td><td>${(am.views_30d||0).toLocaleString()}</td></tr>
           <tr><td>インタラクション (30d)</td><td>${(am.interactions_30d||0).toLocaleString()}</td></tr>
+          <tr><td>エンゲージメント率</td><td><strong>${engRate}%</strong></td></tr>
           <tr><td>いいね</td><td>${inter.likes||0}</td></tr>
           <tr><td>引用</td><td>${inter.quotes||0}</td></tr>
           <tr><td>返信</td><td>${inter.replies||0}</td></tr>
@@ -1455,8 +1475,8 @@ function renderSnsThreadsContent(th){
         </tbody></table>
       </div>
       <div class="card">
-        <h3>📊 閲覧ソース</h3>
-        <div style="position:relative;height:180px"><canvas id="sns-threads-sources"></canvas></div>
+        <h3>📈 フォロワー成長率</h3>
+        <div style="position:relative;height:180px"><canvas id="sns-threads-growth-rate"></canvas></div>
       </div>
     </div>
     <div class="grid grid-3">
@@ -1482,72 +1502,19 @@ function renderSnsThreadsCharts(th){
   const gender=demo.gender||{};
   const age=demo.age||{};
   const loc=demo.location||{};
-
-  // 閲覧ソース (doughnut)
-  if(vs.search||vs.profile||vs.other){
-    snsCreateChart('sns-threads-sources',{
-      type:'doughnut',
-      data:{labels:['検索','プロフィール','その他'],datasets:[{data:[vs.search||0,vs.profile||0,vs.other||0],backgroundColor:['#4f46e5','#06b6d4','#94a3b8'],borderWidth:2}]},
-      options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:function(c){return c.label+': '+c.parsed+'%'}}}}}
-    });
-  }
-
-  // 性別 (doughnut)
-  if(gender.female||gender.male||gender.other){
-    snsCreateChart('sns-threads-gender',{
-      type:'doughnut',
-      data:{labels:['女性','男性','その他'],datasets:[{data:[gender.female||0,gender.male||0,gender.other||0],backgroundColor:['#ec4899','#3b82f6','#a3a3a3'],borderWidth:2}]},
-      options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:function(c){return c.label+': '+c.parsed+'%'}}}}}
-    });
-  }
-
-  // 年齢層 (horizontal bar)
-  const ageLabels=Object.keys(age);
-  const ageData=Object.values(age);
-  if(ageLabels.length>0){
-    snsCreateChart('sns-threads-age',{
-      type:'bar',
-      data:{labels:ageLabels,datasets:[{label:'割合(%)',data:ageData,backgroundColor:'#6366f1',borderRadius:4}]},
-      options:{maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,max:100,ticks:{callback:function(v){return v+'%'}}}}}
-    });
-  }
-
-  // 地域 (horizontal bar)
-  const locLabels=Object.keys(loc);
-  const locData=Object.values(loc);
-  if(locLabels.length>0){
-    snsCreateChart('sns-threads-location',{
-      type:'bar',
-      data:{labels:locLabels,datasets:[{label:'割合(%)',data:locData,backgroundColor:'#10b981',borderRadius:4}]},
-      options:{maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{callback:function(v){return v+'%'}}}}}
-    });
-  }
-
-  // フォロワー推移 (line - 1件でもポイント表示)
   const dates=th.map(x=>x.date);
   const followers=th.map(x=>(x.account_metrics||{}).followers||0);
+  const views=th.map(x=>(x.account_metrics||{}).views_30d||0);
+  const interactions=th.map(x=>(x.account_metrics||{}).interactions_30d||0);
+
+  // 1. フォロワー推移
   snsCreateChart('sns-threads-followers',{
     type:'line',
     data:{labels:dates,datasets:[{label:'フォロワー',data:followers,borderColor:'#000',backgroundColor:'rgba(0,0,0,0.05)',fill:true,tension:0.3,pointRadius:th.length===1?6:3,pointBackgroundColor:'#000'}]},
     options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:false}}}
   });
 
-  // 閲覧数・インタラクション推移
-  const views=th.map(x=>(x.account_metrics||{}).views_30d||0);
-  const interactions=th.map(x=>(x.account_metrics||{}).interactions_30d||0);
-  const hasEngagement=views.some(v=>v>0)||interactions.some(v=>v>0);
-  if(hasEngagement){
-    snsCreateChart('sns-threads-engagement',{
-      type:'line',
-      data:{labels:dates,datasets:[
-        {label:'閲覧数(30d)',data:views,borderColor:'#6366f1',backgroundColor:'rgba(99,102,241,0.08)',fill:true,tension:0.3,yAxisID:'y'},
-        {label:'インタラクション(30d)',data:interactions,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.08)',fill:true,tension:0.3,yAxisID:'y1'}
-      ]},
-      options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{y:{type:'linear',position:'left',beginAtZero:true,title:{display:true,text:'閲覧数'}},y1:{type:'linear',position:'right',beginAtZero:true,grid:{drawOnChartArea:false},title:{display:true,text:'インタラクション'}}}}
-    });
-  }
-
-  // フォロワー増減 (bar chart)
+  // 2. フォロワー増減
   if(followers.length>=2){
     const deltas=followers.map((f,i)=>i===0?0:f-followers[i-1]);
     const deltaColors=deltas.map(d=>d>0?'#10b981':d<0?'#ef4444':'#d1d5db');
@@ -1558,18 +1525,140 @@ function renderSnsThreadsCharts(th){
     });
   }
 
-  // 投稿パフォーマンステーブル
+  // 3. 閲覧数・インタラクション推移
+  if(views.some(v=>v>0)||interactions.some(v=>v>0)){
+    snsCreateChart('sns-threads-engagement',{
+      type:'line',
+      data:{labels:dates,datasets:[
+        {label:'閲覧数(30d)',data:views,borderColor:'#6366f1',backgroundColor:'rgba(99,102,241,0.08)',fill:true,tension:0.3,yAxisID:'y'},
+        {label:'インタラクション(30d)',data:interactions,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.08)',fill:true,tension:0.3,yAxisID:'y1'}
+      ]},
+      options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{y:{type:'linear',position:'left',beginAtZero:true,title:{display:true,text:'閲覧数'}},y1:{type:'linear',position:'right',beginAtZero:true,grid:{drawOnChartArea:false},title:{display:true,text:'インタラクション'}}}}
+    });
+  }
+
+  // 4. エンゲージメント率推移
+  const engRates=th.map(x=>{
+    const v=(x.account_metrics||{}).views_30d||0;
+    const i=(x.account_metrics||{}).interactions_30d||0;
+    return v>0?(i/v*100):0;
+  });
+  if(engRates.some(r=>r>0)){
+    snsCreateChart('sns-threads-eng-rate',{
+      type:'line',
+      data:{labels:dates,datasets:[{label:'エンゲージメント率(%)',data:engRates.map(r=>parseFloat(r.toFixed(2))),borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,0.08)',fill:true,tension:0.3,pointRadius:3}]},
+      options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{callback:function(v){return v+'%'}}}}}
+    });
+  }
+
+  // 5. 閲覧ソース（最新・doughnut）
+  const srcLabels=[],srcData=[],srcColors=['#4f46e5','#06b6d4','#f59e0b','#10b981','#94a3b8'];
+  const srcMap={search:'検索',profile:'プロフィール',recommend:'おすすめ',following:'フォロー中',other:'その他'};
+  Object.entries(vs).forEach(([k,v],i)=>{if(v>0){srcLabels.push(srcMap[k]||k);srcData.push(v);}});
+  if(srcData.length>0){
+    snsCreateChart('sns-threads-sources',{
+      type:'doughnut',
+      data:{labels:srcLabels,datasets:[{data:srcData,backgroundColor:srcColors.slice(0,srcData.length),borderWidth:2}]},
+      options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:function(c){return c.label+': '+c.parsed+'%'}}}}}
+    });
+  }
+
+  // 6. 閲覧ソース推移（積み上げ棒）
+  const srcKeys=['search','profile','recommend','following','other'];
+  const srcTrendData={};
+  srcKeys.forEach(k=>{srcTrendData[k]=[]});
+  th.forEach(d=>{
+    const s=d.view_sources||{};
+    srcKeys.forEach(k=>{srcTrendData[k].push(s[k]||0)});
+  });
+  const activeSrcKeys=srcKeys.filter(k=>srcTrendData[k].some(v=>v>0));
+  if(activeSrcKeys.length>0){
+    const srcTrendColors={search:'#4f46e5',profile:'#06b6d4',recommend:'#f59e0b',following:'#10b981',other:'#94a3b8'};
+    snsCreateChart('sns-threads-sources-trend',{
+      type:'bar',
+      data:{labels:dates,datasets:activeSrcKeys.map(k=>({label:srcMap[k]||k,data:srcTrendData[k],backgroundColor:srcTrendColors[k],borderRadius:1}))},
+      options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:10}}}},scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:function(v){return v+'%'}}}}}
+    });
+  }
+
+  // 7. 投稿パフォーマンステーブル（詳細版）
   const postsEl=document.getElementById('sns-threads-posts');
   if(postsEl){
     const allPosts=[];
     th.forEach(d=>{if(d.posts)d.posts.forEach(p=>{if(!allPosts.find(x=>x.post_id===p.post_id))allPosts.push(p)})});
     if(allPosts.length>0){
       allPosts.sort((a,b)=>(b.views||0)-(a.views||0));
-      let rows=allPosts.map(p=>`<tr><td style="white-space:nowrap">${p.date||''}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(p.content||'').substring(0,40)}</td><td style="text-align:right;font-weight:bold">${(p.views||0).toLocaleString()}</td><td style="text-align:right">${p.likes||0}</td></tr>`).join('');
-      postsEl.innerHTML=`<table style="width:100%;font-size:13px"><thead><tr><th>日付</th><th>内容</th><th>閲覧</th><th>♥</th></tr></thead><tbody>${rows}</tbody></table>`;
+      const hasDetail=allPosts.some(p=>p.interactions_detail||p.view_sources);
+      let header,rowFn;
+      if(hasDetail){
+        header='<tr><th>日付</th><th>内容</th><th>閲覧</th><th>♥</th><th>返信</th><th>引用</th><th>再投稿</th><th>フォロー</th></tr>';
+        rowFn=p=>{const id=p.interactions_detail||{};return `<tr><td style="white-space:nowrap">${p.date||''}</td><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(p.content||'').substring(0,35)}</td><td style="text-align:right;font-weight:bold">${(p.views||0).toLocaleString()}</td><td style="text-align:right">${id.likes||p.likes||0}</td><td style="text-align:right">${id.replies||0}</td><td style="text-align:right">${id.quotes||0}</td><td style="text-align:right">${id.reposts||0}</td><td style="text-align:right">${p.follows_from_post||0}</td></tr>`;};
+      } else {
+        header='<tr><th>日付</th><th>内容</th><th>閲覧</th><th>♥</th></tr>';
+        rowFn=p=>`<tr><td style="white-space:nowrap">${p.date||''}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(p.content||'').substring(0,40)}</td><td style="text-align:right;font-weight:bold">${(p.views||0).toLocaleString()}</td><td style="text-align:right">${p.likes||0}</td></tr>`;
+      }
+      postsEl.innerHTML=`<table style="width:100%;font-size:13px"><thead>${header}</thead><tbody>${allPosts.map(rowFn).join('')}</tbody></table>`;
     } else {
       postsEl.innerHTML='<p style="color:#999;font-size:13px">投稿データなし（次回収集時に取得）</p>';
     }
+  }
+
+  // 8. 投稿別閲覧数比較（横棒）
+  const allPostsForChart=[];
+  th.forEach(d=>{if(d.posts)d.posts.forEach(p=>{if(!allPostsForChart.find(x=>x.post_id===p.post_id))allPostsForChart.push(p)})});
+  if(allPostsForChart.length>0){
+    allPostsForChart.sort((a,b)=>(a.views||0)-(b.views||0));
+    const postLabels=allPostsForChart.map(p=>(p.content||'').substring(0,20)||(p.date||''));
+    const postViews=allPostsForChart.map(p=>p.views||0);
+    snsCreateChart('sns-threads-post-views',{
+      type:'bar',
+      data:{labels:postLabels,datasets:[{label:'閲覧数',data:postViews,backgroundColor:'#6366f1',borderRadius:4}]},
+      options:{maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true}}}
+    });
+  }
+
+  // 9. フォロワー成長率
+  if(followers.length>=2){
+    const growthRates=followers.map((f,i)=>{
+      if(i===0||followers[i-1]===0) return 0;
+      return parseFloat(((f-followers[i-1])/followers[i-1]*100).toFixed(3));
+    });
+    snsCreateChart('sns-threads-growth-rate',{
+      type:'line',
+      data:{labels:dates,datasets:[{label:'成長率(%)',data:growthRates,borderColor:'#10b981',backgroundColor:'rgba(16,185,129,0.08)',fill:true,tension:0.3,pointRadius:3}]},
+      options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:function(v){return v+'%'}}}}}
+    });
+  }
+
+  // 10. 性別 (doughnut)
+  if(gender.female||gender.male||gender.other){
+    snsCreateChart('sns-threads-gender',{
+      type:'doughnut',
+      data:{labels:['女性','男性','その他'],datasets:[{data:[gender.female||0,gender.male||0,gender.other||0],backgroundColor:['#ec4899','#3b82f6','#a3a3a3'],borderWidth:2}]},
+      options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:function(c){return c.label+': '+c.parsed+'%'}}}}}
+    });
+  }
+
+  // 11. 年齢層 (horizontal bar)
+  const ageLabels=Object.keys(age);
+  const ageData=Object.values(age);
+  if(ageLabels.length>0){
+    snsCreateChart('sns-threads-age',{
+      type:'bar',
+      data:{labels:ageLabels,datasets:[{label:'割合(%)',data:ageData,backgroundColor:'#6366f1',borderRadius:4}]},
+      options:{maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,max:100,ticks:{callback:function(v){return v+'%'}}}}}
+    });
+  }
+
+  // 12. 地域 (horizontal bar)
+  const locLabels=Object.keys(loc);
+  const locData=Object.values(loc);
+  if(locLabels.length>0){
+    snsCreateChart('sns-threads-location',{
+      type:'bar',
+      data:{labels:locLabels,datasets:[{label:'割合(%)',data:locData,backgroundColor:'#10b981',borderRadius:4}]},
+      options:{maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{callback:function(v){return v+'%'}}}}}
+    });
   }
 }
 
