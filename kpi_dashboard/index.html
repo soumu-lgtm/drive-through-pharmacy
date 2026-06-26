@@ -688,6 +688,7 @@ function normalizeSnsRows(sns, platform){
       result.interactions=ej.interactions||{};
       result.view_sources=ej.view_sources||{};
       result.demographics=ej.demographics||{};
+      if(ej.posts) result.posts=ej.posts;
     }
     return result;
   });
