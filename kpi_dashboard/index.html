@@ -766,7 +766,7 @@ function renderSNS(sns){
   let content='';
 
   if(snsSubTab==='summary'){
-    content=renderSnsSummaryContent(ig,tt,ln);
+    content=renderSnsSummaryContent(ig,tt,ln,th);
   } else if(snsSubTab==='instagram'){
     content=renderSnsInstagramContent(ig);
   } else if(snsSubTab==='tiktok'){
@@ -784,7 +784,7 @@ function renderSNS(sns){
 
   // チャート描画はDOM挿入後に遅延実行
   setTimeout(()=>{
-    if(snsSubTab==='summary') renderSnsSummaryCharts(ig,tt,ln);
+    if(snsSubTab==='summary') renderSnsSummaryCharts(ig,tt,ln,th);
     else if(snsSubTab==='instagram') renderSnsInstagramCharts(ig);
     else if(snsSubTab==='tiktok') renderSnsTikTokCharts(tt);
     else if(snsSubTab==='line') renderSnsLineCharts(ln);
@@ -793,7 +793,8 @@ function renderSNS(sns){
 }
 
 // ========== サマリー ==========
-function renderSnsSummaryContent(ig,tt,ln){
+function renderSnsSummaryContent(ig,tt,ln,th){
+  th=th||[];
   const igL=ig.length>0?(ig[ig.length-1].account_metrics||{}):{};
   const ttL=tt.length>0?(tt[tt.length-1].account_metrics||{}):{};
   const lnL=ln.length>0?ln[ln.length-1]:{};
@@ -822,7 +823,8 @@ function renderSnsSummaryContent(ig,tt,ln){
       <tbody>${compTbody}</tbody></table>
     </div>`;
 }
-function renderSnsSummaryCharts(ig,tt,ln){
+function renderSnsSummaryCharts(ig,tt,ln,th){
+  th=th||[];
   // フォロワー推移オーバーレイ (補間付き)
   const igFwRaw={};ig.forEach(d=>{igFwRaw[d.date]=(d.account_metrics||{}).followers||0});
   const ttFwRaw={};
