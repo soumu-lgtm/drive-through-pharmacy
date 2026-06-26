@@ -1420,18 +1420,24 @@ function renderSnsThreadsContent(th){
   const loc=demo.location||{};
 
   return `
-    <div class="card">
-      <h3>📈 フォロワー推移</h3>
-      <canvas id="sns-threads-followers" height="200"></canvas>
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>📈 フォロワー推移</h3>
+        <canvas id="sns-threads-followers" height="140"></canvas>
+      </div>
+      <div class="card">
+        <h3>📊 フォロワー増減</h3>
+        <canvas id="sns-threads-followers-delta" height="140"></canvas>
+      </div>
     </div>
     <div class="grid grid-2">
       <div class="card">
-        <h3>📊 フォロワー増減</h3>
-        <canvas id="sns-threads-followers-delta" height="200"></canvas>
+        <h3>👁 閲覧数・インタラクション推移</h3>
+        <canvas id="sns-threads-engagement" height="140"></canvas>
       </div>
       <div class="card">
-        <h3>👁 閲覧数・インタラクション推移 (30d)</h3>
-        <canvas id="sns-threads-engagement" height="200"></canvas>
+        <h3>📝 投稿パフォーマンス</h3>
+        <div id="sns-threads-posts"></div>
       </div>
     </div>
     <div class="grid grid-2">
@@ -1549,6 +1555,20 @@ function renderSnsThreadsCharts(th){
       data:{labels:dates,datasets:[{label:'増減',data:deltas,backgroundColor:deltaColors,borderRadius:2}]},
       options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
     });
+  }
+
+  // 投稿パフォーマンステーブル
+  const postsEl=document.getElementById('sns-threads-posts');
+  if(postsEl){
+    const allPosts=[];
+    th.forEach(d=>{if(d.posts)d.posts.forEach(p=>{if(!allPosts.find(x=>x.post_id===p.post_id))allPosts.push(p)})});
+    if(allPosts.length>0){
+      allPosts.sort((a,b)=>(b.views||0)-(a.views||0));
+      let rows=allPosts.map(p=>`<tr><td style="white-space:nowrap">${p.date||''}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(p.content||'').substring(0,40)}</td><td style="text-align:right;font-weight:bold">${(p.views||0).toLocaleString()}</td><td style="text-align:right">${p.likes||0}</td></tr>`).join('');
+      postsEl.innerHTML=`<table style="width:100%;font-size:13px"><thead><tr><th>日付</th><th>内容</th><th>閲覧</th><th>♥</th></tr></thead><tbody>${rows}</tbody></table>`;
+    } else {
+      postsEl.innerHTML='<p style="color:#999;font-size:13px">投稿データなし（次回収集時に取得）</p>';
+    }
   }
 }
 
