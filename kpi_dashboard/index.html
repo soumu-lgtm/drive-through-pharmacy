@@ -1457,6 +1457,16 @@ function renderSnsThreadsContent(th){
         <h3>📈 フォロワー推移</h3>
         <canvas id="sns-threads-followers" height="200"></canvas>
       </div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>👁 閲覧数・インタラクション推移 (30d)</h3>
+        <canvas id="sns-threads-engagement" height="200"></canvas>
+      </div>
+      <div class="card">
+        <h3>📊 フォロワー増減</h3>
+        <canvas id="sns-threads-followers-delta" height="200"></canvas>
+      </div>
     </div>`;
 }
 function renderSnsThreadsCharts(th){
@@ -1516,6 +1526,32 @@ function renderSnsThreadsCharts(th){
     data:{labels:dates,datasets:[{label:'フォロワー',data:followers,borderColor:'#000',backgroundColor:'rgba(0,0,0,0.05)',fill:true,tension:0.3,pointRadius:th.length===1?6:3,pointBackgroundColor:'#000'}]},
     options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:false}}}
   });
+
+  // 閲覧数・インタラクション推移
+  const views=th.map(x=>(x.account_metrics||{}).views_30d||0);
+  const interactions=th.map(x=>(x.account_metrics||{}).interactions_30d||0);
+  const hasEngagement=views.some(v=>v>0)||interactions.some(v=>v>0);
+  if(hasEngagement){
+    snsCreateChart('sns-threads-engagement',{
+      type:'line',
+      data:{labels:dates,datasets:[
+        {label:'閲覧数(30d)',data:views,borderColor:'#6366f1',backgroundColor:'rgba(99,102,241,0.08)',fill:true,tension:0.3,yAxisID:'y'},
+        {label:'インタラクション(30d)',data:interactions,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.08)',fill:true,tension:0.3,yAxisID:'y1'}
+      ]},
+      options:{plugins:{legend:{position:'bottom'}},scales:{y:{type:'linear',position:'left',beginAtZero:true,title:{display:true,text:'閲覧数'}},y1:{type:'linear',position:'right',beginAtZero:true,grid:{drawOnChartArea:false},title:{display:true,text:'インタラクション'}}}}
+    });
+  }
+
+  // フォロワー増減 (bar chart)
+  if(followers.length>=2){
+    const deltas=followers.map((f,i)=>i===0?0:f-followers[i-1]);
+    const deltaColors=deltas.map(d=>d>0?'#10b981':d<0?'#ef4444':'#d1d5db');
+    snsCreateChart('sns-threads-followers-delta',{
+      type:'bar',
+      data:{labels:dates,datasets:[{label:'増減',data:deltas,backgroundColor:deltaColors,borderRadius:2}]},
+      options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
+    });
+  }
 }
 
 </script>
