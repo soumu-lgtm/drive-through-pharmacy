@@ -1420,6 +1420,20 @@ function renderSnsThreadsContent(th){
   const loc=demo.location||{};
 
   return `
+    <div class="card">
+      <h3>📈 フォロワー推移</h3>
+      <canvas id="sns-threads-followers" height="200"></canvas>
+    </div>
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>📊 フォロワー増減</h3>
+        <canvas id="sns-threads-followers-delta" height="200"></canvas>
+      </div>
+      <div class="card">
+        <h3>👁 閲覧数・インタラクション推移 (30d)</h3>
+        <canvas id="sns-threads-engagement" height="200"></canvas>
+      </div>
+    </div>
     <div class="grid grid-2">
       <div class="card">
         <h3>🧵 Threads サマリー</h3>
@@ -1448,25 +1462,9 @@ function renderSnsThreadsContent(th){
         <canvas id="sns-threads-age" height="200"></canvas>
       </div>
     </div>
-    <div class="grid grid-2">
-      <div class="card">
-        <h3>📍 地域 (Top5)</h3>
-        <canvas id="sns-threads-location" height="200"></canvas>
-      </div>
-      <div class="card">
-        <h3>📈 フォロワー推移</h3>
-        <canvas id="sns-threads-followers" height="200"></canvas>
-      </div>
-    </div>
-    <div class="grid grid-2">
-      <div class="card">
-        <h3>👁 閲覧数・インタラクション推移 (30d)</h3>
-        <canvas id="sns-threads-engagement" height="200"></canvas>
-      </div>
-      <div class="card">
-        <h3>📊 フォロワー増減</h3>
-        <canvas id="sns-threads-followers-delta" height="200"></canvas>
-      </div>
+    <div class="card">
+      <h3>📍 地域 (Top5)</h3>
+      <canvas id="sns-threads-location" height="200"></canvas>
     </div>`;
 }
 function renderSnsThreadsCharts(th){
