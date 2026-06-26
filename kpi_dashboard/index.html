@@ -1338,6 +1338,12 @@ async function runSync(){
   // 1. GAS Web App → EC/GA4/在庫 をSupabaseに同期
   try{
     const r=await fetch(GAS_SYNC_URL,{redirect:'follow',signal:AbortSignal.timeout(120000)});
+    const ct=r.headers.get('content-type')||'';
+    if(!r.ok||!ct.includes('json')){
+      const txt=await r.text();
+      const preview=txt.substring(0,200);
+      throw new Error('HTTP '+r.status+' ('+ct.split(';')[0]+') '+preview);
+    }
     const gasData=await r.json();
     Object.assign(results,gasData);
   }catch(e){
@@ -1355,7 +1361,7 @@ async function runSync(){
     if(st&&st.cdp&&st.cdp.available){
       const openTabs=Object.entries(st.cdp.tabs).filter(([,v])=>v).map(([k])=>k);
       if(openTabs.length>0){
-        const cr=await fetch(SNS_API_URL+'/collect',{cache:'no-store',signal:AbortSignal.timeout(180000)});
+        const cr=await fetch(SNS_API_URL+'/collect',{cache:'no-store',signal:AbortSignal.timeout(360000)});
         const cd=await cr.json();
         if(cd.success&&cd.data){
           let cnt=0;
