@@ -1424,17 +1424,17 @@ function renderSnsThreadsContent(th){
     <div class="grid grid-2">
       <div class="card">
         <h3>📈 フォロワー推移</h3>
-        <canvas id="sns-threads-followers" height="140"></canvas>
+        <div style="position:relative;height:180px"><canvas id="sns-threads-followers"></canvas></div>
       </div>
       <div class="card">
         <h3>📊 フォロワー増減</h3>
-        <canvas id="sns-threads-followers-delta" height="140"></canvas>
+        <div style="position:relative;height:180px"><canvas id="sns-threads-followers-delta"></canvas></div>
       </div>
     </div>
     <div class="grid grid-2">
       <div class="card">
         <h3>👁 閲覧数・インタラクション推移</h3>
-        <canvas id="sns-threads-engagement" height="140"></canvas>
+        <div style="position:relative;height:180px"><canvas id="sns-threads-engagement"></canvas></div>
       </div>
       <div class="card">
         <h3>📝 投稿パフォーマンス</h3>
@@ -1443,8 +1443,8 @@ function renderSnsThreadsContent(th){
     </div>
     <div class="grid grid-2">
       <div class="card">
-        <h3>🧵 Threads サマリー</h3>
-        <table><thead><tr><th>指標</th><th>値</th></tr></thead><tbody>
+        <h3>🧵 サマリー</h3>
+        <table style="font-size:13px"><thead><tr><th>指標</th><th>値</th></tr></thead><tbody>
           <tr><td>フォロワー</td><td><strong>${(am.followers||0).toLocaleString()}</strong></td></tr>
           <tr><td>閲覧数 (30d)</td><td>${(am.views_30d||0).toLocaleString()}</td></tr>
           <tr><td>インタラクション (30d)</td><td>${(am.interactions_30d||0).toLocaleString()}</td></tr>
@@ -1456,22 +1456,22 @@ function renderSnsThreadsContent(th){
       </div>
       <div class="card">
         <h3>📊 閲覧ソース</h3>
-        <canvas id="sns-threads-sources" height="200"></canvas>
+        <div style="position:relative;height:180px"><canvas id="sns-threads-sources"></canvas></div>
       </div>
     </div>
-    <div class="grid grid-2">
+    <div class="grid grid-3">
       <div class="card">
-        <h3>👤 性別構成</h3>
-        <canvas id="sns-threads-gender" height="200"></canvas>
+        <h3>👤 性別</h3>
+        <div style="position:relative;height:180px"><canvas id="sns-threads-gender"></canvas></div>
       </div>
       <div class="card">
         <h3>📅 年齢層</h3>
-        <canvas id="sns-threads-age" height="200"></canvas>
+        <div style="position:relative;height:180px"><canvas id="sns-threads-age"></canvas></div>
       </div>
-    </div>
-    <div class="card">
-      <h3>📍 地域 (Top5)</h3>
-      <canvas id="sns-threads-location" height="200"></canvas>
+      <div class="card">
+        <h3>📍 地域</h3>
+        <div style="position:relative;height:180px"><canvas id="sns-threads-location"></canvas></div>
+      </div>
     </div>`;
 }
 function renderSnsThreadsCharts(th){
@@ -1488,7 +1488,7 @@ function renderSnsThreadsCharts(th){
     snsCreateChart('sns-threads-sources',{
       type:'doughnut',
       data:{labels:['検索','プロフィール','その他'],datasets:[{data:[vs.search||0,vs.profile||0,vs.other||0],backgroundColor:['#4f46e5','#06b6d4','#94a3b8'],borderWidth:2}]},
-      options:{plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:function(c){return c.label+': '+c.parsed+'%'}}}}}
+      options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:function(c){return c.label+': '+c.parsed+'%'}}}}}
     });
   }
 
@@ -1497,7 +1497,7 @@ function renderSnsThreadsCharts(th){
     snsCreateChart('sns-threads-gender',{
       type:'doughnut',
       data:{labels:['女性','男性','その他'],datasets:[{data:[gender.female||0,gender.male||0,gender.other||0],backgroundColor:['#ec4899','#3b82f6','#a3a3a3'],borderWidth:2}]},
-      options:{plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:function(c){return c.label+': '+c.parsed+'%'}}}}}
+      options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:function(c){return c.label+': '+c.parsed+'%'}}}}}
     });
   }
 
@@ -1508,7 +1508,7 @@ function renderSnsThreadsCharts(th){
     snsCreateChart('sns-threads-age',{
       type:'bar',
       data:{labels:ageLabels,datasets:[{label:'割合(%)',data:ageData,backgroundColor:'#6366f1',borderRadius:4}]},
-      options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,max:100,ticks:{callback:function(v){return v+'%'}}}}}
+      options:{maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,max:100,ticks:{callback:function(v){return v+'%'}}}}}
     });
   }
 
@@ -1519,7 +1519,7 @@ function renderSnsThreadsCharts(th){
     snsCreateChart('sns-threads-location',{
       type:'bar',
       data:{labels:locLabels,datasets:[{label:'割合(%)',data:locData,backgroundColor:'#10b981',borderRadius:4}]},
-      options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{callback:function(v){return v+'%'}}}}}
+      options:{maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{callback:function(v){return v+'%'}}}}}
     });
   }
 
@@ -1529,7 +1529,7 @@ function renderSnsThreadsCharts(th){
   snsCreateChart('sns-threads-followers',{
     type:'line',
     data:{labels:dates,datasets:[{label:'フォロワー',data:followers,borderColor:'#000',backgroundColor:'rgba(0,0,0,0.05)',fill:true,tension:0.3,pointRadius:th.length===1?6:3,pointBackgroundColor:'#000'}]},
-    options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:false}}}
+    options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:false}}}
   });
 
   // 閲覧数・インタラクション推移
@@ -1543,7 +1543,7 @@ function renderSnsThreadsCharts(th){
         {label:'閲覧数(30d)',data:views,borderColor:'#6366f1',backgroundColor:'rgba(99,102,241,0.08)',fill:true,tension:0.3,yAxisID:'y'},
         {label:'インタラクション(30d)',data:interactions,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.08)',fill:true,tension:0.3,yAxisID:'y1'}
       ]},
-      options:{plugins:{legend:{position:'bottom'}},scales:{y:{type:'linear',position:'left',beginAtZero:true,title:{display:true,text:'閲覧数'}},y1:{type:'linear',position:'right',beginAtZero:true,grid:{drawOnChartArea:false},title:{display:true,text:'インタラクション'}}}}
+      options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{y:{type:'linear',position:'left',beginAtZero:true,title:{display:true,text:'閲覧数'}},y1:{type:'linear',position:'right',beginAtZero:true,grid:{drawOnChartArea:false},title:{display:true,text:'インタラクション'}}}}
     });
   }
 
@@ -1554,7 +1554,7 @@ function renderSnsThreadsCharts(th){
     snsCreateChart('sns-threads-followers-delta',{
       type:'bar',
       data:{labels:dates,datasets:[{label:'増減',data:deltas,backgroundColor:deltaColors,borderRadius:2}]},
-      options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
+      options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
     });
   }
 
