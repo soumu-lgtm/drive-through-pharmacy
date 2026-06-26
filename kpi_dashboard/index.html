@@ -565,7 +565,7 @@ function renderKPI(d,o,g,s){
         </table>
       </div>
       <div class="card"><h3>📱 SNSパフォーマンス</h3>
-        ${['instagram','tiktok','line'].map(p=>{const d=s.filter(x=>x.platform===p).sort((a,b)=>b.date.localeCompare(a.date));if(!d.length)return'';const l=d[0];const prev=d.length>7?d[7]:d[d.length-1];const fNow=snsVal(l,'followers');const fPrev=snsVal(prev,'followers');const diff=fNow-fPrev;const diffStr=diff>0?`<span style="color:var(--green)">+${fmt(diff)}</span>`:diff<0?`<span style="color:var(--red)">${fmt(diff)}</span>`:'±0';return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0"><span style="font-size:16px">${{instagram:'📷',tiktok:'🎵',line:'💬'}[p]}</span><div style="flex:1"><div style="font-size:12px;font-weight:600">${{instagram:'Instagram',tiktok:'TikTok',line:'LINE'}[p]}</div><div style="font-size:10px;color:var(--sub)">7日比: ${diffStr}</div></div><div style="font-size:16px;font-weight:700">${fmt(fNow)}</div></div>`}).join('')}
+        ${['instagram','tiktok','line','threads'].map(p=>{const d=s.filter(x=>x.platform===p).sort((a,b)=>b.date.localeCompare(a.date));if(!d.length)return'';const l=d[0];const prev=d.length>7?d[7]:d[d.length-1];const fNow=snsVal(l,'followers');const fPrev=snsVal(prev,'followers');const diff=fNow-fPrev;const diffStr=diff>0?`<span style="color:var(--green)">+${fmt(diff)}</span>`:diff<0?`<span style="color:var(--red)">${fmt(diff)}</span>`:'±0';return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0"><span style="font-size:16px">${{instagram:'📷',tiktok:'🎵',line:'💬',threads:'🧵'}[p]}</span><div style="flex:1"><div style="font-size:12px;font-weight:600">${{instagram:'Instagram',tiktok:'TikTok',line:'LINE',threads:'Threads'}[p]}</div><div style="font-size:10px;color:var(--sub)">7日比: ${diffStr}</div></div><div style="font-size:16px;font-weight:700">${fmt(fNow)}</div></div>`}).join('')}
       </div>
     </div>`;
 
@@ -679,6 +679,15 @@ function normalizeSnsRows(sns, platform){
       result.voom=ej.voom||{};
       result.demographics=ej.demographics||{};
       result.broadcasts=ej.broadcasts||[];
+    } else if(platform==='threads'){
+      result.account_metrics={
+        followers:ej.followers||row.followers||0,
+        views_30d:ej.views_30d||0,
+        interactions_30d:ej.interactions_30d||0
+      };
+      result.interactions=ej.interactions||{};
+      result.view_sources=ej.view_sources||{};
+      result.demographics=ej.demographics||{};
     }
     return result;
   });
@@ -730,24 +739,27 @@ function renderSNS(sns){
   const ig=normalizeSnsRows(sns,'instagram');
   const tt=normalizeSnsRows(sns,'tiktok');
   const ln=normalizeSnsRows(sns,'line');
+  const th=normalizeSnsRows(sns,'threads');
 
-  const pN={instagram:'Instagram',tiktok:'TikTok',line:'LINE'};
-  const pI={instagram:'📷',tiktok:'🎵',line:'💬'};
-  const pC={instagram:'#e4405f',tiktok:'#000',line:'#06c755'};
+  const pN={instagram:'Instagram',tiktok:'TikTok',line:'LINE',threads:'Threads'};
+  const pI={instagram:'📷',tiktok:'🎵',line:'💬',threads:'🧵'};
+  const pC={instagram:'#e4405f',tiktok:'#000',line:'#06c755',threads:'#000'};
 
   // KPIカード
   const igLast=ig.length>0?(ig[ig.length-1].account_metrics||{}):{};
   const ttLast=tt.length>0?(tt[tt.length-1].account_metrics||{}):{};
   const lnLast=ln.length>0?(ln[ln.length-1].friends||{}):{};
+  const thLast=th.length>0?(th[th.length-1].account_metrics||{}):{};
   const ttEstFw=tt.length>0?ttEstimatedFollowers(tt,ttLast):0;
 
   let kpis=`
     <div class="card"><h2>📷 Instagram</h2><div class="metric" style="color:#e4405f">${(igLast.followers||0).toLocaleString()}</div><div class="metric-sub">フォロワー | リーチ30d: ${(igLast.reach_30d||0).toLocaleString()}</div></div>
     <div class="card"><h2>🎵 TikTok</h2><div class="metric">≈${ttEstFw.toLocaleString()}</div><div class="metric-sub">推定フォロワー | 視聴7d: ${(ttLast.video_views_7d||0).toLocaleString()}</div></div>
-    <div class="card"><h2>💬 LINE</h2><div class="metric" style="color:#06c755">${(lnLast.target_reach||0).toLocaleString()}</div><div class="metric-sub">ターゲットリーチ</div></div>`;
+    <div class="card"><h2>💬 LINE</h2><div class="metric" style="color:#06c755">${(lnLast.target_reach||0).toLocaleString()}</div><div class="metric-sub">ターゲットリーチ</div></div>
+    <div class="card"><h2>🧵 Threads</h2><div class="metric">${(thLast.followers||0).toLocaleString()}</div><div class="metric-sub">フォロワー | 閲覧30d: ${(thLast.views_30d||0).toLocaleString()}</div></div>`;
 
   // サブタブ
-  let subBtns=['summary','instagram','tiktok','line'].map(t=>
+  let subBtns=['summary','instagram','tiktok','line','threads'].map(t=>
     `<button class="sns-sub-btn ${snsSubTab===t?'active':''}" onclick="switchSns('${t}')">${t==='summary'?'📊 サマリー':pI[t]+' '+pN[t]}</button>`
   ).join('');
 
@@ -761,10 +773,12 @@ function renderSNS(sns){
     content=renderSnsTikTokContent(tt);
   } else if(snsSubTab==='line'){
     content=renderSnsLineContent(ln);
+  } else if(snsSubTab==='threads'){
+    content=renderSnsThreadsContent(th);
   }
 
   document.getElementById('tab-sns').innerHTML=`
-    <div class="grid grid-3">${kpis}</div>
+    <div class="grid grid-4">${kpis}</div>
     <div class="sns-sub-tabs">${subBtns}</div>
     ${content}`;
 
@@ -774,6 +788,7 @@ function renderSNS(sns){
     else if(snsSubTab==='instagram') renderSnsInstagramCharts(ig);
     else if(snsSubTab==='tiktok') renderSnsTikTokCharts(tt);
     else if(snsSubTab==='line') renderSnsLineCharts(ln);
+    else if(snsSubTab==='threads') renderSnsThreadsCharts(th);
   },50);
 }
 
@@ -783,6 +798,7 @@ function renderSnsSummaryContent(ig,tt,ln){
   const ttL=tt.length>0?(tt[tt.length-1].account_metrics||{}):{};
   const lnL=ln.length>0?ln[ln.length-1]:{};
   const lnFr=lnL.friends||{};const lnRm=lnL.rich_menu||{};const lnMsg=lnL.messages||{};
+  const thL2=th.length>0?(th[th.length-1].account_metrics||{}):{};
   const ttEstFw=tt.length>0?ttEstimatedFollowers(tt,ttL):'---';
   const igER=igL.reach_30d>0?((igL.interactions_30d||0)/igL.reach_30d*100).toFixed(2)+'%':'---';
   const ttER=ttL.video_views_7d>0?((ttL.likes_7d||0)/ttL.video_views_7d*100).toFixed(2)+'%':'---';
@@ -1388,6 +1404,74 @@ async function runSync(){
 }
 
 init();
+
+// ========== Threads ==========
+function renderSnsThreadsContent(th){
+  if(th.length===0) return '<div class="card"><p>Threadsデータがありません</p></div>';
+  const last=th[th.length-1];
+  const am=last.account_metrics||{};
+  const inter=last.interactions||{};
+  const vs=last.view_sources||{};
+  const demo=last.demographics||{};
+  const gender=demo.gender||{};
+  const age=demo.age||{};
+  const loc=demo.location||{};
+
+  let locRows=Object.entries(loc).map(([k,v])=>`<tr><td>${k}</td><td>${v}%</td></tr>`).join('');
+  let ageRows=Object.entries(age).map(([k,v])=>`<tr><td>${k}</td><td>${v}%</td></tr>`).join('');
+
+  return `
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>🧵 Threads サマリー</h3>
+        <table><thead><tr><th>指標</th><th>値</th></tr></thead><tbody>
+          <tr><td>フォロワー</td><td><strong>${(am.followers||0).toLocaleString()}</strong></td></tr>
+          <tr><td>閲覧数 (30d)</td><td>${(am.views_30d||0).toLocaleString()}</td></tr>
+          <tr><td>インタラクション (30d)</td><td>${(am.interactions_30d||0).toLocaleString()}</td></tr>
+          <tr><td>いいね</td><td>${inter.likes||0}</td></tr>
+          <tr><td>引用</td><td>${inter.quotes||0}</td></tr>
+          <tr><td>返信</td><td>${inter.replies||0}</td></tr>
+          <tr><td>再投稿</td><td>${inter.reposts||0}</td></tr>
+        </tbody></table>
+      </div>
+      <div class="card">
+        <h3>📊 閲覧ソース</h3>
+        <table><thead><tr><th>ソース</th><th>割合</th></tr></thead><tbody>
+          <tr><td>検索</td><td>${vs.search||0}%</td></tr>
+          <tr><td>プロフィール</td><td>${vs.profile||0}%</td></tr>
+          <tr><td>その他</td><td>${vs.other||0}%</td></tr>
+        </tbody></table>
+        <h3 style="margin-top:16px">👤 デモグラフィクス</h3>
+        <table><thead><tr><th>性別</th><th>割合</th></tr></thead><tbody>
+          <tr><td>女性</td><td>${gender.female||0}%</td></tr>
+          <tr><td>男性</td><td>${gender.male||0}%</td></tr>
+          <tr><td>その他</td><td>${gender.other||0}%</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>📅 年齢層</h3>
+        <table><thead><tr><th>年齢</th><th>割合</th></tr></thead><tbody>${ageRows}</tbody></table>
+      </div>
+      <div class="card">
+        <h3>📍 地域 (Top5)</h3>
+        <table><thead><tr><th>市区町村</th><th>割合</th></tr></thead><tbody>${locRows}</tbody></table>
+      </div>
+    </div>
+    <div class="card"><canvas id="sns-threads-followers" height="180"></canvas></div>`;
+}
+function renderSnsThreadsCharts(th){
+  if(th.length<2) return;
+  const dates=th.map(x=>x.date);
+  const followers=th.map(x=>(x.account_metrics||{}).followers||0);
+  snsCreateChart('sns-threads-followers',{
+    type:'line',
+    data:{labels:dates,datasets:[{label:'フォロワー',data:followers,borderColor:'#000',backgroundColor:'rgba(0,0,0,0.05)',fill:true,tension:0.3}]},
+    options:{plugins:{legend:{display:false},title:{display:true,text:'Threads フォロワー推移'}},scales:{y:{beginAtZero:false}}}
+  });
+}
+
 </script>
 </body>
 </html>
