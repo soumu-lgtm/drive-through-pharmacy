@@ -1246,7 +1246,6 @@ const ReceiptExporter = (() => {
     // ZIP生成＆ダウンロード
     const blob = await zip.generateAsync({ type: 'blob' });
     triggerDownload(blob, 'receipt_' + (billingMonth || month) + '.zip');
-    alert('ZIP出力完了: receipt_' + (billingMonth || month) + '.zip');
   }
 
   // --- ZIP用ビルダー関数群 ---
