@@ -134,7 +134,13 @@ const ReceiptExporter = (() => {
   // 1. レセプト一覧 CSV出力
   // ============================================================
 
+  function hasAnyData() {
+    return (allReceipts.shaho || []).length > 0 || (allReceipts.kokuho || []).length > 0 ||
+           (allReceipts.shahoHenrei || []).length > 0 || (allReceipts.kokuhoHenrei || []).length > 0;
+  }
+
   function exportListCSV() {
+    if (!hasAnyData()) { alert('UKEファイルを先に読み込んでください'); return; }
     const rows = [['種別', 'カルテ番号', '氏名', '性別', '生年月日', '保険種別',
                    '保険者番号', '被保険者番号', '実日数', '合計点数', '一部負担金', '警告数'].join(',')];
 
@@ -161,6 +167,7 @@ const ReceiptExporter = (() => {
   // ============================================================
 
   function exportChecklistCSV() {
+    if (!hasAnyData()) { alert('UKEファイルを先に読み込んでください'); return; }
     const rows = [['種別', 'カルテ番号', '氏名', '保険種別', '深刻度', 'チェック内容'].join(',')];
     const sevLabel = { high: '高', mid: '中', low: '低', info: '情報' };
 
@@ -230,6 +237,7 @@ const ReceiptExporter = (() => {
   // ============================================================
 
   function exportSummaryCSV() {
+    if (!hasAnyData()) { alert('UKEファイルを先に読み込んでください'); return; }
     const data = {};
     for (const key of ['shaho', 'kokuho', 'shahoHenrei', 'kokuhoHenrei']) {
       const list = allReceipts[key] || [];
@@ -378,6 +386,7 @@ const ReceiptExporter = (() => {
   // ============================================================
 
   function printSummary() {
+    if (!hasAnyData()) { alert('UKEファイルを先に読み込んでください'); return; }
     const data = {};
     for (const key of ['shaho', 'kokuho', 'shahoHenrei', 'kokuhoHenrei']) {
       const list = allReceipts[key] || [];
@@ -432,6 +441,7 @@ const ReceiptExporter = (() => {
   // ============================================================
 
   function printChecklist() {
+    if (!hasAnyData()) { alert('UKEファイルを先に読み込んでください'); return; }
     const allWarns = [];
     for (const key of Object.keys(allReceipts)) {
       const label = { shaho: '社保', kokuho: '国保', shahoHenrei: '社保返戻', kokuhoHenrei: '国保返戻' }[key];
@@ -1033,16 +1043,6 @@ const ReceiptExporter = (() => {
     const old = document.getElementById('exportMenu');
     if (old) { old.remove(); return; }
 
-    // 利用可能なデータを確認してボタンの有効/無効を制御
-    const hasShaho = (allReceipts.shaho || []).length > 0;
-    const hasKokuho = (allReceipts.kokuho || []).length > 0;
-    const hasShahoHenrei = (allReceipts.shahoHenrei || []).length > 0;
-    const hasKokuhoHenrei = (allReceipts.kokuhoHenrei || []).length > 0;
-    const hasAny = hasShaho || hasKokuho || hasShahoHenrei || hasKokuhoHenrei;
-    const hasKouhi = hasAny && [...(allReceipts.shaho || []), ...(allReceipts.kokuho || [])].some(r => r.kouhi && r.kouhi.length > 0);
-
-    const dis = (condition) => condition ? '' : ' disabled style="opacity:0.4;cursor:default;"';
-
     const menu = document.createElement('div');
     menu.id = 'exportMenu';
     menu.className = 'rc-export-menu';
@@ -1050,26 +1050,26 @@ const ReceiptExporter = (() => {
       <div class="rc-export-title">データ出力</div>
 
       <div class="rc-export-group">CSV出力</div>
-      <button onclick="ReceiptExporter.exportListCSV();closeExportMenu();"${dis(hasAny)}>レセプト一覧 CSV</button>
-      <button onclick="ReceiptExporter.exportChecklistCSV();closeExportMenu();"${dis(hasAny)}>要確認一覧 CSV</button>
-      <button onclick="ReceiptExporter.exportSummaryCSV();closeExportMenu();"${dis(hasAny)}>総括表 CSV</button>
+      <button onclick="ReceiptExporter.exportListCSV();closeExportMenu();">レセプト一覧 CSV</button>
+      <button onclick="ReceiptExporter.exportChecklistCSV();closeExportMenu();">要確認一覧 CSV</button>
+      <button onclick="ReceiptExporter.exportSummaryCSV();closeExportMenu();">総括表 CSV</button>
 
       <div class="rc-export-group">公式帳票（印刷）</div>
-      <button onclick="ReceiptExporter.printShahoSoukatu();closeExportMenu();"${dis(hasShaho)}>社保総括表（様式第一）</button>
-      <button onclick="ReceiptExporter.printKokuhoSoukatu();closeExportMenu();"${dis(hasKokuho)}>国保総括表（保険者別）</button>
-      <button onclick="ReceiptExporter.printDiscCoverLetter('shaho');closeExportMenu();"${dis(hasShaho)}>光ディスク等送付書（社保）</button>
-      <button onclick="ReceiptExporter.printDiscCoverLetter('kokuho');closeExportMenu();"${dis(hasKokuho)}>光ディスク等送付書（国保）</button>
-      <button onclick="ReceiptExporter.printKouhiSeikyu();closeExportMenu();"${dis(hasKouhi)}>公費医療費請求書</button>
+      <button onclick="ReceiptExporter.printShahoSoukatu();closeExportMenu();">社保総括表（様式第一）</button>
+      <button onclick="ReceiptExporter.printKokuhoSoukatu();closeExportMenu();">国保総括表（保険者別）</button>
+      <button onclick="ReceiptExporter.printDiscCoverLetter('shaho');closeExportMenu();">光ディスク等送付書（社保）</button>
+      <button onclick="ReceiptExporter.printDiscCoverLetter('kokuho');closeExportMenu();">光ディスク等送付書（国保）</button>
+      <button onclick="ReceiptExporter.printKouhiSeikyu();closeExportMenu();">公費医療費請求書</button>
 
       <div class="rc-export-group">返戻関連</div>
-      <button onclick="ReceiptExporter.printHenreiSoukatu('shaho');closeExportMenu();"${dis(hasShahoHenrei)}>返戻用社保総括表</button>
-      <button onclick="ReceiptExporter.printHenreiSoukatu('kokuho');closeExportMenu();"${dis(hasKokuhoHenrei)}>返戻用国保総括表</button>
+      <button onclick="ReceiptExporter.printHenreiSoukatu('shaho');closeExportMenu();">返戻用社保総括表</button>
+      <button onclick="ReceiptExporter.printHenreiSoukatu('kokuho');closeExportMenu();">返戻用国保総括表</button>
       <button onclick="ReceiptExporter.downloadHenreiResult('shaho');closeExportMenu();">返戻処理結果.txt（社保）</button>
       <button onclick="ReceiptExporter.downloadHenreiResult('kokuho');closeExportMenu();">返戻処理結果.txt（国保）</button>
 
       <div class="rc-export-group">印刷</div>
-      <button onclick="ReceiptExporter.printSummary();closeExportMenu();"${dis(hasAny)}>総括表サマリー 印刷</button>
-      <button onclick="ReceiptExporter.printChecklist();closeExportMenu();"${dis(hasAny)}>要確認一覧 印刷</button>
+      <button onclick="ReceiptExporter.printSummary();closeExportMenu();">総括表サマリー 印刷</button>
+      <button onclick="ReceiptExporter.printChecklist();closeExportMenu();">要確認一覧 印刷</button>
 
       <div class="rc-export-group">UKEファイル</div>
       <button onclick="ReceiptExporter.downloadAllUKE();closeExportMenu();">UKE 一括ダウンロード</button>
