@@ -1,5 +1,5 @@
 // ===== レセプト データ出力モジュール (receipt_exporter.js) =====
-// CSV出力・UKEダウンロード・印刷用レセプト生成
+// CSV出力・UKEダウンロード・印刷用レセプト生成・公式帳票出力
 //
 // 依存: receipt_viewer.js (allReceipts, institution, esc, formatDate, formatMonth)
 //       receipt_codes.js (CATEGORY_NAMES, PROCEDURE_CODES, DISEASE_CODES)
@@ -8,23 +8,55 @@
 const ReceiptExporter = (() => {
 
   // ============================================================
+  // 医療機関固定情報（config.jsから取得 or デフォルト）
+  // ============================================================
+  const CLINIC = {
+    code: '7400840',
+    name: '西春内科・在宅クリニック',
+    address: '愛知県北名古屋市九之坪北浦31',
+    founder: '島原　立樹',
+    prefecture: '23', // 愛知
+    prefectureName: '愛知県',
+  };
+
+  // 保険者番号→市町村名マッピング（愛知県内主要）
+  const INSURER_NAMES = {
+    '230014': '名古屋市千種区', '230022': '名古屋市東区', '230031': '名古屋市北区',
+    '230049': '名古屋市西区', '230057': '名古屋市中村区', '230065': '名古屋市中区',
+    '230073': '名古屋市昭和区', '230081': '名古屋市瑞穂区', '230090': '名古屋市熱田区',
+    '230103': '名古屋市中川区', '230111': '名古屋市港区', '230120': '名古屋市南区',
+    '230138': '名古屋市守山区', '230146': '名古屋市緑区', '230154': '名古屋市名東区',
+    '230162': '名古屋市天白区',
+    '230031': '名古屋市北区',
+    '230078': '春日井市', '230086': '小牧市',
+    '230171': '豊橋市', '230189': '岡崎市', '230197': '一宮市',
+    '230200': '瀬戸市', '230219': '半田市', '230227': '豊川市',
+    '230235': '津島市', '230243': '碧南市', '230251': '刈谷市',
+    '230260': '豊田市', '230278': '安城市', '230286': '犬山市',
+    '230292': '岩倉市', '230294': '江南市',
+    '230308': '稲沢市', '230316': '豊明市',
+    '230326': '清須市', '230334': '北名古屋市', '230342': 'あま市',
+    '230351': '長久手市', '230367': '東郷町', '230375': '豊山町',
+    '230383': '大口町', '230391': '扶桑町',
+    '234011': '海部郡蟹江町', '234029': '海部郡大治町', '234037': '海部郡飛島村',
+    '39230008': '愛知県（後期高齢者）',
+  };
+
+  // ============================================================
   // ユーティリティ
   // ============================================================
 
-  /** BOM付きUTF-8 CSVとしてダウンロード */
   function downloadCSV(filename, csvContent) {
     const bom = '\uFEFF';
     const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8' });
     triggerDownload(blob, filename);
   }
 
-  /** テキストファイルとしてダウンロード */
   function downloadText(filename, text, mimeType) {
     const blob = new Blob([text], { type: mimeType || 'text/plain;charset=utf-8' });
     triggerDownload(blob, filename);
   }
 
-  /** Blob→ダウンロード */
   function triggerDownload(blob, filename) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -36,7 +68,6 @@ const ReceiptExporter = (() => {
     URL.revokeObjectURL(url);
   }
 
-  /** CSVフィールドエスケープ */
   function csvField(val) {
     if (val == null) return '';
     const s = String(val);
@@ -44,6 +75,59 @@ const ReceiptExporter = (() => {
       return '"' + s.replace(/"/g, '""') + '"';
     }
     return s;
+  }
+
+  function he(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function getDisplayMonth() {
+    const firstReceipt = [...(allReceipts.shaho || []), ...(allReceipts.kokuho || []),
+                          ...(allReceipts.shahoHenrei || []), ...(allReceipts.kokuhoHenrei || [])][0];
+    const m = firstReceipt ? firstReceipt.billingMonth : (institution.billingMonth || '');
+    return formatMonth(m);
+  }
+
+  /** YYYYMM → 令和XX年X月 */
+  function toWareki(yyyymm) {
+    if (!yyyymm || yyyymm.length < 6) return yyyymm || '';
+    const y = parseInt(yyyymm.substring(0, 4));
+    const m = parseInt(yyyymm.substring(4, 6));
+    const reiwa = y - 2018;
+    return '令和' + (reiwa < 10 ? '0' : '') + reiwa + '年' + m + '月';
+  }
+
+  /** 提出年月（診療月の翌月1日） */
+  function getSubmitDate(yyyymm) {
+    if (!yyyymm || yyyymm.length < 6) return '';
+    let y = parseInt(yyyymm.substring(0, 4));
+    let m = parseInt(yyyymm.substring(4, 6)) + 1;
+    if (m > 12) { m = 1; y++; }
+    const reiwa = y - 2018;
+    return '令和' + (reiwa < 10 ? '0' : '') + reiwa + '年' + m + '月1日';
+  }
+
+  /** 保険者番号→名称 */
+  function getInsurerName(num) {
+    return INSURER_NAMES[num] || ('保険者' + num);
+  }
+
+  /** レセプト種別コードから保険分類を取得 */
+  function getInsuranceCategory(receipt) {
+    const code = receipt.insuranceTypeCode || '';
+    if (code.length < 4) return { type: 'other', label: '不明' };
+    const d1 = code[1];
+    const d2 = code[2]; // 1=本人, 2=未就学, 3=家族
+    const d3 = code[3]; // 0=一般, 2=本人外来, 4=6歳未満, 6=家族外来, 8=高齢
+    switch (d1) {
+      case '1': return { type: 'shaho', subType: d2, ageType: d3, label: '社保' };
+      case '2': return { type: 'kouhi', subType: d2, ageType: d3, label: '公費' };
+      case '3': return { type: 'kokuho', subType: d2, ageType: d3, label: '国保' };
+      case '4': return { type: 'taishoku', subType: d2, ageType: d3, label: '退職' };
+      case '6': return { type: 'kouki', subType: d2, ageType: d3, label: '後期高齢' };
+      default: return { type: 'other', label: '不明' };
+    }
   }
 
   // ============================================================
@@ -60,28 +144,20 @@ const ReceiptExporter = (() => {
         const warnCount = r.warnings.filter(w => w.severity !== 'info').length;
         const copay = r.insurance ? r.insurance.copayAmount : 0;
         rows.push([
-          csvField(label),
-          csvField(r.karteNumber),
-          csvField(r.name),
-          csvField(r.sex),
-          csvField(formatDate(r.dob)),
-          csvField(r.insuranceType),
+          csvField(label), csvField(r.karteNumber), csvField(r.name), csvField(r.sex),
+          csvField(formatDate(r.dob)), csvField(r.insuranceType),
           csvField(r.insurance ? r.insurance.insurerNumber : ''),
           csvField(r.insurance ? r.insurance.insuredNumber : ''),
-          r.visitDays.length,
-          r.totalPoints,
-          copay,
-          warnCount,
+          r.visitDays.length, r.totalPoints, copay, warnCount,
         ].join(','));
       }
     }
-
     const month = getDisplayMonth();
     downloadCSV('レセプト一覧_' + month + '.csv', rows.join('\r\n'));
   }
 
   // ============================================================
-  // 2. 要確認レセプト（チェック結果）CSV出力
+  // 2. 要確認レセプト CSV出力
   // ============================================================
 
   function exportChecklistCSV() {
@@ -93,30 +169,24 @@ const ReceiptExporter = (() => {
       for (const r of (allReceipts[key] || [])) {
         for (const w of r.warnings) {
           rows.push([
-            csvField(label),
-            csvField(r.karteNumber),
-            csvField(r.name),
-            csvField(r.insuranceType),
-            csvField(sevLabel[w.severity] || w.severity),
+            csvField(label), csvField(r.karteNumber), csvField(r.name),
+            csvField(r.insuranceType), csvField(sevLabel[w.severity] || w.severity),
             csvField(w.message),
           ].join(','));
         }
       }
     }
-
     const month = getDisplayMonth();
     downloadCSV('要確認レセプト_' + month + '.csv', rows.join('\r\n'));
   }
 
   // ============================================================
-  // 3. レセプト詳細 CSV出力（個別患者 or 全件）
+  // 3. レセプト詳細 CSV出力
   // ============================================================
 
   function exportDetailCSV(receipt) {
     if (!receipt) return;
     const rows = [];
-
-    // ヘッダ情報
     rows.push('# 患者情報');
     rows.push(['氏名', csvField(receipt.name)].join(','));
     rows.push(['カルテ番号', csvField(receipt.karteNumber)].join(','));
@@ -131,22 +201,13 @@ const ReceiptExporter = (() => {
     rows.push(['合計点数', receipt.totalPoints].join(','));
     rows.push(['実日数', receipt.visitDays.length].join(','));
     rows.push('');
-
-    // 傷病名
     rows.push('# 傷病名');
     rows.push(['コード', '傷病名', '開始日', '修飾語'].join(','));
     for (const d of receipt.diseases) {
       const modName = d.modifier ? (MasterLoader.getModifierName(d.modifier) || MODIFIER_CODES[d.modifier] || d.modifier) : '';
-      rows.push([
-        csvField(d.code),
-        csvField(d.name || d.code),
-        csvField(formatDate(d.startDate)),
-        csvField(modName),
-      ].join(','));
+      rows.push([csvField(d.code), csvField(d.name || d.code), csvField(formatDate(d.startDate)), csvField(modName)].join(','));
     }
     rows.push('');
-
-    // 診療内容
     rows.push('# 診療内容');
     rows.push(['区分', '区分名', 'コード', '名称', '点数', '数量', '小計'].join(','));
     for (const p of receipt.procedures) {
@@ -157,17 +218,9 @@ const ReceiptExporter = (() => {
       }
       if (!displayName) displayName = p.code;
       const subtotal = (p.points && p.quantity) ? p.points * p.quantity : p.points || '';
-      rows.push([
-        csvField(p.category),
-        csvField(CATEGORY_NAMES[p.category] || p.category),
-        csvField(p.code),
-        csvField(displayName),
-        p.points || '',
-        p.quantity || '',
-        subtotal,
-      ].join(','));
+      rows.push([csvField(p.category), csvField(CATEGORY_NAMES[p.category] || p.category),
+        csvField(p.code), csvField(displayName), p.points || '', p.quantity || '', subtotal].join(','));
     }
-
     const month = getDisplayMonth();
     downloadCSV('レセプト詳細_' + receipt.karteNumber + '_' + receipt.name + '_' + month + '.csv', rows.join('\r\n'));
   }
@@ -191,7 +244,6 @@ const ReceiptExporter = (() => {
       count: data.shahoHenrei.count + data.kokuhoHenrei.count,
       points: data.shahoHenrei.points + data.kokuhoHenrei.points,
       days: data.shahoHenrei.days + data.kokuhoHenrei.days,
-      copay: 0,
     };
     const total = {
       count: data.shaho.count + data.kokuho.count + henrei.count,
@@ -199,23 +251,20 @@ const ReceiptExporter = (() => {
       days: data.shaho.days + data.kokuho.days + henrei.days,
       copay: data.shaho.copay + data.kokuho.copay,
     };
-
     const rows = [];
     rows.push(['', '社保', '国保', '返戻（計）', '合計'].join(','));
     rows.push(['件数', data.shaho.count, data.kokuho.count, henrei.count, total.count].join(','));
     rows.push(['合計点数', data.shaho.points, data.kokuho.points, henrei.points, total.points].join(','));
     rows.push(['実日数合計', data.shaho.days, data.kokuho.days, henrei.days, total.days].join(','));
     rows.push(['一部負担金', data.shaho.copay, data.kokuho.copay, '-', total.copay].join(','));
-
     const month = getDisplayMonth();
     downloadCSV('総括表_' + month + '.csv', rows.join('\r\n'));
   }
 
   // ============================================================
-  // 5. UKEファイルダウンロード（読み込んだ生データを保存）
+  // 5. UKEファイルダウンロード
   // ============================================================
 
-  // 読み込み時に生テキストを保存するための変数
   let rawUkeData = {};
 
   function storeRawUke(fileType, text) {
@@ -234,25 +283,21 @@ const ReceiptExporter = (() => {
   function downloadAllUKE() {
     let count = 0;
     for (const key of Object.keys(rawUkeData)) {
-      if (rawUkeData[key]) {
-        downloadUKE(key);
-        count++;
-      }
+      if (rawUkeData[key]) { downloadUKE(key); count++; }
     }
     if (count === 0) alert('UKEデータが読み込まれていません');
   }
 
   // ============================================================
-  // 6. 印刷用レセプト生成
+  // 6. 印刷用レセプト（個別）
   // ============================================================
 
-  /** 個別レセプトの印刷用HTMLを別ウィンドウで開く */
   function printReceipt(receipt) {
     if (!receipt) return;
     const w = window.open('', '_blank', 'width=800,height=900');
     if (!w) { alert('ポップアップがブロックされました'); return; }
 
-    const instName = institution.name || '西春内科・在宅クリニック';
+    const instName = institution.name || CLINIC.name;
     const month = formatMonth(receipt.billingMonth);
 
     let diseasesHtml = '';
@@ -284,8 +329,6 @@ const ReceiptExporter = (() => {
     });
 
     const copay = receipt.insurance ? receipt.insurance.copayAmount : 0;
-
-    // 警告セクション
     let warningsHtml = '';
     const realWarns = receipt.warnings.filter(w => w.severity !== 'info');
     if (realWarns.length > 0) {
@@ -302,7 +345,6 @@ const ReceiptExporter = (() => {
       body: `
         <div class="header-bar">${he(instName)} | 診療年月: ${month}</div>
         <h2>${he(receipt.name)} (${he(receipt.karteNumber)}) — ${he(receipt.insuranceType)}</h2>
-
         <div class="info-grid">
           <div><span class="label">保険者番号:</span> ${he(receipt.insurance ? receipt.insurance.insurerNumber : '-')}</div>
           <div><span class="label">被保険者番号:</span> ${he(receipt.insurance ? receipt.insurance.insuredNumber : '-')}</div>
@@ -311,29 +353,19 @@ const ReceiptExporter = (() => {
           <div><span class="label">受診日:</span> ${receipt.visitDays.join(', ')}日</div>
           <div><span class="label">給付割合:</span> ${receipt.copayRatio || '-'}%</div>
         </div>
-
         <div class="section">
           <div class="section-head">傷病名</div>
-          <table>
-            <tr><th>#</th><th>傷病名</th><th>開始日</th></tr>
-            ${diseasesHtml}
-          </table>
+          <table><tr><th>#</th><th>傷病名</th><th>開始日</th></tr>${diseasesHtml}</table>
         </div>
-
         <div class="section">
           <div class="section-head">診療内容</div>
-          <table>
-            <tr><th>名称</th><th style="width:60px;">点数</th><th style="width:40px;">数量</th><th style="width:60px;">小計</th><th style="width:100px;">コード</th></tr>
-            ${procHtml}
-          </table>
+          <table><tr><th>名称</th><th style="width:60px;">点数</th><th style="width:40px;">数量</th><th style="width:60px;">小計</th><th style="width:100px;">コード</th></tr>${procHtml}</table>
         </div>
-
         <div class="total-bar">
           合計点数: <strong>${receipt.totalPoints.toLocaleString()}</strong>
           &nbsp;&nbsp; 実日数: ${receipt.visitDays.length}
           &nbsp;&nbsp; 一部負担金: ${copay ? copay.toLocaleString() + '円' : '-'}
         </div>
-
         ${warningsHtml}
       `
     }));
@@ -341,14 +373,16 @@ const ReceiptExporter = (() => {
     setTimeout(() => w.print(), 400);
   }
 
-  /** 総括表の印刷用HTMLを別ウィンドウで開く */
+  // ============================================================
+  // 7. 総括表 印刷（簡易サマリー）
+  // ============================================================
+
   function printSummary() {
     const data = {};
     for (const key of ['shaho', 'kokuho', 'shahoHenrei', 'kokuhoHenrei']) {
       const list = allReceipts[key] || [];
       data[key] = {
-        count: list.length,
-        points: list.reduce((s, r) => s + r.totalPoints, 0),
+        count: list.length, points: list.reduce((s, r) => s + r.totalPoints, 0),
         days: list.reduce((s, r) => s + r.visitDays.length, 0),
         copay: list.reduce((s, r) => s + (r.insurance ? r.insurance.copayAmount : 0), 0),
       };
@@ -362,48 +396,30 @@ const ReceiptExporter = (() => {
       days: data.shaho.days + data.kokuho.days + henreiDays,
       copay: data.shaho.copay + data.kokuho.copay,
     };
-
-    const instName = institution.name || '西春内科・在宅クリニック';
+    const instName = institution.name || CLINIC.name;
     const month = getDisplayMonth();
-
-    // 保険種別ごとの内訳テーブル（社保）
     let shahoDetail = buildCategoryBreakdown(allReceipts.shaho || [], '社保');
     let kokuhoDetail = buildCategoryBreakdown(allReceipts.kokuho || [], '国保');
 
     const w = window.open('', '_blank', 'width=800,height=900');
     if (!w) { alert('ポップアップがブロックされました'); return; }
-
     w.document.write(buildPrintHTML({
       title: '総括表 — ' + month,
       body: `
         <div class="header-bar">${he(instName)} | 請求年月: ${month}</div>
         <h2>レセプト総括表</h2>
-
-        <div class="section">
-          <div class="section-head">サマリー</div>
+        <div class="section"><div class="section-head">サマリー</div>
           <table>
             <tr><th></th><th style="text-align:right;">社保</th><th style="text-align:right;">国保</th><th style="text-align:right;">返戻（計）</th><th style="text-align:right;font-weight:700;">合計</th></tr>
-            <tr><td style="font-weight:600;">件数</td>
-              <td style="text-align:right;">${data.shaho.count}</td><td style="text-align:right;">${data.kokuho.count}</td>
-              <td style="text-align:right;">${henreiCount}</td><td style="text-align:right;font-weight:700;">${total.count}</td></tr>
-            <tr><td style="font-weight:600;">合計点数</td>
-              <td style="text-align:right;">${data.shaho.points.toLocaleString()}</td><td style="text-align:right;">${data.kokuho.points.toLocaleString()}</td>
-              <td style="text-align:right;">${henreiPts.toLocaleString()}</td><td style="text-align:right;font-weight:700;">${total.points.toLocaleString()}</td></tr>
-            <tr><td style="font-weight:600;">実日数合計</td>
-              <td style="text-align:right;">${data.shaho.days}</td><td style="text-align:right;">${data.kokuho.days}</td>
-              <td style="text-align:right;">${henreiDays}</td><td style="text-align:right;font-weight:700;">${total.days}</td></tr>
-            <tr><td style="font-weight:600;">一部負担金</td>
-              <td style="text-align:right;">${data.shaho.copay.toLocaleString()}</td><td style="text-align:right;">${data.kokuho.copay.toLocaleString()}</td>
-              <td style="text-align:right;">-</td><td style="text-align:right;font-weight:700;">${total.copay.toLocaleString()}</td></tr>
+            <tr><td style="font-weight:600;">件数</td><td style="text-align:right;">${data.shaho.count}</td><td style="text-align:right;">${data.kokuho.count}</td><td style="text-align:right;">${henreiCount}</td><td style="text-align:right;font-weight:700;">${total.count}</td></tr>
+            <tr><td style="font-weight:600;">合計点数</td><td style="text-align:right;">${data.shaho.points.toLocaleString()}</td><td style="text-align:right;">${data.kokuho.points.toLocaleString()}</td><td style="text-align:right;">${henreiPts.toLocaleString()}</td><td style="text-align:right;font-weight:700;">${total.points.toLocaleString()}</td></tr>
+            <tr><td style="font-weight:600;">実日数合計</td><td style="text-align:right;">${data.shaho.days}</td><td style="text-align:right;">${data.kokuho.days}</td><td style="text-align:right;">${henreiDays}</td><td style="text-align:right;font-weight:700;">${total.days}</td></tr>
+            <tr><td style="font-weight:600;">一部負担金</td><td style="text-align:right;">${data.shaho.copay.toLocaleString()}</td><td style="text-align:right;">${data.kokuho.copay.toLocaleString()}</td><td style="text-align:right;">-</td><td style="text-align:right;font-weight:700;">${total.copay.toLocaleString()}</td></tr>
           </table>
         </div>
-
-        ${shahoDetail}
-        ${kokuhoDetail}
-
+        ${shahoDetail}${kokuhoDetail}
         <div style="margin-top:16px;font-size:10px;color:#999;">
-          ※ UKEファイルから自動集計した参考値です。実際の総括表（PDF）と照合してください。<br>
-          出力日時: ${new Date().toLocaleString('ja-JP')}
+          ※ UKEファイルから自動集計した参考値です。<br>出力日時: ${new Date().toLocaleString('ja-JP')}
         </div>
       `
     }));
@@ -411,7 +427,10 @@ const ReceiptExporter = (() => {
     setTimeout(() => w.print(), 400);
   }
 
-  /** 要確認レセプト一覧の印刷 */
+  // ============================================================
+  // 8. 要確認レセプト一覧 印刷
+  // ============================================================
+
   function printChecklist() {
     const allWarns = [];
     for (const key of Object.keys(allReceipts)) {
@@ -440,7 +459,7 @@ const ReceiptExporter = (() => {
       });
     }
 
-    const instName = institution.name || '西春内科・在宅クリニック';
+    const instName = institution.name || CLINIC.name;
     const month = getDisplayMonth();
     const high = allWarns.filter(w => w.severity === 'high').length;
     const mid = allWarns.filter(w => w.severity === 'mid').length;
@@ -448,23 +467,19 @@ const ReceiptExporter = (() => {
 
     const win = window.open('', '_blank', 'width=800,height=900');
     if (!win) { alert('ポップアップがブロックされました'); return; }
-
     win.document.write(buildPrintHTML({
       title: '要確認レセプト一覧 — ' + month,
       body: `
         <div class="header-bar">${he(instName)} | 診療年月: ${month}</div>
         <h2>要確認レセプト チェック結果</h2>
         <div style="margin-bottom:12px;font-size:12px;">
-          警告合計: <strong style="color:#c1272d;">${allWarns.length}件</strong>
-          （高: ${high} / 中: ${mid} / 低: ${low}）
+          警告合計: <strong style="color:#c1272d;">${allWarns.length}件</strong>（高: ${high} / 中: ${mid} / 低: ${low}）
         </div>
         <table>
           <tr><th>#</th><th>種別</th><th>カルテ番号</th><th>氏名</th><th>深刻度</th><th>チェック内容</th></tr>
           ${tableRows}
         </table>
-        <div style="margin-top:12px;font-size:10px;color:#999;">
-          出力日時: ${new Date().toLocaleString('ja-JP')}
-        </div>
+        <div style="margin-top:12px;font-size:10px;color:#999;">出力日時: ${new Date().toLocaleString('ja-JP')}</div>
       `
     }));
     win.document.close();
@@ -472,38 +487,602 @@ const ReceiptExporter = (() => {
   }
 
   // ============================================================
-  // 7. エクスポートメニュー UI
+  // 9. 社保総括表（様式第一）印刷
+  // ============================================================
+
+  function printShahoSoukatu() {
+    const receipts = allReceipts.shaho || [];
+    if (receipts.length === 0) { alert('社保データがありません'); return; }
+
+    const billingMonth = receipts[0] ? receipts[0].billingMonth : '';
+    const wareki = toWareki(billingMonth);
+    const submitDate = getSubmitDate(billingMonth);
+
+    // 保険区分別集計
+    // 協会(01): 保険者番号が01で始まる
+    // 組合(06): 保険者番号が06で始まる
+    // 共済(31-34): 保険者番号が31-34で始まる
+    // 船員(02): 保険者番号が02
+    // 日雇(63): 保険者番号が63
+    // 公費単独(2x): insuranceTypeCodeの2桁目が2
+    const cats = {
+      kyokai: { label: '協会けんぽ', count: 0, days: 0, points: 0 },
+      kumiai: { label: '組合健保', count: 0, days: 0, points: 0 },
+      kyosai: { label: '共済', count: 0, days: 0, points: 0 },
+      senin:  { label: '船員', count: 0, days: 0, points: 0 },
+      hiyatoi:{ label: '日雇', count: 0, days: 0, points: 0 },
+      kouhi:  { label: '公費単独', count: 0, days: 0, points: 0 },
+      other:  { label: 'その他', count: 0, days: 0, points: 0 },
+    };
+
+    for (const r of receipts) {
+      const insurerNum = r.insurance ? r.insurance.insurerNumber : '';
+      const insCategory = getInsuranceCategory(r);
+      let cat = 'other';
+
+      if (insCategory.type === 'kouhi') {
+        cat = 'kouhi';
+      } else if (insurerNum.startsWith('01') || insurerNum.startsWith('39')) {
+        // 協会けんぽは保険者番号の法別番号01
+        // ただし39は後期高齢者（社保ファイルには通常入らないが念のため）
+        cat = insurerNum.startsWith('39') ? 'other' : 'kyokai';
+      } else if (insurerNum.startsWith('06')) {
+        cat = 'kumiai';
+      } else if (/^(31|32|33|34)/.test(insurerNum)) {
+        cat = 'kyosai';
+      } else if (insurerNum.startsWith('02')) {
+        cat = 'senin';
+      } else if (insurerNum.startsWith('63')) {
+        cat = 'hiyatoi';
+      } else {
+        // 法別番号から分類
+        const houbetsu = insurerNum.substring(0, 2);
+        if (houbetsu === '01') cat = 'kyokai';
+        else if (houbetsu === '06') cat = 'kumiai';
+        else if (['31','32','33','34'].includes(houbetsu)) cat = 'kyosai';
+        else if (houbetsu === '02') cat = 'senin';
+        else if (houbetsu === '63') cat = 'hiyatoi';
+        else cat = 'other';
+      }
+
+      cats[cat].count++;
+      cats[cat].days += r.visitDays.length;
+      cats[cat].points += r.totalPoints;
+    }
+
+    const totalCount = receipts.length;
+    const totalDays = receipts.reduce((s, r) => s + r.visitDays.length, 0);
+    const totalPoints = receipts.reduce((s, r) => s + r.totalPoints, 0);
+
+    // 公費集計（KOレコード持ちの患者）
+    let kouhiReceipts = receipts.filter(r => r.kouhi && r.kouhi.length > 0);
+    const kouhiByHoubetsu = {};
+    for (const r of kouhiReceipts) {
+      for (const k of r.kouhi) {
+        const houbetsu = k.futanshaNumber.substring(0, 2);
+        const label = { '12': '生活保護', '21': '精神通院', '51': '特定疾患', '54': '特定医療費(難病)',
+          '81': 'こども医療', '82': '障害者医療', '83': 'ひとり親', '85': 'こども(85)', '89': '福祉給付金', '19': '被爆者' }[houbetsu] || ('公費' + houbetsu);
+        if (!kouhiByHoubetsu[houbetsu]) kouhiByHoubetsu[houbetsu] = { label: label, count: 0, points: 0 };
+        kouhiByHoubetsu[houbetsu].count++;
+        kouhiByHoubetsu[houbetsu].points += r.totalPoints;
+      }
+    }
+
+    let catRows = '';
+    for (const [key, d] of Object.entries(cats)) {
+      if (d.count === 0) continue;
+      catRows += `<tr><td style="font-weight:600;">${he(d.label)}</td>
+        <td style="text-align:right;">${d.count}</td>
+        <td style="text-align:right;">${d.days}</td>
+        <td style="text-align:right;">${d.points.toLocaleString()}</td></tr>`;
+    }
+
+    let kouhiRows = '';
+    for (const [houbetsu, d] of Object.entries(kouhiByHoubetsu)) {
+      kouhiRows += `<tr style="color:#457b9d;"><td style="padding-left:20px;">公費(${he(houbetsu)}) ${he(d.label)}</td>
+        <td style="text-align:right;">${d.count}</td><td></td>
+        <td style="text-align:right;">${d.points.toLocaleString()}</td></tr>`;
+    }
+
+    const w = window.open('', '_blank', 'width=800,height=900');
+    if (!w) { alert('ポップアップがブロックされました'); return; }
+
+    w.document.write(buildOfficialFormHTML({
+      title: '社保総括表（様式第一）',
+      body: `
+        <div class="form-title">診療報酬請求書<span style="font-size:12px;color:#666;margin-left:12px;">（様式第一 医科・入院外）</span></div>
+        <div class="form-subtitle">${wareki}分</div>
+        <div class="form-dest">社会保険診療報酬支払基金 ${he(CLINIC.prefectureName)}支部 御中</div>
+
+        <table class="form-info">
+          <tr><td class="fi-label">医療機関コード</td><td>${he(institution.code || CLINIC.code)}</td>
+              <td class="fi-label">所在地</td><td>${he(CLINIC.address)}</td></tr>
+          <tr><td class="fi-label">名称</td><td>${he(institution.name || CLINIC.name)}</td>
+              <td class="fi-label">開設者氏名</td><td>${he(CLINIC.founder)}</td></tr>
+          <tr><td class="fi-label">請求日</td><td colspan="3">${submitDate}</td></tr>
+        </table>
+
+        <div class="form-section-title">保険区分別内訳</div>
+        <table class="form-table">
+          <tr><th>区分</th><th style="width:80px;">件数</th><th style="width:80px;">実日数</th><th style="width:120px;">点数</th></tr>
+          ${catRows}
+          <tr style="font-weight:700;border-top:2px solid #333;">
+            <td>合計</td><td style="text-align:right;">${totalCount}</td>
+            <td style="text-align:right;">${totalDays}</td>
+            <td style="text-align:right;">${totalPoints.toLocaleString()}</td>
+          </tr>
+        </table>
+
+        ${kouhiRows ? `
+        <div class="form-section-title" style="margin-top:16px;">公費負担分（再掲）</div>
+        <table class="form-table">
+          <tr><th>公費種別</th><th style="width:80px;">件数</th><th style="width:80px;"></th><th style="width:120px;">点数</th></tr>
+          ${kouhiRows}
+        </table>` : ''}
+
+        <div class="form-footer-note">
+          ※ UKEファイルから自動集計した参考値です。正式提出時は審査支払機関の総括表をご使用ください。<br>
+          出力日時: ${new Date().toLocaleString('ja-JP')}
+        </div>
+      `
+    }));
+    w.document.close();
+    setTimeout(() => w.print(), 400);
+  }
+
+  // ============================================================
+  // 10. 国保総括表（保険者別）印刷
+  // ============================================================
+
+  function printKokuhoSoukatu() {
+    const receipts = allReceipts.kokuho || [];
+    if (receipts.length === 0) { alert('国保データがありません'); return; }
+
+    const billingMonth = receipts[0] ? receipts[0].billingMonth : '';
+    const wareki = toWareki(billingMonth);
+    const submitDate = getSubmitDate(billingMonth);
+
+    // 国保と後期に分離
+    const kokuhoList = [];
+    const koukiList = [];
+    for (const r of receipts) {
+      const cat = getInsuranceCategory(r);
+      if (cat.type === 'kouki') koukiList.push(r);
+      else kokuhoList.push(r);
+    }
+
+    // 保険者番号別集計（国保）
+    function groupByInsurer(list) {
+      const map = {};
+      for (const r of list) {
+        const num = r.insurance ? r.insurance.insurerNumber : '不明';
+        if (!map[num]) map[num] = { insurerNumber: num, name: getInsurerName(num), count: 0, days: 0, points: 0, copay: 0 };
+        map[num].count++;
+        map[num].days += r.visitDays.length;
+        map[num].points += r.totalPoints;
+        map[num].copay += r.insurance ? r.insurance.copayAmount : 0;
+      }
+      return Object.values(map).sort((a, b) => a.insurerNumber.localeCompare(b.insurerNumber));
+    }
+
+    const kokuhoInsurers = groupByInsurer(kokuhoList);
+    const koukiInsurers = groupByInsurer(koukiList);
+
+    function makeInsurerTable(insurers, label) {
+      if (insurers.length === 0) return `<div class="form-section-title">${he(label)}</div><p style="text-align:center;color:#999;padding:12px;">対象なし</p>`;
+      let rows = '';
+      let totalCount = 0, totalDays = 0, totalPoints = 0, totalCopay = 0;
+      for (const ins of insurers) {
+        rows += `<tr>
+          <td>${he(ins.insurerNumber)}</td><td>${he(ins.name)}</td>
+          <td style="text-align:right;">${ins.count}</td>
+          <td style="text-align:right;">${ins.days}</td>
+          <td style="text-align:right;">${ins.points.toLocaleString()}</td>
+          <td style="text-align:right;">${ins.copay ? ins.copay.toLocaleString() : '-'}</td>
+        </tr>`;
+        totalCount += ins.count; totalDays += ins.days;
+        totalPoints += ins.points; totalCopay += ins.copay;
+      }
+      return `
+        <div class="form-section-title">${he(label)} (${totalCount}件)</div>
+        <table class="form-table">
+          <tr><th>保険者番号</th><th>保険者名</th><th style="width:60px;">件数</th><th style="width:60px;">実日数</th><th style="width:100px;">点数</th><th style="width:90px;">一部負担金</th></tr>
+          ${rows}
+          <tr style="font-weight:700;border-top:2px solid #333;">
+            <td colspan="2">合計</td>
+            <td style="text-align:right;">${totalCount}</td>
+            <td style="text-align:right;">${totalDays}</td>
+            <td style="text-align:right;">${totalPoints.toLocaleString()}</td>
+            <td style="text-align:right;">${totalCopay ? totalCopay.toLocaleString() : '-'}</td>
+          </tr>
+        </table>`;
+    }
+
+    // 後期高齢者 負担割合別集計
+    let koukiByRatio = '';
+    if (koukiList.length > 0) {
+      const ratioMap = {};
+      for (const r of koukiList) {
+        const ratio = r.copayRatio || '不明';
+        const label = ratio === '90' ? '9割' : ratio === '80' ? '8割' : ratio === '70' ? '7割' : ratio + '%';
+        if (!ratioMap[ratio]) ratioMap[ratio] = { label: label, count: 0, days: 0, points: 0 };
+        ratioMap[ratio].count++;
+        ratioMap[ratio].days += r.visitDays.length;
+        ratioMap[ratio].points += r.totalPoints;
+      }
+      let ratioRows = '';
+      for (const [ratio, d] of Object.entries(ratioMap).sort((a, b) => b[0].localeCompare(a[0]))) {
+        ratioRows += `<tr><td>${he(d.label)}</td><td style="text-align:right;">${d.count}</td>
+          <td style="text-align:right;">${d.days}</td><td style="text-align:right;">${d.points.toLocaleString()}</td></tr>`;
+      }
+      koukiByRatio = `
+        <div class="form-section-title" style="margin-top:8px;">後期高齢者 負担割合別</div>
+        <table class="form-table">
+          <tr><th>負担割合</th><th style="width:60px;">件数</th><th style="width:60px;">実日数</th><th style="width:100px;">点数</th></tr>
+          ${ratioRows}
+        </table>`;
+    }
+
+    const w = window.open('', '_blank', 'width=800,height=900');
+    if (!w) { alert('ポップアップがブロックされました'); return; }
+
+    w.document.write(buildOfficialFormHTML({
+      title: '国保総括表（一覧）',
+      body: `
+        <div class="form-title">診療報酬等請求総括表<span style="font-size:12px;color:#666;margin-left:12px;">（国保・後期高齢者）</span></div>
+        <div class="form-subtitle">${wareki}分</div>
+        <div class="form-dest">${he(CLINIC.prefectureName)}国民健康保険団体連合会 御中</div>
+
+        <table class="form-info">
+          <tr><td class="fi-label">医療機関コード</td><td>${he(institution.code || CLINIC.code)}</td>
+              <td class="fi-label">名称</td><td>${he(institution.name || CLINIC.name)}</td></tr>
+          <tr><td class="fi-label">請求日</td><td colspan="3">${submitDate}</td></tr>
+        </table>
+
+        ${makeInsurerTable(kokuhoInsurers, '国保 当月分')}
+        ${makeInsurerTable(koukiInsurers, '後期高齢者 当月分')}
+        ${koukiByRatio}
+
+        <div class="form-footer-note">
+          ※ UKEファイルから自動集計した参考値です。<br>出力日時: ${new Date().toLocaleString('ja-JP')}
+        </div>
+      `
+    }));
+    w.document.close();
+    setTimeout(() => w.print(), 400);
+  }
+
+  // ============================================================
+  // 11. 光ディスク等送付書 印刷（社保/国保）
+  // ============================================================
+
+  function printDiscCoverLetter(target) {
+    // target: 'shaho' or 'kokuho'
+    const receipts = target === 'shaho' ? (allReceipts.shaho || []) : (allReceipts.kokuho || []);
+    const billingMonth = receipts[0] ? receipts[0].billingMonth : (institution.billingMonth || '');
+    const wareki = toWareki(billingMonth);
+    const submitDate = getSubmitDate(billingMonth);
+
+    const dest = target === 'shaho'
+      ? '社会保険診療報酬支払基金 ' + CLINIC.prefectureName + '支部 御中'
+      : CLINIC.prefectureName + '国民健康保険団体連合会 御中';
+
+    const w = window.open('', '_blank', 'width=800,height=900');
+    if (!w) { alert('ポップアップがブロックされました'); return; }
+
+    w.document.write(buildOfficialFormHTML({
+      title: '光ディスク等送付書',
+      body: `
+        <div class="form-title">光ディスク等送付書</div>
+        <div class="form-dest" style="margin-top:20px;font-size:16px;">${he(dest)}</div>
+
+        <p style="margin:20px 0;font-size:13px;">
+          下記のとおり、診療（調剤）報酬等の請求に係る光ディスク等を送付します。
+        </p>
+
+        <table class="form-table" style="max-width:500px;">
+          <tr><td class="fi-label" style="width:180px;">点数表区分</td><td>医科</td></tr>
+          <tr><td class="fi-label">診療（調剤）月分</td><td>${wareki}</td></tr>
+          <tr><td class="fi-label">媒体種類</td><td>CD-R</td></tr>
+          <tr><td class="fi-label">媒体枚数</td><td>1枚</td></tr>
+          <tr><td class="fi-label">提出年月日</td><td>${submitDate}</td></tr>
+        </table>
+
+        <div style="margin-top:40px;border-top:1px solid #ccc;padding-top:16px;">
+          <table class="form-table" style="max-width:500px;">
+            <tr><td class="fi-label" style="width:180px;">医療機関コード</td><td>${he(institution.code || CLINIC.code)}</td></tr>
+            <tr><td class="fi-label">所在地</td><td>${he(CLINIC.address)}</td></tr>
+            <tr><td class="fi-label">名称</td><td>${he(institution.name || CLINIC.name)}</td></tr>
+            <tr><td class="fi-label">開設者氏名</td><td>${he(CLINIC.founder)}</td></tr>
+          </table>
+        </div>
+
+        <div class="form-footer-note">
+          ※ 印刷後、開設者印を押印の上ご提出ください。<br>
+          出力日時: ${new Date().toLocaleString('ja-JP')}
+        </div>
+      `
+    }));
+    w.document.close();
+    setTimeout(() => w.print(), 400);
+  }
+
+  // ============================================================
+  // 12. 返戻処理結果.txt ダウンロード
+  // ============================================================
+
+  function downloadHenreiResult(target) {
+    // target: 'shaho' or 'kokuho'
+    const henreiKey = target + 'Henrei';
+    const receipts = allReceipts[henreiKey] || [];
+    const billingMonth = getDisplayMonth();
+    const label = target === 'shaho' ? '社保' : '国保';
+
+    let text = '';
+    if (receipts.length === 0) {
+      text = '返戻処理結果\r\n\r\n' +
+        '医療機関: ' + (institution.name || CLINIC.name) + '\r\n' +
+        '処理日: ' + new Date().toLocaleDateString('ja-JP') + '\r\n' +
+        '対象: ' + label + '\r\n\r\n' +
+        '出力対象のレセプトが見つかりません\r\n';
+    } else {
+      text = '返戻処理結果\r\n\r\n' +
+        '医療機関: ' + (institution.name || CLINIC.name) + '\r\n' +
+        '処理日: ' + new Date().toLocaleDateString('ja-JP') + '\r\n' +
+        '対象: ' + label + '\r\n' +
+        '件数: ' + receipts.length + '\r\n\r\n' +
+        '--- 返戻レセプト一覧 ---\r\n';
+      receipts.forEach((r, i) => {
+        text += (i + 1) + '. カルテ番号: ' + r.karteNumber +
+          ' | 氏名: ' + r.name +
+          ' | 診療月: ' + formatMonth(r.billingMonth) +
+          ' | 点数: ' + r.totalPoints + '\r\n';
+      });
+    }
+
+    downloadText('返戻処理結果_' + label + '_' + billingMonth.replace('/', '') + '.txt', text);
+  }
+
+  // ============================================================
+  // 13. 返戻用総括表 印刷
+  // ============================================================
+
+  function printHenreiSoukatu(target) {
+    const henreiKey = target + 'Henrei';
+    const receipts = allReceipts[henreiKey] || [];
+    const label = target === 'shaho' ? '社保' : '国保';
+    const dest = target === 'shaho'
+      ? '社会保険診療報酬支払基金 ' + CLINIC.prefectureName + '支部 御中'
+      : CLINIC.prefectureName + '国民健康保険団体連合会 御中';
+
+    if (receipts.length === 0) {
+      alert('返戻データがありません（' + label + '）');
+      return;
+    }
+
+    const billingMonth = receipts[0].billingMonth || '';
+    const wareki = toWareki(billingMonth);
+    const submitDate = getSubmitDate(institution.billingMonth || billingMonth);
+
+    let rows = '';
+    let totalPoints = 0, totalDays = 0;
+    receipts.forEach((r, i) => {
+      rows += `<tr>
+        <td>${i + 1}</td><td>${he(r.karteNumber)}</td><td>${he(r.name)}</td>
+        <td>${he(r.insuranceType)}</td>
+        <td style="text-align:right;">${r.visitDays.length}</td>
+        <td style="text-align:right;">${r.totalPoints.toLocaleString()}</td>
+      </tr>`;
+      totalPoints += r.totalPoints;
+      totalDays += r.visitDays.length;
+    });
+
+    const w = window.open('', '_blank', 'width=800,height=900');
+    if (!w) { alert('ポップアップがブロックされました'); return; }
+
+    w.document.write(buildOfficialFormHTML({
+      title: '返戻用' + label + '総括表',
+      body: `
+        <div class="form-title">返戻分 診療報酬請求書<span style="font-size:12px;color:#666;margin-left:12px;">（${he(label)}）</span></div>
+        <div class="form-dest">${he(dest)}</div>
+
+        <table class="form-info">
+          <tr><td class="fi-label">医療機関コード</td><td>${he(institution.code || CLINIC.code)}</td>
+              <td class="fi-label">名称</td><td>${he(institution.name || CLINIC.name)}</td></tr>
+          <tr><td class="fi-label">請求日</td><td colspan="3">${submitDate}</td></tr>
+        </table>
+
+        <div class="form-section-title">返戻レセプト一覧 (${receipts.length}件)</div>
+        <table class="form-table">
+          <tr><th>#</th><th>カルテ番号</th><th>氏名</th><th>保険種別</th><th style="width:60px;">実日数</th><th style="width:100px;">点数</th></tr>
+          ${rows}
+          <tr style="font-weight:700;border-top:2px solid #333;">
+            <td colspan="4">合計</td>
+            <td style="text-align:right;">${totalDays}</td>
+            <td style="text-align:right;">${totalPoints.toLocaleString()}</td>
+          </tr>
+        </table>
+
+        <div class="form-footer-note">
+          ※ UKEファイルから自動集計した参考値です。<br>出力日時: ${new Date().toLocaleString('ja-JP')}
+        </div>
+      `
+    }));
+    w.document.close();
+    setTimeout(() => w.print(), 400);
+  }
+
+  // ============================================================
+  // 14. 公費医療費請求書 印刷（市町村別）
+  // ============================================================
+
+  function printKouhiSeikyu() {
+    // 公費(KOレコード)を持つ全レセプトを市町村ごとにグループ化
+    const allKouhiReceipts = [];
+    for (const key of ['shaho', 'kokuho']) {
+      for (const r of (allReceipts[key] || [])) {
+        if (r.kouhi && r.kouhi.length > 0) {
+          allKouhiReceipts.push(r);
+        }
+      }
+    }
+
+    if (allKouhiReceipts.length === 0) {
+      alert('公費データがありません');
+      return;
+    }
+
+    // 市町村(保険者番号ベース)でグルーピング
+    const cityMap = {};
+    for (const r of allKouhiReceipts) {
+      // 市町村特定: 保険者番号の上6桁、または公費負担者番号の構成から
+      const insurerNum = r.insurance ? r.insurance.insurerNumber : '';
+      // 市町村コード: 保険者番号の3-6桁目 or 公費負担者番号の3-8桁目
+      let cityKey = insurerNum || 'unknown';
+      let cityName = getInsurerName(insurerNum);
+
+      // 後期高齢者の場合、公費負担者番号から市町村を特定
+      if (insurerNum.startsWith('39')) {
+        const kouhiNum = r.kouhi[0] ? r.kouhi[0].futanshaNumber : '';
+        if (kouhiNum.length >= 8) {
+          // 公費負担者番号: 法別2桁 + 都道府県2桁 + 実施機関(市町村)4桁
+          cityKey = 'kouhi_' + kouhiNum.substring(0, 8);
+          cityName = '公費市町村(' + kouhiNum.substring(4, 8) + ')';
+        }
+      }
+
+      if (!cityMap[cityKey]) cityMap[cityKey] = { cityName: cityName, insurerNumber: insurerNum, receipts: [] };
+      cityMap[cityKey].receipts.push(r);
+    }
+
+    const billingMonth = allKouhiReceipts[0].billingMonth || '';
+    const wareki = toWareki(billingMonth);
+
+    let pages = '';
+    let pageNum = 0;
+    for (const [cityKey, group] of Object.entries(cityMap)) {
+      pageNum++;
+      let rows = '';
+      let totalPoints = 0, totalAmount = 0;
+
+      for (const r of group.receipts) {
+        const kouhiInfo = r.kouhi[0] || {};
+        const kouhiType = kouhiInfo.futanshaNumber ? kouhiInfo.futanshaNumber.substring(0, 2) : '';
+        const typeLabel = { '12': '生活保護', '21': '精神通院', '51': '特定疾患', '54': '難病',
+          '81': 'こども', '82': '障害者', '83': 'ひとり親', '85': 'こども', '89': '福祉給付金' }[kouhiType] || kouhiType;
+        // 金額 = 点数 × 10 × 公費負担割合（概算: 3割負担なら7割公費 = 点数×7）
+        // 簡易計算: 一部負担金がある場合、総額 - 一部負担金
+        const amount = r.totalPoints * 10 - (r.insurance ? r.insurance.copayAmount : 0);
+
+        rows += `<tr>
+          <td>${he(kouhiInfo.jukyushaNumber || '-')}</td>
+          <td>${he(r.name)}</td>
+          <td>${he(typeLabel)}</td>
+          <td style="text-align:right;">${r.totalPoints.toLocaleString()}</td>
+          <td style="text-align:right;">${amount > 0 ? amount.toLocaleString() + '円' : '-'}</td>
+        </tr>`;
+        totalPoints += r.totalPoints;
+        totalAmount += amount > 0 ? amount : 0;
+      }
+
+      pages += `
+        ${pageNum > 1 ? '<div style="page-break-before:always;"></div>' : ''}
+        <div class="form-title" style="font-size:14px;">医療費請求書<span style="font-size:11px;color:#666;margin-left:8px;">${wareki}分 (${pageNum}/${Object.keys(cityMap).length})</span></div>
+        <div class="form-dest" style="font-size:14px;">${he(group.cityName)} 長 様</div>
+
+        <table class="form-info" style="margin-top:12px;">
+          <tr><td class="fi-label" style="width:140px;">医療機関名</td><td>${he(institution.name || CLINIC.name)}</td></tr>
+          <tr><td class="fi-label">医療機関コード</td><td>${he(institution.code || CLINIC.code)}</td></tr>
+          <tr><td class="fi-label">請求件数</td><td>${group.receipts.length}件</td></tr>
+          <tr><td class="fi-label">請求金額合計</td><td style="font-weight:700;">${totalAmount.toLocaleString()}円</td></tr>
+        </table>
+
+        <table class="form-table" style="margin-top:12px;">
+          <tr><th>受給者番号</th><th>氏名</th><th>公費種別</th><th style="width:80px;">点数</th><th style="width:100px;">請求金額</th></tr>
+          ${rows}
+          <tr style="font-weight:700;border-top:2px solid #333;">
+            <td colspan="3">合計</td>
+            <td style="text-align:right;">${totalPoints.toLocaleString()}</td>
+            <td style="text-align:right;">${totalAmount.toLocaleString()}円</td>
+          </tr>
+        </table>
+      `;
+    }
+
+    const w = window.open('', '_blank', 'width=800,height=900');
+    if (!w) { alert('ポップアップがブロックされました'); return; }
+
+    w.document.write(buildOfficialFormHTML({
+      title: '公費医療費請求書',
+      body: pages + `
+        <div class="form-footer-note">
+          ※ UKEファイルから自動集計した参考値です。金額は概算です。<br>
+          出力日時: ${new Date().toLocaleString('ja-JP')}
+        </div>
+      `
+    }));
+    w.document.close();
+    setTimeout(() => w.print(), 400);
+  }
+
+  // ============================================================
+  // 15. エクスポートメニュー UI
   // ============================================================
 
   function showExportMenu(e) {
-    // 既存メニューがあれば削除
     const old = document.getElementById('exportMenu');
     if (old) { old.remove(); return; }
+
+    // 利用可能なデータを確認してボタンの有効/無効を制御
+    const hasShaho = (allReceipts.shaho || []).length > 0;
+    const hasKokuho = (allReceipts.kokuho || []).length > 0;
+    const hasShahoHenrei = (allReceipts.shahoHenrei || []).length > 0;
+    const hasKokuhoHenrei = (allReceipts.kokuhoHenrei || []).length > 0;
+    const hasAny = hasShaho || hasKokuho || hasShahoHenrei || hasKokuhoHenrei;
+    const hasKouhi = hasAny && [...(allReceipts.shaho || []), ...(allReceipts.kokuho || [])].some(r => r.kouhi && r.kouhi.length > 0);
+
+    const dis = (condition) => condition ? '' : ' disabled style="opacity:0.4;cursor:default;"';
 
     const menu = document.createElement('div');
     menu.id = 'exportMenu';
     menu.className = 'rc-export-menu';
     menu.innerHTML = `
       <div class="rc-export-title">データ出力</div>
+
       <div class="rc-export-group">CSV出力</div>
-      <button onclick="ReceiptExporter.exportListCSV();closeExportMenu();">レセプト一覧 CSV</button>
-      <button onclick="ReceiptExporter.exportChecklistCSV();closeExportMenu();">要確認一覧 CSV</button>
-      <button onclick="ReceiptExporter.exportSummaryCSV();closeExportMenu();">総括表 CSV</button>
+      <button onclick="ReceiptExporter.exportListCSV();closeExportMenu();"${dis(hasAny)}>レセプト一覧 CSV</button>
+      <button onclick="ReceiptExporter.exportChecklistCSV();closeExportMenu();"${dis(hasAny)}>要確認一覧 CSV</button>
+      <button onclick="ReceiptExporter.exportSummaryCSV();closeExportMenu();"${dis(hasAny)}>総括表 CSV</button>
+
+      <div class="rc-export-group">公式帳票（印刷）</div>
+      <button onclick="ReceiptExporter.printShahoSoukatu();closeExportMenu();"${dis(hasShaho)}>社保総括表（様式第一）</button>
+      <button onclick="ReceiptExporter.printKokuhoSoukatu();closeExportMenu();"${dis(hasKokuho)}>国保総括表（保険者別）</button>
+      <button onclick="ReceiptExporter.printDiscCoverLetter('shaho');closeExportMenu();"${dis(hasShaho)}>光ディスク等送付書（社保）</button>
+      <button onclick="ReceiptExporter.printDiscCoverLetter('kokuho');closeExportMenu();"${dis(hasKokuho)}>光ディスク等送付書（国保）</button>
+      <button onclick="ReceiptExporter.printKouhiSeikyu();closeExportMenu();"${dis(hasKouhi)}>公費医療費請求書</button>
+
+      <div class="rc-export-group">返戻関連</div>
+      <button onclick="ReceiptExporter.printHenreiSoukatu('shaho');closeExportMenu();"${dis(hasShahoHenrei)}>返戻用社保総括表</button>
+      <button onclick="ReceiptExporter.printHenreiSoukatu('kokuho');closeExportMenu();"${dis(hasKokuhoHenrei)}>返戻用国保総括表</button>
+      <button onclick="ReceiptExporter.downloadHenreiResult('shaho');closeExportMenu();">返戻処理結果.txt（社保）</button>
+      <button onclick="ReceiptExporter.downloadHenreiResult('kokuho');closeExportMenu();">返戻処理結果.txt（国保）</button>
+
       <div class="rc-export-group">印刷</div>
-      <button onclick="ReceiptExporter.printSummary();closeExportMenu();">総括表 印刷</button>
-      <button onclick="ReceiptExporter.printChecklist();closeExportMenu();">要確認一覧 印刷</button>
+      <button onclick="ReceiptExporter.printSummary();closeExportMenu();"${dis(hasAny)}>総括表サマリー 印刷</button>
+      <button onclick="ReceiptExporter.printChecklist();closeExportMenu();"${dis(hasAny)}>要確認一覧 印刷</button>
+
       <div class="rc-export-group">UKEファイル</div>
       <button onclick="ReceiptExporter.downloadAllUKE();closeExportMenu();">UKE 一括ダウンロード</button>
     `;
 
-    // ボタン位置に合わせて表示
     const rect = e.target.getBoundingClientRect();
     menu.style.position = 'fixed';
     menu.style.top = (rect.bottom + 4) + 'px';
     menu.style.right = (window.innerWidth - rect.right) + 'px';
+    menu.style.maxHeight = '80vh';
+    menu.style.overflowY = 'auto';
     document.body.appendChild(menu);
 
-    // 外側クリックで閉じる
     setTimeout(() => {
       document.addEventListener('click', closeExportMenuOnOutside, { once: true });
     }, 50);
@@ -513,22 +1092,8 @@ const ReceiptExporter = (() => {
   // 内部ヘルパー
   // ============================================================
 
-  function he(s) {
-    if (s == null) return '';
-    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
-
-  function getDisplayMonth() {
-    const firstReceipt = [...(allReceipts.shaho || []), ...(allReceipts.kokuho || []),
-                          ...(allReceipts.shahoHenrei || []), ...(allReceipts.kokuhoHenrei || [])][0];
-    const m = firstReceipt ? firstReceipt.billingMonth : (institution.billingMonth || '');
-    return formatMonth(m);
-  }
-
-  /** 保険種別ごとの診療区分内訳テーブルHTML */
   function buildCategoryBreakdown(receipts, label) {
     if (receipts.length === 0) return '';
-    // 区分ごとの点数集計
     const catTotals = {};
     for (const r of receipts) {
       for (const p of r.procedures) {
@@ -559,7 +1124,7 @@ const ReceiptExporter = (() => {
       </div>`;
   }
 
-  /** 印刷用HTML共通テンプレート */
+  /** 印刷用HTML共通テンプレート（レセプト詳細・サマリー・チェックリスト用） */
   function buildPrintHTML({ title, body }) {
     return `<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>${he(title)}</title>
 <style>
@@ -584,6 +1149,31 @@ const ReceiptExporter = (() => {
 </style></head><body>${body}</body></html>`;
   }
 
+  /** 公式帳票用HTMLテンプレート（様式第一、総括表、送付書、請求書） */
+  function buildOfficialFormHTML({ title, body }) {
+    return `<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>${he(title)}</title>
+<style>
+  @page { size: A4; margin: 15mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Yu Gothic", "Meiryo", sans-serif; font-size: 12px; color: #222; line-height: 1.6; padding: 16px; }
+  .form-title { font-size: 20px; font-weight: 700; text-align: center; color: #1a2744; margin-bottom: 4px; padding-bottom: 8px; border-bottom: 3px double #1a2744; }
+  .form-subtitle { text-align: center; font-size: 14px; color: #555; margin-bottom: 8px; }
+  .form-dest { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+  .form-section-title { font-size: 13px; font-weight: 700; color: #264653; border-bottom: 2px solid #264653; padding-bottom: 3px; margin: 16px 0 8px; }
+  .form-info { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+  .form-info td { padding: 4px 8px; border: 1px solid #ccc; font-size: 12px; }
+  .fi-label { background: #f0ede6; font-weight: 600; width: 140px; white-space: nowrap; }
+  .form-table { width: 100%; border-collapse: collapse; }
+  .form-table th { background: #e8e4dc; padding: 5px 8px; border: 1px solid #bbb; font-size: 11px; font-weight: 600; text-align: center; }
+  .form-table td { padding: 4px 8px; border: 1px solid #ccc; font-size: 11px; }
+  .form-footer-note { margin-top: 20px; font-size: 10px; color: #999; border-top: 1px solid #ddd; padding-top: 8px; }
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .no-print { display: none !important; }
+  }
+</style></head><body>${body}</body></html>`;
+  }
+
   // ============================================================
   // Public API
   // ============================================================
@@ -599,6 +1189,12 @@ const ReceiptExporter = (() => {
     printReceipt,
     printSummary,
     printChecklist,
+    printShahoSoukatu,
+    printKokuhoSoukatu,
+    printDiscCoverLetter,
+    printKouhiSeikyu,
+    printHenreiSoukatu,
+    downloadHenreiResult,
     showExportMenu,
   };
 })();

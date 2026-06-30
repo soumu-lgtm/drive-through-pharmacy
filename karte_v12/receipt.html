@@ -43,6 +43,7 @@
     <button class="rc-header-btn" onclick="showChecklist()">要確認一覧</button>
     <button class="rc-header-btn" onclick="ReceiptExporter.showExportMenu(event)">出力</button>
     <button class="rc-header-btn" onclick="triggerFileInput()">UKEファイル読込</button>
+    <a href="receipt_manual.html" target="_blank" class="rc-header-btn" style="text-decoration:none;">マニュアル</a>
     <input type="file" id="fileInput" accept=".UKE,.uke,.csv,.txt" multiple
            style="display:none;" onchange="onFileInputChange(event)">
   </div>
@@ -223,7 +224,7 @@
      ============================================================ -->
 <script src="supabase_client.js"></script>
 <script src="receipt_checker.js"></script>
-<script src="receipt_exporter.js?v=20260630_v12"></script>
+<script src="receipt_exporter.js?v=20260630_v12b"></script>
 <script src="receipt_viewer.js?v=20260630_v12"></script>
 
 </body>
