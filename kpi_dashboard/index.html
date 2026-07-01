@@ -1593,7 +1593,7 @@ function renderSnsThreadsCharts(th){
     const allPosts=[];
     th.forEach(d=>{if(d.posts)d.posts.forEach(p=>{if(!allPosts.find(x=>x.post_id===p.post_id))allPosts.push(p)})});
     if(allPosts.length>0){
-      allPosts.sort((a,b)=>(b.views||0)-(a.views||0));
+      allPosts.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
       const hasDetail=allPosts.some(p=>p.interactions_detail||p.view_sources);
       let header,rowFn;
       if(hasDetail){
