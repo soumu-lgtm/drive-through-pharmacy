@@ -1217,6 +1217,8 @@ const ReceiptExporter = (() => {
       kokuhoDir.file('返戻処理結果.txt', _buildHenreiResultText('kokuho'));
       if (hasKokuhoHenrei) {
         kokuhoDir.file('返戻用国保総括表.html', _buildHenreiSoukatuHTML('kokuho'));
+        kokuhoDir.file('返戻用国保請求書.html', _buildKokuhoSeikyushoHTML());
+        kokuhoDir.file('返戻用後期高齢者請求書.html', _buildKoukiSeikyushoHTML());
       }
     }
 
@@ -1238,7 +1240,7 @@ const ReceiptExporter = (() => {
 
     // --- ルート ---
     zip.file('社保総括表.html', hasShaho ? _buildShahoSoukatuHTML() : '<html><body>社保データなし</body></html>');
-    zip.file('国保総括表.html', hasKokuho ? _buildKokuhoSoukatuHTML() : '<html><body>国保データなし</body></html>');
+    zip.file('国保総括表（一覧）.html', hasKokuho ? _buildKokuhoSoukatuHTML() : '<html><body>国保データなし</body></html>');
     zip.file('要確認レセプト一覧.html', _buildChecklistHTML());
     zip.file('レセプト一覧.csv', _buildListCSV());
     zip.file('総括表.csv', _buildSummaryCSV());
@@ -1450,6 +1452,77 @@ const ReceiptExporter = (() => {
       <table class="form-table"><tr><th>負担者番号</th><th>市区町村</th><th>公費種別</th><th style="width:60px;">件数</th><th style="width:100px;">点数</th></tr>${rows}</table>
       <div class="form-footer-note">出力日時: ${new Date().toLocaleString('ja-JP')}</div>
     `});
+  }
+
+  function _buildKokuhoSeikyushoHTML() {
+    var receipts = allReceipts.kokuho || [];
+    var kokuhoOnly = receipts.filter(function(r) { var cat = getInsuranceCategory(r); return cat.type === 'kokuho'; });
+    if (kokuhoOnly.length === 0) return '<html><body>国保請求データなし</body></html>';
+    var billingMonth = kokuhoOnly[0].billingMonth || '';
+    var wareki = toWareki(billingMonth);
+    var submitDate = getSubmitDate(billingMonth);
+    var totalCount = kokuhoOnly.length;
+    var totalDays = kokuhoOnly.reduce(function(s,r){ return s + r.visitDays.length; }, 0);
+    var totalPoints = kokuhoOnly.reduce(function(s,r){ return s + r.totalPoints; }, 0);
+    var insurerMap = {};
+    for (var i = 0; i < kokuhoOnly.length; i++) {
+      var r = kokuhoOnly[i];
+      var num = r.insurance ? r.insurance.insurerNumber : '';
+      if (!insurerMap[num]) insurerMap[num] = { name: getInsurerName(num), count: 0, days: 0, points: 0 };
+      insurerMap[num].count++; insurerMap[num].days += r.visitDays.length; insurerMap[num].points += r.totalPoints;
+    }
+    var rows = '';
+    for (var key in insurerMap) {
+      var d = insurerMap[key];
+      rows += '<tr><td>' + he(key) + '</td><td>' + he(d.name) + '</td><td style="text-align:right;">' + d.count + '</td><td style="text-align:right;">' + d.days + '</td><td style="text-align:right;">' + d.points.toLocaleString() + '</td></tr>';
+    }
+    return buildOfficialFormHTML({ title: '国保請求書', body: '<div class="form-title">診療報酬請求書（国保）</div>' +
+      '<div class="form-subtitle">' + wareki + '分</div>' +
+      '<div class="form-dest">' + he(CLINIC.prefectureName) + '国民健康保険団体連合会 御中</div>' +
+      '<table class="form-info"><tr><td class="fi-label">医療機関コード</td><td>' + he(institution.code||CLINIC.code) + '</td><td class="fi-label">名称</td><td>' + he(institution.name||CLINIC.name) + '</td></tr>' +
+      '<tr><td class="fi-label">所在地</td><td>' + he(CLINIC.address) + '</td><td class="fi-label">開設者</td><td>' + he(CLINIC.founder) + '</td></tr>' +
+      '<tr><td class="fi-label">請求年月日</td><td colspan="3">' + submitDate + '</td></tr></table>' +
+      '<div class="form-section-title">保険者別請求内訳</div>' +
+      '<table class="form-table"><tr><th>保険者番号</th><th>保険者名</th><th style="width:60px;">件数</th><th style="width:60px;">実日数</th><th style="width:100px;">点数</th></tr>' + rows +
+      '<tr style="font-weight:700;border-top:2px solid #333;"><td colspan="2">合計</td><td style="text-align:right;">' + totalCount + '</td><td style="text-align:right;">' + totalDays + '</td><td style="text-align:right;">' + totalPoints.toLocaleString() + '</td></tr></table>' +
+      '<div class="form-footer-note">出力日時: ' + new Date().toLocaleString('ja-JP') + '</div>'
+    });
+  }
+
+  function _buildKoukiSeikyushoHTML() {
+    var receipts = allReceipts.kokuho || [];
+    var koukiOnly = receipts.filter(function(r) { var cat = getInsuranceCategory(r); return cat.type === 'kouki'; });
+    if (koukiOnly.length === 0) return '<html><body>後期高齢者請求データなし</body></html>';
+    var billingMonth = koukiOnly[0].billingMonth || '';
+    var wareki = toWareki(billingMonth);
+    var submitDate = getSubmitDate(billingMonth);
+    var totalCount = koukiOnly.length;
+    var totalDays = koukiOnly.reduce(function(s,r){ return s + r.visitDays.length; }, 0);
+    var totalPoints = koukiOnly.reduce(function(s,r){ return s + r.totalPoints; }, 0);
+    var ratioMap = {};
+    for (var i = 0; i < koukiOnly.length; i++) {
+      var r = koukiOnly[i];
+      var ratio = r.copayRatio || '不明';
+      var label = ratio === '90' ? '9割' : ratio === '80' ? '8割' : ratio === '70' ? '7割' : ratio + '%';
+      if (!ratioMap[ratio]) ratioMap[ratio] = { label: label, count: 0, days: 0, points: 0 };
+      ratioMap[ratio].count++; ratioMap[ratio].days += r.visitDays.length; ratioMap[ratio].points += r.totalPoints;
+    }
+    var rows = '';
+    for (var key in ratioMap) {
+      var d = ratioMap[key];
+      rows += '<tr><td>' + he(d.label) + '</td><td style="text-align:right;">' + d.count + '</td><td style="text-align:right;">' + d.days + '</td><td style="text-align:right;">' + d.points.toLocaleString() + '</td></tr>';
+    }
+    return buildOfficialFormHTML({ title: '後期高齢者請求書', body: '<div class="form-title">診療報酬請求書（後期高齢者）</div>' +
+      '<div class="form-subtitle">' + wareki + '分</div>' +
+      '<div class="form-dest">' + he(CLINIC.prefectureName) + '後期高齢者医療広域連合 御中</div>' +
+      '<table class="form-info"><tr><td class="fi-label">医療機関コード</td><td>' + he(institution.code||CLINIC.code) + '</td><td class="fi-label">名称</td><td>' + he(institution.name||CLINIC.name) + '</td></tr>' +
+      '<tr><td class="fi-label">所在地</td><td>' + he(CLINIC.address) + '</td><td class="fi-label">開設者</td><td>' + he(CLINIC.founder) + '</td></tr>' +
+      '<tr><td class="fi-label">請求年月日</td><td colspan="3">' + submitDate + '</td></tr></table>' +
+      '<div class="form-section-title">負担割合別内訳</div>' +
+      '<table class="form-table"><tr><th>負担割合</th><th style="width:60px;">件数</th><th style="width:60px;">実日数</th><th style="width:100px;">点数</th></tr>' + rows +
+      '<tr style="font-weight:700;border-top:2px solid #333;"><td>合計</td><td style="text-align:right;">' + totalCount + '</td><td style="text-align:right;">' + totalDays + '</td><td style="text-align:right;">' + totalPoints.toLocaleString() + '</td></tr></table>' +
+      '<div class="form-footer-note">出力日時: ' + new Date().toLocaleString('ja-JP') + '</div>'
+    });
   }
 
   // ============================================================
