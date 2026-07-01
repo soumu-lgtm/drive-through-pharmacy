@@ -1199,7 +1199,7 @@ const ReceiptExporter = (() => {
     // --- shaho/ フォルダ ---
     if (hasShaho) {
       const shahoDir = zip.folder('shaho');
-      if (rawUkeData.shaho) shahoDir.file('RECEIPTC.UKE', rawUkeData.shaho);
+      shahoDir.file('RECEIPTC.UKE', rawUkeData.shaho || _buildUKE('shaho'));
       shahoDir.file('社保総括表.html', _buildShahoSoukatuHTML());
       shahoDir.file('光ディスク等送付書.html', _buildDiscCoverLetterHTML('shaho'));
       shahoDir.file('返戻処理結果.txt', _buildHenreiResultText('shaho'));
@@ -1211,7 +1211,7 @@ const ReceiptExporter = (() => {
     // --- kokuho/ フォルダ ---
     if (hasKokuho) {
       const kokuhoDir = zip.folder('kokuho');
-      if (rawUkeData.kokuho) kokuhoDir.file('RECEIPTC.UKE', rawUkeData.kokuho);
+      kokuhoDir.file('RECEIPTC.UKE', rawUkeData.kokuho || _buildUKE('kokuho'));
       kokuhoDir.file('国保総括表.html', _buildKokuhoSoukatuHTML());
       kokuhoDir.file('光ディスク等送付書.html', _buildDiscCoverLetterHTML('kokuho'));
       kokuhoDir.file('返戻処理結果.txt', _buildHenreiResultText('kokuho'));
@@ -1229,13 +1229,13 @@ const ReceiptExporter = (() => {
     }
 
     // --- shaho-henrei/ フォルダ ---
-    if (hasShahoHenrei && rawUkeData.shahoHenrei) {
-      zip.folder('shaho-henrei').file('RECEIPTC.UKE', rawUkeData.shahoHenrei);
+    if (hasShahoHenrei) {
+      zip.folder('shaho-henrei').file('RECEIPTC.UKE', rawUkeData.shahoHenrei || _buildUKE('shahoHenrei'));
     }
 
     // --- kokuho-henrei/ フォルダ ---
-    if (hasKokuhoHenrei && rawUkeData.kokuhoHenrei) {
-      zip.folder('kokuho-henrei').file('RECEIPTC.UKE', rawUkeData.kokuhoHenrei);
+    if (hasKokuhoHenrei) {
+      zip.folder('kokuho-henrei').file('RECEIPTC.UKE', rawUkeData.kokuhoHenrei || _buildUKE('kokuhoHenrei'));
     }
 
     // --- ルート ---
@@ -1523,6 +1523,125 @@ const ReceiptExporter = (() => {
       '<tr style="font-weight:700;border-top:2px solid #333;"><td>合計</td><td style="text-align:right;">' + totalCount + '</td><td style="text-align:right;">' + totalDays + '</td><td style="text-align:right;">' + totalPoints.toLocaleString() + '</td></tr></table>' +
       '<div class="form-footer-note">出力日時: ' + new Date().toLocaleString('ja-JP') + '</div>'
     });
+  }
+
+  // ============================================================
+  // UKE ジェネレーター（パース済みデータからUKE形式テキストを再構築）
+  // ============================================================
+
+  function _buildUKE(fileType) {
+    var receipts = allReceipts[fileType] || [];
+    if (receipts.length === 0) return '';
+
+    var lines = [];
+    // IR レコード（医療機関情報）
+    var reviewOrg = (fileType === 'shaho' || fileType === 'shahoHenrei') ? '1' : '2';
+    var inst = institution || {};
+    lines.push([
+      'IR', reviewOrg, inst.prefecture || '', inst.tensu || '1',
+      inst.code || '', '', inst.name || '',
+      receipts[0].billingMonth || '', '', inst.phone || ''
+    ].join(','));
+
+    for (var i = 0; i < receipts.length; i++) {
+      var r = receipts[i];
+
+      // RE レコード（レセプト共通）
+      var reFields = new Array(35).fill('');
+      reFields[0] = 'RE';
+      reFields[1] = String(r.seq || (i + 1));
+      reFields[2] = r.insuranceTypeCode || '';
+      reFields[3] = r.billingMonth || '';
+      reFields[4] = r.name || '';
+      reFields[5] = r.sex === '男' ? '1' : r.sex === '女' ? '2' : '';
+      reFields[6] = r.dob || '';
+      reFields[7] = r.copayRatio || '';
+      reFields[11] = r.karteNumber || '';
+      reFields[13] = String(r.totalPoints || 0);
+      // Trim trailing empty fields
+      while (reFields.length > 1 && reFields[reFields.length - 1] === '') reFields.pop();
+      lines.push(reFields.join(','));
+
+      // HO レコード（保険者情報）
+      if (r.insurance) {
+        lines.push([
+          'HO', r.insurance.insurerNumber || '',
+          r.insurance.symbol || '', r.insurance.insuredNumber || '',
+          '', String(r.insurance.copayAmount || 0)
+        ].join(','));
+      }
+
+      // KO レコード（公費）
+      if (r.kouhi) {
+        for (var k = 0; k < r.kouhi.length; k++) {
+          var ko = r.kouhi[k];
+          lines.push([
+            'KO', ko.futanshaNumber || '', ko.jukyushaNumber || '',
+            '', '', String(ko.copayAmount || 0)
+          ].join(','));
+        }
+      }
+
+      // SY レコード（傷病名）
+      if (r.diseases) {
+        for (var d = 0; d < r.diseases.length; d++) {
+          var dis = r.diseases[d];
+          lines.push([
+            'SY', dis.code || '', dis.startDate || '',
+            dis.outcomeFlag || '', dis.modifier || '',
+            '', dis.isPrimary ? '01' : ''
+          ].join(','));
+        }
+      }
+
+      // SI/IY レコード（診療行為・医薬品）
+      if (r.procedures) {
+        for (var p = 0; p < r.procedures.length; p++) {
+          var proc = r.procedures[p];
+          if (proc._raw) {
+            // 生データがあればそのまま使う
+            lines.push(proc._raw);
+          } else if (proc.isDrug) {
+            lines.push([
+              'IY', proc.code || '', String(proc.quantity || 0),
+              String(proc.points || 0)
+            ].join(','));
+          } else {
+            lines.push([
+              'SI', proc.category || '', '',
+              proc.code || '', '', String(proc.points || 0),
+              String(proc.quantity || 0)
+            ].join(','));
+          }
+        }
+      }
+
+      // CO レコード（コメント）
+      if (r.comments) {
+        for (var c = 0; c < r.comments.length; c++) {
+          var co = r.comments[c];
+          lines.push(['CO', co.identifier || '', '', co.code || '', co.text || ''].join(','));
+        }
+      }
+
+      // JD レコード（診療日）
+      if (r.visitDays && r.visitDays.length > 0) {
+        var jdFields = new Array(32).fill('');
+        jdFields[0] = 'JD';
+        for (var v = 0; v < r.visitDays.length; v++) {
+          var day = r.visitDays[v];
+          if (day >= 1 && day <= 31) jdFields[day] = '1';
+        }
+        while (jdFields.length > 1 && jdFields[jdFields.length - 1] === '') jdFields.pop();
+        lines.push(jdFields.join(','));
+      }
+    }
+
+    // GO レコード（合計）
+    var totalPoints = receipts.reduce(function(s, r) { return s + (r.totalPoints || 0); }, 0);
+    lines.push(['GO', String(receipts.length), String(totalPoints)].join(','));
+
+    return lines.join('\r\n') + '\r\n';
   }
 
   // ============================================================
