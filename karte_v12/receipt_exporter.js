@@ -1294,7 +1294,7 @@ const ReceiptExporter = (() => {
       const sevClass = w.severity === 'high' ? 'color:#c1272d;font-weight:700;' : w.severity === 'mid' ? 'color:#b45309;' : '';
       rows += `<tr><td>${i+1}</td><td>${he(w.label)}</td><td>${he(w.karte)}</td><td>${he(w.name)}</td><td style="${sevClass}">${sevLabel[w.severity]||w.severity}</td><td>${he(w.message)}</td></tr>`;
     });
-    return buildPrintHTML('要確認レセプト一覧', `
+    return buildPrintHTML({ title: '要確認レセプト一覧', body: `
       <div style="margin-bottom:8px;font-size:13px;">要確認件数: <strong style="color:#c1272d;">${allWarns.length}件</strong></div>
       <table><thead><tr><th>#</th><th>種別</th><th>カルテ番号</th><th>氏名</th><th>深刻度</th><th>チェック内容</th></tr></thead><tbody>${rows}</tbody></table>
       <div style="margin-top:12px;font-size:10px;color:#999;">出力日時: ${new Date().toLocaleString('ja-JP')}</div>
