@@ -1278,27 +1278,26 @@ const ReceiptExporter = (() => {
   }
 
   function _buildChecklistHTML() {
-    const allWarns = [];
-    for (const key of Object.keys(allReceipts)) {
-      const label = {shaho:'社保',kokuho:'国保',shahoHenrei:'社保返戻',kokuhoHenrei:'国保返戻'}[key];
-      for (const r of (allReceipts[key]||[])) {
-        for (const w of r.warnings) {
+    var allWarns = [];
+    for (var key of Object.keys(allReceipts)) {
+      var lbl = {shaho:'社保',kokuho:'国保',shahoHenrei:'社保返戻',kokuhoHenrei:'国保返戻'}[key];
+      for (var r of (allReceipts[key]||[])) {
+        for (var w of r.warnings) {
           if (w.severity === 'info') continue;
-          allWarns.push({ label, name: r.name, karte: r.karteNumber, insType: r.insuranceType, severity: w.severity, message: w.message });
+          allWarns.push({ label: lbl, name: r.name, karte: r.karteNumber, insType: r.insuranceType, severity: w.severity, message: w.message });
         }
       }
     }
-    const sevLabel = {high:'高',mid:'中',low:'低'};
-    let rows = '';
-    allWarns.forEach((w, i) => {
-      const sevClass = w.severity === 'high' ? 'color:#c1272d;font-weight:700;' : w.severity === 'mid' ? 'color:#b45309;' : '';
-      rows += `<tr><td>${i+1}</td><td>${he(w.label)}</td><td>${he(w.karte)}</td><td>${he(w.name)}</td><td style="${sevClass}">${sevLabel[w.severity]||w.severity}</td><td>${he(w.message)}</td></tr>`;
+    var sevLabel = {high:'高',mid:'中',low:'低'};
+    var rows = '';
+    allWarns.forEach(function(w, i) {
+      var sevClass = w.severity === 'high' ? 'color:#c1272d;font-weight:700;' : w.severity === 'mid' ? 'color:#b45309;' : '';
+      rows += '<tr><td>' + (i+1) + '</td><td>' + he(w.label) + '</td><td>' + he(w.karte) + '</td><td>' + he(w.name) + '</td><td style="' + sevClass + '">' + (sevLabel[w.severity]||w.severity) + '</td><td>' + he(w.message) + '</td></tr>';
     });
-    return buildPrintHTML({ title: '要確認レセプト一覧', body: `
-      <div style="margin-bottom:8px;font-size:13px;">要確認件数: <strong style="color:#c1272d;">${allWarns.length}件</strong></div>
-      <table><thead><tr><th>#</th><th>種別</th><th>カルテ番号</th><th>氏名</th><th>深刻度</th><th>チェック内容</th></tr></thead><tbody>${rows}</tbody></table>
-      <div style="margin-top:12px;font-size:10px;color:#999;">出力日時: ${new Date().toLocaleString('ja-JP')}</div>
-    `);
+    var bodyHtml = '<div style="margin-bottom:8px;font-size:13px;">要確認件数: <strong style="color:#c1272d;">' + allWarns.length + '件</strong></div>' +
+      '<table><thead><tr><th>#</th><th>種別</th><th>カルテ番号</th><th>氏名</th><th>深刻度</th><th>チェック内容</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+      '<div style="margin-top:12px;font-size:10px;color:#999;">出力日時: ' + new Date().toLocaleString('ja-JP') + '</div>';
+    return buildPrintHTML({ title: '要確認レセプト一覧', body: bodyHtml });
   }
 
   function _buildShahoSoukatuHTML() {
