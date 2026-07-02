@@ -256,7 +256,7 @@ setTimeout(startAutoRefresh, 10000);
 function renderAll(){
   const d=filt(D),o=filt(O,'order_date'),g=filt(G);
   renderDash(d,o);renderCharts(d,o);renderProduct(o);renderGA4(g);
-  renderReport(d,o);renderProfit(d,o);renderKPI(d,o,g,S);renderInv(I);renderSNS(S);renderSEO(filt(SEO),SEO_ART);renderHistory(O);
+  renderReport(d,o);renderProfit(d,o);renderKPI(d,o,g,S);renderInv(I);renderSNS(S);renderSEO(filt(SEO),SEO_ART);renderHistory(O,SY);
 }
 
 // ===== 1. ダッシュボード =====
@@ -1706,7 +1706,7 @@ function renderSnsThreadsCharts(th){
 
 
 // ===== 最新履歴タブ =====
-function renderHistory(orders){
+function renderHistory(orders,syncStatus){
   const el=document.getElementById('tab-history');if(!el)return;
   const dayNames=['日','月','火','水','木','金','土'];
   const sorted=[...orders].sort((a,b)=>{
@@ -1715,38 +1715,50 @@ function renderHistory(orders){
     return db.localeCompare(da);
   }).slice(0,50);
 
-  // --- チャネル別 最終同期時間パネル（created_at=Supabaseへの挿入日時） ---
-  const chChannels=['shopify','amazon','qoo10','rakuten','employee','wholesale'];
-  const chLatest={};
-  orders.forEach(o=>{
-    const ch=o.channel||'';const ca=o.created_at||'';
-    if(ch&&ca){if(!chLatest[ch]||ca>chLatest[ch])chLatest[ch]=ca}
-  });
-  const chColors={shopify:'#96bf48',amazon:'#ff9900',qoo10:'#e31937',rakuten:'#bf0000',employee:'#f59e0b',wholesale:'#6366f1'};
+  // --- システム同期ステータスパネル ---
   const now=new Date();
-  function fmtAgo(dt){
-    if(!dt)return'<span style="color:#ccc">データなし</span>';
+  function fmtSyncTime(dt){
+    if(!dt)return'<span style="color:#bbb">未同期</span>';
     const d=new Date(dt);if(isNaN(d))return dt;
     const mm=d.getMonth()+1,dd=d.getDate(),dow=dayNames[d.getDay()];
     const hh=String(d.getHours()).padStart(2,'0'),mi=String(d.getMinutes()).padStart(2,'0');
     const diffMin=Math.floor((now-d)/60000);
     let ago=diffMin<1?'たった今':diffMin<60?diffMin+'分前':diffMin<1440?Math.floor(diffMin/60)+'時間前':Math.floor(diffMin/1440)+'日前';
-    const dateStr=mm+'/'+dd+'('+dow+') '+hh+':'+mi;
-    return'<span style="font-weight:600">'+dateStr+'</span> <span style="font-size:11px;color:'+(diffMin<30?'#16a34a':'#999')+'">'+ago+'</span>';
+    return mm+'/'+dd+'('+dow+') '+hh+':'+mi+' <span style="font-size:11px;color:'+(diffMin<30?'#16a34a':'#999')+'">'+ago+'</span>';
   }
-  const syncCards=chChannels.filter(c=>chLatest[c]).map(c=>{
-    const dt=chLatest[c];const d=new Date(dt||'');
-    const diffMin=isNaN(d)?9999:Math.floor((now-d)/60000);
-    const dot=diffMin<60?'#22c55e':diffMin<1440?'#f59e0b':'#ef4444';
-    return'<div style="flex:1;min-width:140px;padding:10px 12px;background:#fafafa;border-radius:6px;border-left:3px solid '+chColors[c]+'">'+
-      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'+
-      '<span style="width:8px;height:8px;border-radius:50%;background:'+dot+';display:inline-block"></span>'+chBadge(c)+'</div>'+
-      '<div style="font-size:12px;color:#555">'+fmtAgo(dt)+'</div></div>';
+  function dotColor(dt){
+    if(!dt)return'#ccc';
+    const d=new Date(dt);if(isNaN(d))return'#ccc';
+    const m=Math.floor((now-d)/60000);
+    return m<60?'#22c55e':m<1440?'#f59e0b':'#ef4444';
+  }
+  // kpi_sync_statusからsync_typeごとのlast_syncを取得
+  const syMap={};
+  (syncStatus||[]).forEach(s=>{syMap[s.sync_type]={last_sync:s.last_sync,status:s.status,count:s.record_count,error:s.error_msg}});
+  // 表示する同期項目
+  const syncItems=[
+    {key:'_dashboard',label:'\u{1F4CA} ダッシュボード読込',color:'#667eea',time:now.toISOString()},
+    {key:'shopify',label:'\u{1F6D2} Shopify同期',color:'#96bf48',time:syMap.shopify?.last_sync},
+    {key:'amazon_qoo10',label:'\u{1F4E6} Amazon/Qoo10/楽天同期',color:'#ff9900',time:syMap.amazon_qoo10?.last_sync},
+    {key:'ga4',label:'\u{1F4C8} GA4同期',color:'#4285f4',time:syMap.ga4?.last_sync},
+    {key:'inventory',label:'\u{1F4E6} 在庫同期',color:'#10b981',time:syMap.inventory?.last_sync},
+    {key:'sns',label:'\u{1F4F1} SNS同期',color:'#e1306c',time:syMap.sns?.last_sync},
+  ];
+  const syncRows=syncItems.map(it=>{
+    const st=syMap[it.key];
+    const hasErr=st&&st.status==='error';
+    const errMsg=hasErr?'<div style="font-size:11px;color:#ef4444;margin-top:2px">'+st.error+'</div>':'';
+    const countStr=st&&st.count?'<span style="font-size:11px;color:#999;margin-left:6px">'+st.count+'件</span>':'';
+    return'<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #f5f5f5">'+
+      '<span style="width:8px;height:8px;border-radius:50%;background:'+dotColor(it.time)+';display:inline-block;margin-top:5px;flex-shrink:0"></span>'+
+      '<div style="min-width:180px;font-size:13px;font-weight:500;border-left:3px solid '+it.color+';padding-left:8px">'+it.label+countStr+'</div>'+
+      '<div style="font-size:13px;color:#444">'+fmtSyncTime(it.time)+errMsg+'</div>'+
+    '</div>';
   }).join('');
   const syncPanel='<div class="card" style="margin-bottom:12px">'+
-    '<h3 style="font-size:14px;margin-bottom:8px">\u{1F504} チャネル別 最終データ同期</h3>'+
-    '<div style="display:flex;flex-wrap:wrap;gap:8px">'+syncCards+'</div>'+
-    '<p style="font-size:11px;color:#bbb;margin:8px 0 0">\u{1F7E2} 1時間以内\u3000\u{1F7E1} 24時間以内\u3000\u{1F534} 24時間超</p></div>';
+    '<h3 style="font-size:14px;margin-bottom:8px">\u{1F504} システム同期ステータス</h3>'+
+    syncRows+
+    '<p style="font-size:11px;color:#bbb;margin:8px 0 0">\u{1F7E2} 1時間以内\u3000\u{1F7E1} 24時間以内\u3000\u{1F534} 24時間超\u3000\u{26AA} 未同期</p></div>';
 
   const chIcon={shopify:'\u{1F6D2}',amazon:'\u{1F4E6}',qoo10:'\u{1F3EA}',rakuten:'\u{1F3EF}',employee:'\u{1F464}',wholesale:'\u{1F3E5}'};
 
