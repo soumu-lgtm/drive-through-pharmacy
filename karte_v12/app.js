@@ -1989,11 +1989,14 @@ function renderAddedBillingList() {
   const k = karteData[currentPatientId];
   const container = document.getElementById('addedBillingList');
   const itemsEl = document.getElementById('addedBillingItems');
-  if (!k || !k.addedBillingItems || !k.addedBillingItems.length) { if (container) container.style.display = 'none'; return; }
+  var clearBtn = document.getElementById('btnClearBilling');
+  if (!k || !k.addedBillingItems || !k.addedBillingItems.length) { if (container) container.style.display = 'none'; if (clearBtn) clearBtn.style.display = 'none'; return; }
   container.style.display = '';
   itemsEl.innerHTML = k.addedBillingItems.map((it,i) =>
     '<div class="added-billing-item"><span>' + esc(it.name) + '</span><span class="added-billing-pts">' + it.points + '点</span><span class="added-billing-del" onclick="removeAddedBilling(' + i + ')" title="削除">&times;</span></div>'
-  ).join('') + '<div style="text-align:right;margin-top:4px;"><button onclick="clearAllBilling()" style="font-size:10px;padding:2px 8px;border:1px solid var(--border);background:var(--bg);border-radius:3px;cursor:pointer;color:var(--text-muted);">全てクリア</button></div>';
+  ).join('');
+  var clearBtn = document.getElementById('btnClearBilling');
+  if (clearBtn) clearBtn.style.display = k.addedBillingItems.length ? '' : 'none';
 }
 function removeAddedBilling(i) {
   const k = karteData[currentPatientId];
