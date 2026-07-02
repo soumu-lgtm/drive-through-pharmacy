@@ -1433,6 +1433,8 @@ function addBillingItem(name, points) {
     k.addedBillingItems.push({name:name, points:points});
     recalcBilling();
     showToast(name + ' を追加');
+    var el = document.getElementById('addedBillingList');
+    if (el) el.scrollIntoView({behavior:'smooth', block:'nearest'});
   }
 }
 function toggleBillingMyListItem(name, points) {
@@ -1990,8 +1992,8 @@ function renderAddedBillingList() {
   if (!k || !k.addedBillingItems || !k.addedBillingItems.length) { if (container) container.style.display = 'none'; return; }
   container.style.display = '';
   itemsEl.innerHTML = k.addedBillingItems.map((it,i) =>
-    '<div class="added-billing-item"><span>' + esc(it.name) + '</span><span class="added-billing-pts">' + it.points + '点</span><span class="added-billing-del" onclick="removeAddedBilling(' + i + ')">&times;</span></div>'
-  ).join('');
+    '<div class="added-billing-item"><span>' + esc(it.name) + '</span><span class="added-billing-pts">' + it.points + '点</span><span class="added-billing-del" onclick="removeAddedBilling(' + i + ')" title="削除">&times;</span></div>'
+  ).join('') + '<div style="text-align:right;margin-top:4px;"><button onclick="clearAllBilling()" style="font-size:10px;padding:2px 8px;border:1px solid var(--border);background:var(--bg);border-radius:3px;cursor:pointer;color:var(--text-muted);">全てクリア</button></div>';
 }
 function removeAddedBilling(i) {
   const k = karteData[currentPatientId];
@@ -1999,6 +2001,14 @@ function removeAddedBilling(i) {
   k.addedBillingItems.splice(i,1);
   recalcBilling();
   showToast(name + ' を削除');
+}
+function clearAllBilling() {
+  var k = karteData[currentPatientId];
+  if (!k || !k.addedBillingItems.length) return;
+  if (!confirm('追加済み算定を全てクリアしますか？')) return;
+  k.addedBillingItems = [];
+  recalcBilling();
+  showToast('算定項目を全てクリアしました');
 }
 
 // ===== v0.8: 機能10 既存患者保険証モーダルOCR/QR =====
