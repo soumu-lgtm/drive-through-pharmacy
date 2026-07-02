@@ -302,17 +302,6 @@
           </div>
         </div>
 
-        <!-- Disease -->
-        <div class="form-group">
-          <label class="form-label">傷病名</label>
-          <div class="disease-search-wrap">
-            <input type="text" class="form-input" id="diseaseSearch" placeholder="病名を検索..." oninput="searchDisease(this.value)" onfocus="searchDisease(this.value)">
-            <div class="disease-results" id="diseaseResults"></div>
-          </div>
-          <div class="disease-quick-btns" id="diseaseQuickBtns"></div>
-          <div class="selected-diseases" id="selectedDiseases"></div>
-        </div>
-
         <!-- Prescription -->
         <div class="form-group">
           <label class="form-label">処方入力
@@ -355,6 +344,7 @@
               <div class="bm-tab" data-cat="labtest" onclick="switchBillingTab('labtest')">検査</div>
               <div class="bm-tab" data-cat="injection" onclick="switchBillingTab('injection')">注射</div>
               <div class="bm-tab" data-cat="imaging" onclick="switchBillingTab('imaging')">画像</div>
+              <div class="bm-tab" data-cat="drug" onclick="switchBillingTab('drug')">薬</div>
             </div>
             <div class="billing-menu-items" id="billingMenuItems"></div>
             <div id="addedBillingList" class="added-billing-list" style="display:none;">

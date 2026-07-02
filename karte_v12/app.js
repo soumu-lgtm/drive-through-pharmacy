@@ -878,7 +878,13 @@ function switchPatientTab(tab) {
   currentPatientTab = tab;
   document.querySelectorAll('.patient-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
   const p = patients.find(x => x.id === currentPatientId);
-  if (p) renderPatientInfoTab(p);
+  if (p) {
+    renderPatientInfoTab(p);
+    if (tab === 'diseases') {
+      renderDiseaseQuickBtns();
+      renderSelectedDiseases();
+    }
+  }
 }
 
 function renderPatientInfoTab(p) {
@@ -1047,18 +1053,24 @@ function renderPatientInfoTab(p) {
       break;
 
     case 'diseases':
-      h += '<div class="info-section"><div class="info-section-title">傷病名一覧</div>';
+      // 傷病名検索・追加UI
+      h += '<div class="info-section">';
+      h += '<div class="info-section-title">傷病名入力</div>';
+      h += '<div class="disease-search-wrap" style="margin-bottom:6px;">';
+      h += '<input type="text" class="form-input" id="diseaseSearch" placeholder="病名を検索..." oninput="searchDisease(this.value)" onfocus="searchDisease(this.value)" style="font-size:12px;padding:6px 8px;">';
+      h += '<div class="disease-results" id="diseaseResults"></div>';
+      h += '</div>';
+      h += '<div class="disease-quick-btns" id="diseaseQuickBtns"></div>';
+      h += '<div class="selected-diseases" id="selectedDiseases"></div>';
+      h += '</div>';
+      // 既往傷病名一覧
+      h += '<div class="info-section" style="margin-top:6px;"><div class="info-section-title">傷病名履歴</div>';
       if (p.history && p.history.length > 0) {
         p.history.forEach(d => {
           const info = diseases.find(x => x.name === d);
           h += '<div style="padding:3px 0;font-size:11px;border-bottom:1px solid var(--bg);">' + esc(d) + (info ? ' <span style="font-size:9px;color:var(--text-muted);">' + esc(info.code) + '</span>' : '') + '</div>';
         });
       } else h += '<span style="font-size:11px;color:var(--text-muted);">なし</span>';
-      const k = karteData[currentPatientId];
-      if (k && k.selectedDiseases.length > 0) {
-        h += '<div class="info-section-title" style="margin-top:6px;">今回の傷病名</div>';
-        k.selectedDiseases.forEach(d => { h += '<div style="padding:3px 0;font-size:11px;">' + esc(d.name) + ' [' + (d.status==='suspected'?'疑い':'確定') + ']</div>'; });
-      }
       h += '</div>';
       break;
 
@@ -1084,15 +1096,18 @@ function onChiefComplaintSelect(val) {
 
 // ===== Disease =====
 function renderDiseaseQuickBtns() {
+  const el = document.getElementById('diseaseQuickBtns');
+  if (!el) return;
   const p = patients.find(x => x.id === currentPatientId);
   let btns = '';
   if (p && p.history && p.history.length > 0) btns += '<button class="disease-quick-btn" style="background:var(--success-light);border-color:var(--success);color:var(--success);" onclick="copyPrevDiseases()">&#8635; 前回傷病引継</button>';
   btns += quickDiseases.map(d => '<button class="disease-quick-btn" onclick="addDisease(\'' + esc(d) + '\')">' + esc(d) + '</button>').join('');
-  document.getElementById('diseaseQuickBtns').innerHTML = btns;
+  el.innerHTML = btns;
 }
 function copyPrevDiseases() { const p = patients.find(x => x.id === currentPatientId); if (!p || !p.history) return; p.history.forEach(h => addDisease(h)); showToast('前回傷病名を引き継ぎました'); }
 function searchDisease(q) {
   const r = document.getElementById('diseaseResults');
+  if (!r) return;
   if (!q || q.length < 2) { r.classList.remove('show'); return; }
   // 1. ローカル辞書から検索
   let f = diseases.filter(d => d.name.includes(q) || d.code.includes(q));
@@ -1134,8 +1149,10 @@ function addDisease(name, code) {
 function removeDisease(i) { karteData[currentPatientId].selectedDiseases.splice(i,1); renderSelectedDiseases(); }
 function toggleDiseaseStatus(i) { const d = karteData[currentPatientId].selectedDiseases[i]; d.status = d.status === 'confirmed' ? 'suspected' : 'confirmed'; renderSelectedDiseases(); }
 function renderSelectedDiseases() {
+  const el = document.getElementById('selectedDiseases');
+  if (!el) return;
   const k = karteData[currentPatientId];
-  document.getElementById('selectedDiseases').innerHTML = k.selectedDiseases.map((d,i) => {
+  el.innerHTML = k.selectedDiseases.map((d,i) => {
     const cls = d.status === 'suspected' ? 'disease-tag suspected' : 'disease-tag';
     const lbl = d.status === 'suspected' ? '疑' : '確';
     return '<span class="' + cls + '"><span class="status-toggle" onclick="toggleDiseaseStatus(' + i + ')">[' + lbl + ']</span> ' + esc(d.name) + (d.code ? ' <span style="font-size:9px;opacity:0.7;">' + esc(d.code) + '</span>' : '') + ' <span class="remove" onclick="removeDisease(' + i + ')">&times;</span></span>';
@@ -1279,6 +1296,7 @@ function switchBillingTab(cat) {
     return;
   }
   currentBillingTab = cat;
+  if (cat !== 'drug') drugTabMode = '';
   document.querySelectorAll('.bm-tab').forEach(function(t) { t.classList.toggle('active', t.dataset.cat === cat); });
   renderBillingMenu();
 }
@@ -1315,6 +1333,11 @@ function renderBillingMenu() {
     }).join('');
     return;
   }
+  // 薬タブ: 院内/院外選択 → 薬品リスト
+  if (currentBillingTab === 'drug') {
+    renderDrugTab(el);
+    return;
+  }
   var items = getActiveBillingMenu()[currentBillingTab] || [];
   var search = (document.getElementById('billingMenuSearch')?.value || '').toLowerCase();
   var filtered = search ? items.filter(function(it) { return it.name.toLowerCase().includes(search); }) : items;
@@ -1328,6 +1351,81 @@ function renderBillingMenu() {
       '<span class="bm-pts">' + it.points + '点</span></div>';
   }).join('');
 }
+// ===== 薬タブ（算定メニュー内） =====
+var drugTabMode = ''; // '' | 'internal' | 'external'
+
+function renderDrugTab(el) {
+  if (!drugTabMode) {
+    // 院内/院外選択画面
+    el.innerHTML = '<div style="padding:12px 8px;text-align:center;">' +
+      '<div style="font-size:12px;font-weight:600;margin-bottom:10px;color:var(--text);">処方区分を選択</div>' +
+      '<button class="drug-mode-btn" onclick="selectDrugMode(\'internal\')" style="display:block;width:100%;padding:10px;margin-bottom:8px;border:2px solid var(--primary);background:var(--primary-light);color:var(--primary);border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">院内薬</button>' +
+      '<button class="drug-mode-btn" onclick="selectDrugMode(\'external\')" style="display:block;width:100%;padding:10px;border:2px solid var(--border);background:#fff;color:var(--text);border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">院外薬</button>' +
+      '</div>';
+    return;
+  }
+  var search = (document.getElementById('billingMenuSearch')?.value || '').toLowerCase();
+  var modeLabel = drugTabMode === 'internal' ? '院内薬' : '院外薬';
+  var header = '<div style="display:flex;align-items:center;gap:6px;padding:4px 0 6px;border-bottom:1px solid var(--border);margin-bottom:4px;">' +
+    '<span style="font-size:11px;font-weight:600;color:var(--primary);">' + modeLabel + '</span>' +
+    '<button onclick="selectDrugMode(\'\')" style="margin-left:auto;font-size:10px;padding:2px 8px;border:1px solid var(--border);background:var(--bg);border-radius:4px;cursor:pointer;">戻る</button>' +
+    '</div>';
+
+  if (drugTabMode === 'internal') {
+    // 在庫管理リストの薬を表示
+    var filtered = drugs;
+    if (search) filtered = drugs.filter(function(d) { return d.name.toLowerCase().includes(search); });
+    el.innerHTML = header + filtered.map(function(d) {
+      return '<div class="bm-item" style="cursor:pointer;" onclick="addDrugFromMenu(\'' + d.id + '\')">' +
+        '<span class="bm-item-label">' + esc(d.name) + '</span>' +
+        '<span class="bm-pts" style="font-size:10px;color:var(--text-muted);">' + esc(d.category) + '</span></div>';
+    }).join('');
+    if (filtered.length === 0) el.innerHTML = header + '<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:11px;">該当する薬品がありません</div>';
+  } else {
+    // 院外薬: SSKマスター検索
+    el.innerHTML = header + '<div style="padding:8px;font-size:11px;color:var(--text-muted);text-align:center;">検索欄にキーワードを入力して薬品を検索してください</div>';
+    if (search && search.length >= 2) {
+      var results = [];
+      if (typeof MasterLoader !== 'undefined' && MasterLoader.isLoaded()) {
+        results = MasterLoader.searchDrugs ? MasterLoader.searchDrugs(search, 30) : [];
+      }
+      if (results.length > 0) {
+        el.innerHTML = header + results.map(function(d) {
+          var eName = (d.name || '').replace(/'/g, "\\'");
+          return '<div class="bm-item" style="cursor:pointer;" onclick="addExternalDrug(\'' + eName + '\')">' +
+            '<span class="bm-item-label">' + esc(d.name) + '</span>' +
+            '<span class="bm-pts" style="font-size:9px;color:var(--text-muted);">' + esc(d.code || '') + '</span></div>';
+        }).join('');
+      } else {
+        el.innerHTML = header + '<div style="padding:8px;font-size:11px;color:var(--text-muted);text-align:center;">該当なし（キーワード: ' + esc(search) + '）</div>';
+      }
+    }
+  }
+}
+
+function selectDrugMode(mode) {
+  drugTabMode = mode;
+  renderBillingMenu();
+}
+
+function addDrugFromMenu(drugId) {
+  addDrug(drugId);
+  showToast(drugs.find(function(d) { return d.id === drugId; })?.name + ' を処方に追加');
+}
+
+function addExternalDrug(name) {
+  // 院外薬：drugsリストにない場合は仮のエントリとして処方に追加
+  var k = karteData[currentPatientId];
+  var existing = k.prescriptions.find(function(rx) { return rx.drug.name === name; });
+  if (existing) { showToast(name + ' は既に追加済みです'); return; }
+  var tempDrug = { id: 'ext_' + Date.now(), name: name, price: 0, unit: 'T', category: '院外' };
+  var savedNote = getDrugSavedNote(tempDrug.id);
+  k.prescriptions.push({ drug: tempDrug, qty: 1, days: k.rxDays || 7, note: savedNote || '' });
+  renderRxList();
+  recalcBilling();
+  showToast(name + ' を院外処方に追加');
+}
+
 function filterBillingMenu(q) { renderBillingMenu(); }
 function addBillingItem(name, points) {
   var k = karteData[currentPatientId];
