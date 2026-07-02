@@ -122,6 +122,7 @@ tr:hover td{background:#f8f9fb}
   <button class="tab-btn" onclick="showTab('inventory')">在庫状況</button>
   <button class="tab-btn" onclick="showTab('sns')">SNS分析</button>
   <button class="tab-btn" onclick="showTab('seo')">SEO分析</button>
+  <button class="tab-btn" onclick="showTab('history')">最新履歴</button>
 </div>
 
 <div class="tab-content active" id="tab-dashboard"></div>
@@ -134,6 +135,7 @@ tr:hover td{background:#f8f9fb}
 <div class="tab-content" id="tab-inventory"></div>
 <div class="tab-content" id="tab-sns"></div>
 <div class="tab-content" id="tab-seo"></div>
+<div class="tab-content" id="tab-history"></div>
 
 <script>
 const SB='https://dyjhxkqzxibcpgoefbiv.supabase.co',SK='sb_publishable_bOK3qqLHkM1fFOojh3slpg_glKQoP3g',H={'apikey':SK};
@@ -170,7 +172,7 @@ function normProd(n){
 
 function showTab(id){
   document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',b.textContent.includes(
-    {dashboard:'ダッシュボード',charts:'グラフ',product:'商品',analytics:'アナリティクス',report:'売上報告',profit:'利益',kpi:'KPI',inventory:'在庫',sns:'SNS',seo:'SEO'}[id]||''
+    {dashboard:'ダッシュボード',charts:'グラフ',product:'商品',analytics:'アナリティクス',report:'売上報告',profit:'利益',kpi:'KPI',inventory:'在庫',sns:'SNS',seo:'SEO',history:'最新履歴'}[id]||''
   )));
   document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
@@ -220,7 +222,7 @@ async function init(){
 function renderAll(){
   const d=filt(D),o=filt(O,'order_date'),g=filt(G);
   renderDash(d,o);renderCharts(d,o);renderProduct(o);renderGA4(g);
-  renderReport(d,o);renderProfit(d,o);renderKPI(d,o,g,S);renderInv(I);renderSNS(S);renderSEO(filt(SEO),SEO_ART);
+  renderReport(d,o);renderProfit(d,o);renderKPI(d,o,g,S);renderInv(I);renderSNS(S);renderSEO(filt(SEO),SEO_ART);renderHistory(O);
 }
 
 // ===== 1. ダッシュボード =====
@@ -1666,6 +1668,69 @@ function renderSnsThreadsCharts(th){
       options:{maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{callback:function(v){return v+'%'}}}}}
     });
   }
+}
+
+
+// ===== 最新履歴タブ =====
+function renderHistory(orders){
+  const el=document.getElementById('tab-history');if(!el)return;
+  const dayNames=['日','月','火','水','木','金','土'];
+  const sorted=[...orders].sort((a,b)=>{
+    const da=a.order_datetime||a.order_date||'';
+    const db=b.order_datetime||b.order_date||'';
+    return db.localeCompare(da);
+  }).slice(0,50);
+
+  const chIcon={shopify:'\u{1F6D2}',amazon:'\u{1F4E6}',qoo10:'\u{1F3EA}',rakuten:'\u{1F3EF}',employee:'\u{1F464}',wholesale:'\u{1F3E5}'};
+
+  let rows=sorted.map(o=>{
+    const dt=o.order_datetime||o.order_date||'';
+    let dateDisp='';
+    if(dt){
+      const d=new Date(dt.replace(/-/g,'/'));
+      if(!isNaN(d)){
+        const mm=d.getMonth()+1,dd=d.getDate(),dow=dayNames[d.getDay()];
+        const hh=d.getHours(),mi=String(d.getMinutes()).padStart(2,'0');
+        if(dt.length>10){
+          dateDisp=mm+'/'+dd+'('+dow+') '+hh+':'+mi;
+        } else {
+          dateDisp=mm+'/'+dd+'('+dow+')';
+        }
+      } else { dateDisp=dt; }
+    }
+    const ch=o.channel||'';
+    const prod=normProd(o.product_name)||'\u4E0D\u660E';
+    const qty=o.quantity||1;
+    const total=o.total||0;
+    return '<tr>'+
+      '<td style="white-space:nowrap;font-size:13px">'+dateDisp+'</td>'+
+      '<td>'+chBadge(ch)+'</td>'+
+      '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+prod+'</td>'+
+      '<td class="num">'+qty+'</td>'+
+      '<td class="num" style="font-weight:600">'+yen(total)+'</td>'+
+    '</tr>';
+  }).join('');
+
+  const chCounts={};
+  sorted.forEach(o=>{const c=o.channel||'other';chCounts[c]=(chCounts[c]||0)+1});
+  const chSummary=Object.entries(chCounts).sort((a,b)=>b[1]-a[1]).map(([c,n])=>
+    chBadge(c)+' <b>'+n+'\u4EF6</b>'
+  ).join('\u3000');
+
+  el.innerHTML='<div class="card" style="margin-bottom:16px">'+
+    '<h3>\u{1F4CB} \u5168\u5A92\u4F53 \u6700\u65B0\u6CE8\u6587\u5C65\u6B74\uFF08\u65B0\u3057\u3044\u9806 50\u4EF6\uFF09</h3>'+
+    '<p style="font-size:12px;color:#999;margin:4px 0 12px">\u5A92\u4F53\u5185\u8A33: '+chSummary+'</p>'+
+    '<div style="overflow-x:auto">'+
+    '<table style="width:100%;font-size:13px">'+
+    '<thead><tr>'+
+    '<th style="min-width:100px">\u65E5\u6642</th>'+
+    '<th>\u5A92\u4F53</th>'+
+    '<th>\u5546\u54C1\u540D</th>'+
+    '<th class="num">\u6570\u91CF</th>'+
+    '<th class="num">\u58F2\u4E0A</th>'+
+    '</tr></thead>'+
+    '<tbody>'+rows+'</tbody>'+
+    '</table></div></div>';
 }
 
 </script>
