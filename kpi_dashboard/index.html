@@ -1405,6 +1405,8 @@ async function runSync(){
             if(d&&await upsertSnsToSupabase(p,d))cnt++;
           }
           results.sns={ok:true,count:cnt};
+          // kpi_sync_statusのsns行を更新
+          try{await fetch(`${SB}/rest/v1/kpi_sync_status?sync_type=eq.sns`,{method:'PATCH',headers:{...H,'Authorization':'Bearer '+SK,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({last_sync:new Date().toISOString(),record_count:cnt,status:'ok',error_msg:null})})}catch(e){}
           const closed=Object.entries(st.cdp.tabs).filter(([,v])=>!v).map(([k])=>k);
           if(closed.length>0)results.sns.partial_skip='タブ未検出: '+closed.join(', ');
         }else{
@@ -1738,11 +1740,11 @@ function renderHistory(orders,syncStatus){
   // 表示する同期項目
   const syncItems=[
     {key:'_dashboard',label:'\u{1F4CA} ダッシュボード読込',color:'#667eea',time:now.toISOString()},
-    {key:'shopify',label:'\u{1F6D2} Shopify同期',color:'#96bf48',time:syMap.shopify?.last_sync},
-    {key:'amazon_qoo10',label:'\u{1F4E6} Amazon/Qoo10/楽天同期',color:'#ff9900',time:syMap.amazon_qoo10?.last_sync},
-    {key:'ga4',label:'\u{1F4C8} GA4同期',color:'#4285f4',time:syMap.ga4?.last_sync},
-    {key:'inventory',label:'\u{1F4E6} 在庫同期',color:'#10b981',time:syMap.inventory?.last_sync},
-    {key:'sns',label:'\u{1F4F1} SNS同期',color:'#e1306c',time:syMap.sns?.last_sync},
+    {key:'shopify',label:'\u{1F6D2} Shopify/社割/卸売 同期',color:'#96bf48',time:syMap.shopify?.last_sync},
+    {key:'amazon_qoo10',label:'\u{1F4E6} Amazon/Qoo10/楽天 同期',color:'#ff9900',time:syMap.amazon_qoo10?.last_sync},
+    {key:'ga4',label:'\u{1F4C8} GA4 同期',color:'#4285f4',time:syMap.ga4?.last_sync},
+    {key:'inventory',label:'\u{1F4DD} 在庫 同期',color:'#10b981',time:syMap.inventory?.last_sync},
+    {key:'sns',label:'\u{1F4F1} SNS 同期',color:'#e1306c',time:syMap.sns?.last_sync},
   ];
   const syncRows=syncItems.map(it=>{
     const st=syMap[it.key];
