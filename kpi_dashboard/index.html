@@ -214,10 +214,44 @@ async function init(){
     const latestSync=allSyncs.length?new Date(Math.max(...allSyncs)):null;
     const lt=latestSync?latestSync.toLocaleString('ja-JP'):'未同期';
     const nextSync=latestSync?new Date(latestSync.getTime()+60*60*1000).toLocaleString('ja-JP',{hour:'2-digit',minute:'2-digit'}):'---';
-    document.getElementById('syncTs').textContent=`最終更新: ${lt}（自動同期: 1時間毎 / 次回予定: ${nextSync}頃）`;
+    document.getElementById('syncTs').textContent=`最終更新: ${lt}（自動刷新: 5分毎 / 次回予定: ${nextSync}頃）`;
     renderAll();
   }catch(e){document.getElementById('syncTs').textContent='読み込みエラー: '+e.message}
 }
+
+// ===== 自動リフレッシュ（5分毎にSupabaseからデータ再取得・画面更新） =====
+var _autoRefreshId = null;
+function startAutoRefresh() {
+  if (_autoRefreshId) return;
+  _autoRefreshId = setInterval(async function() {
+    try {
+      console.log('[自動リフレッシュ] データ再取得中...');
+      var EX=[];
+      [D,O,G,S,I,SY,SEO,SEO_ART,EX]=await Promise.all([
+        sbGet('kpi_daily_summary','select=*&order=date.desc&limit=2000',2000),
+        sbGet('kpi_orders','select=*&order=order_date.desc&limit=5000',5000),
+        sbGet('kpi_ga4_metrics','select=*&order=date.desc&limit=500'),
+        sbGet('kpi_sns_metrics','select=*&order=date.desc&limit=300'),
+        sbGet('kpi_inventory','select=*&order=snapshot_date.desc&limit=500'),
+        sbGet('kpi_sync_status','select=*'),
+        sbGet('kpi_seo_daily','select=*&order=date.asc&limit=5000',5000),
+        sbGet('kpi_seo_articles','select=*&order=clicks.desc&limit=3000',3000),
+        sbGet('kpi_excluded_orders','select=order_id'),
+      ]);
+      const exSet=new Set(EX.map(e=>e.order_id));
+      if(exSet.size){O=O.filter(o=>!exSet.has(o.order_id))}
+      O=(()=>{const seen=new Set();return O.filter(o=>{const k=o.order_id+"|"+o.channel+"|"+(o.sku||o.product_name||"");if(seen.has(k))return false;seen.add(k);return true})})();
+      renderAll();
+      var now=new Date().toLocaleString('ja-JP');
+      document.getElementById('syncTs').textContent=`最終更新: ${now}（自動刷新: 5分毎）`;
+      console.log('[自動リフレッシュ] 完了 ' + now);
+    } catch(e) {
+      console.error('[自動リフレッシュ] エラー:', e);
+    }
+  }, 5 * 60 * 1000); // 5分
+}
+// 初回ロード後に自動リフレッシュ開始
+setTimeout(startAutoRefresh, 10000);
 
 function renderAll(){
   const d=filt(D),o=filt(O,'order_date'),g=filt(G);
