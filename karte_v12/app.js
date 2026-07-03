@@ -679,6 +679,7 @@ function renderPatientInfoTab(p) {
       h += '</div>';
       h += '<div class="disease-quick-btns" id="diseaseQuickBtns"></div>';
       h += '<div class="selected-diseases" id="selectedDiseases"></div>';
+      h += '<div id="drugSuggestArea"></div>';
       h += '</div>';
       // 既往傷病名一覧
       h += '<div class="info-section" style="margin-top:6px;"><div class="info-section-title">傷病名履歴</div>';
@@ -774,6 +775,8 @@ function renderSelectedDiseases() {
     const lbl = d.status === 'suspected' ? '疑' : '確';
     return '<span class="' + cls + '"><span class="status-toggle" onclick="toggleDiseaseStatus(' + i + ')">[' + lbl + ']</span> ' + esc(d.name) + (d.code ? ' <span style="font-size:9px;opacity:0.7;">' + esc(d.code) + '</span>' : '') + ' <span class="remove" onclick="removeDisease(' + i + ')">&times;</span></span>';
   }).join('');
+  // 案2: 病名から候補薬を提示（医師チェック前提）
+  if (typeof renderDrugSuggestions === 'function') renderDrugSuggestions();
 }
 
 // ===== Prescription =====
