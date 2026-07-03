@@ -302,7 +302,7 @@ function checkReceipt(r) {
 
   // 2. 適応症チェック（投薬ありなのに傷病名なし → 簡易版）
   const hasMedication = r.procedures.some(p =>
-    ['21','22','23'].includes(p.category) || p.isdrug);
+    ['21','22','23'].includes(p.category) || p.isDrug);
   if (hasMedication && r.diseases.length === 0) {
     r.warnings.push({ severity: 'high', message: '投薬あり・傷病名なし: 適応症未登録の可能性' });
   }

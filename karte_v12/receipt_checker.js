@@ -74,21 +74,32 @@ const ReceiptChecker = (() => {
     let age = billingYear - birthYear;
     if (billingMonthNum < birthMonth) age--;
 
+    if (isNaN(age)) return;
+
     for (const p of r.procedures) {
-      const proc = MasterLoader.getProcedure(p.code);
-      if (!proc) continue;
-      const name = proc.name || '';
-      if (name.includes('乳幼児') && age >= 6) {
-        r.warnings.push({
-          severity: 'mid',
-          message: '年齢制限: ' + name + ' は6歳未満対象（患者' + age + '歳）'
-        });
-      }
-      if (name.includes('小児') && !name.includes('乳幼児') && age >= 15) {
-        r.warnings.push({
-          severity: 'low',
-          message: '年齢注意: ' + name + '（患者' + age + '歳）'
-        });
+      if (p.isDrug || !p.code) continue;
+      const nm = codeName(p.code);
+      // マスタの年齢制限(下限/上限・数値)を優先。上限年齢hiは「hi歳未満まで有効」
+      const ageInfo = MasterLoader.getProcAge ? MasterLoader.getProcAge(p.code) : null;
+      if (ageInfo) {
+        if (typeof ageInfo.hi === 'number' && age >= ageInfo.hi) {
+          r.warnings.push({
+            severity: 'high',
+            message: '年齢制限: ' + (ageInfo.name || nm) + ' は' + ageInfo.hi + '歳未満が対象（患者' + age + '歳）'
+          });
+        } else if (typeof ageInfo.lo === 'number' && age < ageInfo.lo) {
+          r.warnings.push({
+            severity: 'high',
+            message: '年齢制限: ' + (ageInfo.name || nm) + ' は' + ageInfo.lo + '歳以上が対象（患者' + age + '歳）'
+          });
+        }
+      } else {
+        // マスタ未収載時は名称ベースの簡易判定（fallback）
+        if (nm.includes('乳幼児') && age >= 6) {
+          r.warnings.push({ severity: 'mid', message: '年齢注意: ' + nm + ' は6歳未満対象の可能性（患者' + age + '歳）' });
+        } else if (nm.includes('小児') && age >= 15) {
+          r.warnings.push({ severity: 'low', message: '年齢注意: ' + nm + '（患者' + age + '歳）' });
+        }
       }
     }
   }

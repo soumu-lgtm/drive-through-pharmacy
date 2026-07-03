@@ -25,6 +25,7 @@ const MasterLoader = (() => {
     santeiCount: null,       // 算定回数テーブル Map<code, {u,un,max}>
     syRelation: null,        // 傷病名関連区分 {procCode: {sy, name}} (col24)
     diseaseFlags: null,      // 傷病名フラグ {diseaseCode: {tk,nb,tan}} (特定疾患/難病/単独禁止)
+    procAge: null,           // 診療行為の年齢制限 {procCode: {lo,hi,name}} (下限/上限年齢)
   };
 
   let loaded = false;
@@ -57,6 +58,7 @@ const MasterLoader = (() => {
         { key: 'santeiCount',       file: 'santei_count.json',        label: '算定回数' },
         { key: 'syRelation',        file: 'sy_relation.json',         label: '傷病名関連区分' },
         { key: 'diseaseFlags',      file: 'disease_flags.json',       label: '傷病名フラグ' },
+        { key: 'procAge',           file: 'proc_age.json',            label: '年齢制限' },
       ];
 
       const allFiles = [...masterFiles, ...tableFiles];
@@ -82,7 +84,7 @@ const MasterLoader = (() => {
             masters[key] = new Map();
           } else {
             tables[key] = key === 'santeiCount' ? new Map() :
-                          (key === 'houkatsu' || key === 'syRelation' || key === 'diseaseFlags') ? {} : [];
+                          (key === 'houkatsu' || key === 'syRelation' || key === 'diseaseFlags' || key === 'procAge') ? {} : [];
           }
         }
       }
@@ -212,6 +214,11 @@ const MasterLoader = (() => {
     return tables.diseaseFlags?.[code] || null;
   }
 
+  /** 診療行為の年齢制限を取得 {lo:下限年齢, hi:上限年齢(この歳未満まで有効), name} / null */
+  function getProcAge(code) {
+    return tables.procAge?.[code] || null;
+  }
+
   function isLoaded() {
     return loaded;
   }
@@ -249,6 +256,7 @@ const MasterLoader = (() => {
     getSanteiCount,
     getSyRelation,
     getDiseaseFlags,
+    getProcAge,
     isLoaded,
     getStats,
   };
