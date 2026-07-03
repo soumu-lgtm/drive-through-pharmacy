@@ -294,6 +294,66 @@ function runAllChecks() {
       checkReceipt(r);
     }
   }
+  // 月またぎの回数チェック（複数月のUKEを読み込んでいる場合のみ有効）
+  try { checkCrossMonthLimits(); } catch (e) { console.warn('cross-month check error', e); }
+}
+
+// ===== 期間跨ぎ（月またぎ）算定回数チェック =====
+// 算定回数テーブルの期間単位が「複数月(３月/６月/１２月)」のコードについて、
+// 同一患者の複数月レセプトを通算し、期間内の上限回数を超えていないか検査する。
+// ※ 単月内(月1回等)は checkSanteiCount が担当。ここは月をまたぐ制限専用。
+const CROSS_MONTH_PERIOD = { '１２月': 12, '６月': 6, '３月': 3 };
+
+function checkCrossMonthLimits() {
+  if (typeof MasterLoader === 'undefined' || !MasterLoader.isLoaded()) return;
+  const flat = [];
+  for (const key of Object.keys(allReceipts)) flat.push(...allReceipts[key]);
+  if (flat.length < 2) return;
+  // 患者(カルテ番号 or 氏名) → コード → [{monthIdx, count, receipt}]
+  const byPatient = {};
+  for (const r of flat) {
+    const pk = ((r.karteNumber || '') || (r.name || '')).trim();
+    const ym = (r.billingMonth || '');
+    if (!pk || ym.length < 6) continue;
+    const monthIdx = parseInt(ym.slice(0, 4)) * 12 + parseInt(ym.slice(4, 6));
+    if (isNaN(monthIdx)) continue;
+    const codeCount = {};
+    for (const p of r.procedures) {
+      if (p.isDrug || !p.code) continue;
+      codeCount[p.code] = (codeCount[p.code] || 0) + (p.quantity || 1);
+    }
+    for (const code in codeCount) {
+      (byPatient[pk] = byPatient[pk] || {});
+      (byPatient[pk][code] = byPatient[pk][code] || []).push({ monthIdx: monthIdx, count: codeCount[code], receipt: r });
+    }
+  }
+  for (const pk in byPatient) {
+    for (const code in byPatient[pk]) {
+      const occ = byPatient[pk][code];
+      if (occ.length < 2) continue; // 複数月に跨って初めて意味を持つ
+      const limit = MasterLoader.getSanteiCount(code);
+      if (!limit) continue;
+      const pm = CROSS_MONTH_PERIOD[limit.un];
+      if (!pm) continue; // 複数月周期のコードのみ対象
+      const max = Number(limit.max) || 0;
+      if (max <= 0) continue;
+      occ.sort((a, b) => a.monthIdx - b.monthIdx);
+      const flagged = new Set();
+      for (let i = 0; i < occ.length; i++) {
+        let sum = 0, last = null;
+        for (let j = i; j < occ.length && occ[j].monthIdx < occ[i].monthIdx + pm; j++) {
+          sum += occ[j].count; last = occ[j];
+        }
+        if (sum > max && last && !flagged.has(last.receipt)) {
+          flagged.add(last.receipt);
+          last.receipt.warnings.push({
+            severity: 'high',
+            message: '期間内回数超過(月またぎ): ' + (MasterLoader.getProcedureName(code) || code) + ' は' + limit.un + max + '回まで（同一患者・期間内' + sum + '回算定）'
+          });
+        }
+      }
+    }
+  }
 }
 
 function checkReceipt(r) {
