@@ -514,9 +514,9 @@ body.resizing img {
 .billing-row .label { color: var(--text-muted); }
 .billing-row .value { font-weight: 500; font-variant-numeric: tabular-nums; }
 .billing-row .value.surcharge { color: var(--danger); }
-.billing-row-del { display: none; position: absolute; right: -2px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; line-height: 18px; text-align: center; font-size: 14px; color: #dc2626; cursor: pointer; border-radius: 50%; }
+.billing-row-del { display: none; flex-shrink: 0; width: 18px; height: 18px; line-height: 18px; text-align: center; font-size: 14px; color: #dc2626; cursor: pointer; border-radius: 50%; margin-left: 2px; }
 .billing-row-del:hover { background: #fee2e2; }
-.billing-row-removable:hover .billing-row-del { display: block; }
+.billing-row-removable:hover .billing-row-del { display: inline-block; }
 .billing-row-removable.excluded .label, .billing-row-removable.excluded .value { text-decoration: line-through; opacity: 0.4; }
 .billing-divider { border-top: 1px solid var(--border); margin: 4px 0; }
 .billing-total { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; font-weight: 700; }
