@@ -272,12 +272,12 @@
             <div class="actions-body" id="actionsBody">
               <div id="billingBody">
                 <div class="billing-row"><span class="label">初再診料</span><span class="value" id="billShoshin">---</span></div>
-                <div class="billing-row"><span class="label">外来管理加算</span><span class="value" id="billGairai">---</span></div>
+                <div class="billing-row billing-row-removable" id="rowGairai"><span class="label">外来管理加算</span><span class="value" id="billGairai">---</span><span class="billing-row-del" onclick="removeBillingRow('gairai')" title="除外">&times;</span></div>
                 <div class="billing-row" id="billSurchargeRow" style="display:none"><span class="label">時間外加算</span><span class="value surcharge" id="billSurcharge">---</span></div>
-                <div class="billing-row"><span class="label">処方料</span><span class="value" id="billShohou">---</span></div>
-                <div class="billing-row"><span class="label">調剤料</span><span class="value" id="billChouzai">---</span></div>
-                <div class="billing-row"><span class="label">薬剤料</span><span class="value" id="billYakuzai">---</span></div>
-                <div class="billing-row" id="billExamRow" style="display:none"><span class="label">検査料</span><span class="value" id="billExam">---</span></div>
+                <div class="billing-row billing-row-removable" id="rowShohou"><span class="label">処方料</span><span class="value" id="billShohou">---</span><span class="billing-row-del" onclick="removeBillingRow('shohou')" title="除外">&times;</span></div>
+                <div class="billing-row billing-row-removable" id="rowChouzai"><span class="label">調剤料</span><span class="value" id="billChouzai">---</span><span class="billing-row-del" onclick="removeBillingRow('chouzai')" title="除外">&times;</span></div>
+                <div class="billing-row billing-row-removable" id="rowYakuzai"><span class="label">薬剤料</span><span class="value" id="billYakuzai">---</span><span class="billing-row-del" onclick="removeBillingRow('yakuzai')" title="除外">&times;</span></div>
+                <div class="billing-row" id="billExamRow" style="display:none"><span class="label">検査料</span><span class="value" id="billExam">---</span><span class="billing-row-del" onclick="removeBillingRow('exam')" title="除外">&times;</span></div>
                 <div class="billing-divider"></div>
                 <div class="billing-total"><span>合計点数</span><span id="billTotal">---</span></div>
                 <div class="billing-burden"><span>患者負担額</span><span id="billBurden">---</span></div>

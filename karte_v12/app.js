@@ -107,7 +107,7 @@ function initKarteData() {
       vitals:{t:'',bps:'',bpd:'',spo2:'',pulse:''},
       selectedDiseases:[], prescriptions:[], rxDays:7, rxModeExternal:false,
       isFirstVisit: !p.prevVisitDate,
-      selectedExams:[], addedBillingItems:[]
+      selectedExams:[], addedBillingItems:[], excludedBillingRows:{}
     };
   });
 }
@@ -758,7 +758,7 @@ function addNewPatient(andOpen) {
     visitDate: selectedDate, pastKartes: [], pastVitals: []
   };
   patients.push(newP);
-  karteData[newP.id] = { chiefComplaint:'', chiefComplaintSelect:'', findingsHtml:'', vitals:{t:'',bps:'',bpd:'',spo2:'',pulse:''}, selectedDiseases:[], prescriptions:[], rxDays:7, isFirstVisit:true, selectedExams:[], addedBillingItems:[] };
+  karteData[newP.id] = { chiefComplaint:'', chiefComplaintSelect:'', findingsHtml:'', vitals:{t:'',bps:'',bpd:'',spo2:'',pulse:''}, selectedDiseases:[], prescriptions:[], rxDays:7, isFirstVisit:true, selectedExams:[], addedBillingItems:[], excludedBillingRows:{} };
   postToApi('savePatient', { '患者ID': newP.id, '���名': newP.name, 'フリガナ': newP.nameKana, '生年月日': newP.dob, '年��': newP.age, '性別': newP.sex, '住所': newP.address, '電話番号': newP.phone, 'アレルギー': '', '既往歴': '', 'メモ': '' });
   closeModal('newPatientModal');
   renderPatientList();
@@ -1527,6 +1527,18 @@ function recalcBilling() {
   if (examTen > 0) { er.style.display = ''; document.getElementById('billExam').textContent = examTen + '点'; } else { er.style.display = 'none'; }
   let extraTen = 0;
   if (k.addedBillingItems) k.addedBillingItems.forEach(it => extraTen += it.points);
+  // 個別除外の適用
+  const ex = k.excludedBillingRows || {};
+  if (ex.gairai) gairaiTen = 0;
+  if (ex.shohou) shohouTen = 0;
+  if (ex.chouzai) chouzaiTen = 0;
+  if (ex.yakuzai) yakuzaiTen = 0;
+  if (ex.exam) examTen = 0;
+  ['gairai','shohou','chouzai','yakuzai'].forEach(function(key) {
+    var row = document.getElementById('row' + key.charAt(0).toUpperCase() + key.slice(1));
+    if (row) row.classList.toggle('excluded', !!ex[key]);
+  });
+  if (er) er.classList.toggle('excluded', !!ex.exam);
   const totalTen = shoshinTen + gairaiTen + surchargeTen + shohouTen + chouzaiTen + yakuzaiTen + examTen + extraTen;
   const burden = Math.round(totalTen * 10 * p.ratio);
   document.getElementById('billShoshin').textContent = (k.isFirstVisit ? '初診料 ' : '再診料 ') + shoshinTen + '点';
@@ -2006,18 +2018,31 @@ function removeAddedBilling(i) {
   recalcBilling();
   showToast(name + ' を削除');
 }
+function removeBillingRow(key) {
+  var k = karteData[currentPatientId];
+  if (!k) return;
+  if (!k.excludedBillingRows) k.excludedBillingRows = {};
+  if (k.excludedBillingRows[key]) {
+    delete k.excludedBillingRows[key];
+  } else {
+    k.excludedBillingRows[key] = true;
+  }
+  recalcBilling();
+}
 function clearAllBilling() {
   var k = karteData[currentPatientId];
   if (!k) return;
   var hasItems = (k.addedBillingItems && k.addedBillingItems.length > 0);
   var hasExams = (k.selectedExams && k.selectedExams.length > 0);
-  if (!hasItems && !hasExams) { showToast('クリアする算定項目がありません'); return; }
-  if (!confirm('追加済み算定・検査をクリアしますか？')) return;
+  var hasExcluded = k.excludedBillingRows && Object.keys(k.excludedBillingRows).length > 0;
+  if (!hasItems && !hasExams && !hasExcluded) { showToast('クリアする算定項目がありません'); return; }
+  if (!confirm('追加済み算定・検査・個別除外をすべてリセットしますか？')) return;
   k.addedBillingItems = [];
   k.selectedExams = [];
+  k.excludedBillingRows = {};
   document.querySelectorAll('#examCheckList input[type="checkbox"]').forEach(function(cb) { cb.checked = false; });
   recalcBilling();
-  showToast('算定項目をクリアしました');
+  showToast('算定項目をリセットしました');
 }
 
 // ===== v0.8: 機能10 既存患者保険証モーダルOCR/QR =====
