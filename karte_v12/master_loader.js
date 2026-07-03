@@ -23,6 +23,8 @@ const MasterLoader = (() => {
     haihanWeekly: null,      // 背反テーブル4(週)
     houkatsu: null,          // 包括テーブル {groupNo: [code,...]}
     santeiCount: null,       // 算定回数テーブル Map<code, {u,un,max}>
+    syRelation: null,        // 傷病名関連区分 {procCode: {sy, name}} (col24)
+    diseaseFlags: null,      // 傷病名フラグ {diseaseCode: {tk,nb,tan}} (特定疾患/難病/単独禁止)
   };
 
   let loaded = false;
@@ -53,6 +55,8 @@ const MasterLoader = (() => {
         { key: 'haihanWeekly',      file: 'haihan_weekly.json',       label: '背反(週)' },
         { key: 'houkatsu',          file: 'houkatsu.json',            label: '包括' },
         { key: 'santeiCount',       file: 'santei_count.json',        label: '算定回数' },
+        { key: 'syRelation',        file: 'sy_relation.json',         label: '傷病名関連区分' },
+        { key: 'diseaseFlags',      file: 'disease_flags.json',       label: '傷病名フラグ' },
       ];
 
       const allFiles = [...masterFiles, ...tableFiles];
@@ -78,7 +82,7 @@ const MasterLoader = (() => {
             masters[key] = new Map();
           } else {
             tables[key] = key === 'santeiCount' ? new Map() :
-                          key === 'houkatsu' ? {} : [];
+                          (key === 'houkatsu' || key === 'syRelation' || key === 'diseaseFlags') ? {} : [];
           }
         }
       }
@@ -198,6 +202,16 @@ const MasterLoader = (() => {
     return tables.santeiCount?.get(code) || null;
   }
 
+  /** 診療行為の傷病名関連区分を取得 {sy:'5',name} / null (sy: 3・4皮膚科特定疾患 / 5特定疾患療養管理料 / 7てんかん / 9難病外来) */
+  function getSyRelation(code) {
+    return tables.syRelation?.[code] || null;
+  }
+
+  /** 傷病名フラグを取得 {tk:特定疾患等対象区分, nb:難病外来対象区分, tan:単独使用禁止区分} / null */
+  function getDiseaseFlags(code) {
+    return tables.diseaseFlags?.[code] || null;
+  }
+
   function isLoaded() {
     return loaded;
   }
@@ -233,6 +247,8 @@ const MasterLoader = (() => {
     findHoukatsuGroup,
     getHoukatsuGroupCodes,
     getSanteiCount,
+    getSyRelation,
+    getDiseaseFlags,
     isLoaded,
     getStats,
   };

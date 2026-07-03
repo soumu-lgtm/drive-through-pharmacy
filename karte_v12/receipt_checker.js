@@ -33,6 +33,8 @@ const ReceiptChecker = (() => {
     checkHaihanWeekly(receipt);
     checkHoukatsu(receipt);
     checkSanteiCount(receipt);
+    checkByomeiRequirement(receipt);
+    checkStandaloneDisease(receipt);
   }
 
   // ============================================================
@@ -257,6 +259,56 @@ const ReceiptChecker = (() => {
         r.warnings.push({
           severity: 'high',
           message: '算定回数超過: ' + codeName(code) + ' は' + unitName + maxCount + '回限り（' + count + '回算定）'
+        });
+      }
+    }
+  }
+
+  // ============================================================
+  // 病名要件チェック（傷病名関連区分 × 特定疾患/難病区分）
+  // ============================================================
+
+  // 診療行為の傷病名関連区分(sy) → 必要な傷病名フラグ
+  const SY_REQUIRE = {
+    '3': { field: 'tk', val: '03', label: '皮膚科特定疾患' },
+    '4': { field: 'tk', val: '04', label: '皮膚科特定疾患' },
+    '5': { field: 'tk', val: '05', label: '特定疾患' },
+    '7': { field: 'tk', val: '07', label: 'てんかん' },
+    '9': { field: 'nb', val: '09', label: '難病外来指導管理料対象' },
+  };
+
+  /** 指導管理料等に必要な傷病名が付いているか（特定疾患療養管理料・てんかん指導料・難病外来指導管理料等） */
+  function checkByomeiRequirement(r) {
+    if (!MasterLoader.getSyRelation) return;
+    for (const p of r.procedures) {
+      if (p.isDrug || !p.code) continue;
+      const rel = MasterLoader.getSyRelation(p.code);
+      if (!rel) continue;
+      const req = SY_REQUIRE[rel.sy];
+      if (!req) continue;
+      const hasReqDisease = r.diseases.some(d => {
+        const f = d.code && MasterLoader.getDiseaseFlags(d.code);
+        return f && f[req.field] === req.val;
+      });
+      if (!hasReqDisease) {
+        r.warnings.push({
+          severity: 'high',
+          message: '病名要件: ' + (rel.name || codeName(p.code)) + ' に必要な' + req.label + '病名が見当たりません'
+        });
+      }
+    }
+  }
+
+  /** 単独使用禁止傷病名: 修飾語（部位等）なしで単独記録されている包括的病名を警告 */
+  function checkStandaloneDisease(r) {
+    if (!MasterLoader.getDiseaseFlags) return;
+    for (const d of r.diseases) {
+      if (!d.code) continue;
+      const f = MasterLoader.getDiseaseFlags(d.code);
+      if (f && f.tan === '01' && !d.modifier) {
+        r.warnings.push({
+          severity: 'mid',
+          message: '単独使用禁止: ' + (MasterLoader.getDiseaseName(d.code) || d.code) + ' は部位等の修飾語との併記が必要です'
         });
       }
     }
