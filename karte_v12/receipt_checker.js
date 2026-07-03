@@ -140,7 +140,19 @@ const ReceiptChecker = (() => {
     return MasterLoader.getProcedureName(code) || code;
   }
 
-  /** 背反テーブル1: 同日に併算定不可 */
+  /** 指定コードが算定された日リストを収集（UKE算定日情報 days を利用） */
+  function daysForCode(r, code) {
+    const set = new Set();
+    for (const p of r.procedures) {
+      if (p.code === code && Array.isArray(p.days)) {
+        p.days.forEach(d => set.add(d));
+      }
+    }
+    return set;
+  }
+
+  /** 背反テーブル1: 同日に併算定不可
+   *  算定日情報(days)がある場合は「実際に同じ日に算定されたか」まで確認し、別日なら警告しない(誤検知抑制) */
   function checkHaihanDaily(r) {
     const codes = getProcedureCodes(r);
     if (codes.length < 2) return;
@@ -149,6 +161,13 @@ const ReceiptChecker = (() => {
     for (const [c1, c2] of pairs) {
       const key = [c1, c2].sort().join('-');
       if (seen.has(key)) continue;
+      // 両コードの算定日が判明していれば、共通の日がある場合のみ背反。日情報が無ければ従来通り警告
+      const d1 = daysForCode(r, c1);
+      const d2 = daysForCode(r, c2);
+      if (d1.size && d2.size) {
+        const sameDay = [...d1].some(d => d2.has(d));
+        if (!sameDay) continue; // 別日算定 → 同日背反にあたらない
+      }
       seen.add(key);
       r.warnings.push({
         severity: 'high',

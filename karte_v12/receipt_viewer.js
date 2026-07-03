@@ -132,6 +132,12 @@ function parseUKE(text, fileType) {
           const code = fields[3] || '';
           const pts = parseInt(fields[5]) || 0;
           const qty = parseInt(fields[6]) || 0;
+          // 算定日情報: fields[12..42] が日1..31の回数 (day = fieldIndex - 11)。実UKEで検証済み
+          const siDays = [];
+          for (let di = 12; di <= 42 && di < fields.length; di++) {
+            const dv = fields[di];
+            if (dv && dv !== '0') siDays.push(di - 11);
+          }
           currentReceipt.procedures.push({
             category: currentCategory,
             categoryName: CATEGORY_NAMES[currentCategory] || currentCategory,
@@ -139,6 +145,7 @@ function parseUKE(text, fileType) {
             name: MasterLoader.getProcedureName(code) || PROCEDURE_CODES[code] || '',
             points: pts,
             quantity: qty,
+            days: siDays,
             _raw: line
           });
         }
