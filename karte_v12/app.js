@@ -1538,6 +1538,8 @@ function recalcBilling() {
   document.getElementById('billTotal').textContent = totalTen + '点';
   document.getElementById('billBurden').textContent = burden.toLocaleString() + '円';
   renderAddedBillingList();
+  var clearBtn2 = document.getElementById('btnClearBilling');
+  if (clearBtn2) clearBtn2.disabled = !(k.addedBillingItems.length || k.selectedExams.length);
 }
 function goshagochoNyuu(val) { const f = Math.floor(val); return (val - f) > 0.5 ? f + 1 : f; }
 
@@ -2006,11 +2008,16 @@ function removeAddedBilling(i) {
 }
 function clearAllBilling() {
   var k = karteData[currentPatientId];
-  if (!k || !k.addedBillingItems.length) return;
-  if (!confirm('追加済み算定を全てクリアしますか？')) return;
+  if (!k) return;
+  var hasItems = (k.addedBillingItems && k.addedBillingItems.length > 0);
+  var hasExams = (k.selectedExams && k.selectedExams.length > 0);
+  if (!hasItems && !hasExams) { showToast('クリアする算定項目がありません'); return; }
+  if (!confirm('追加済み算定・検査をクリアしますか？')) return;
   k.addedBillingItems = [];
+  k.selectedExams = [];
+  document.querySelectorAll('#examCheckList input[type="checkbox"]').forEach(function(cb) { cb.checked = false; });
   recalcBilling();
-  showToast('算定項目を全てクリアしました');
+  showToast('算定項目をクリアしました');
 }
 
 // ===== v0.8: 機能10 既存患者保険証モーダルOCR/QR =====
