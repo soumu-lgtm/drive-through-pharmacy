@@ -960,7 +960,7 @@ function renderPatientInfoTab(p) {
         }
         if (p.iryoValidFrom || p.iryoValidTo) h += '<div class="info-row"><span class="label">有効期間</span><span class="value">' + esc(p.iryoValidFrom||'') + ' 〜 ' + esc(p.iryoValidTo||'') + '</span></div>';
         if (p.iryoMemo) h += '<div class="info-row"><span class="label">備考</span><span class="value" style="font-size:10px;">' + esc(p.iryoMemo) + '</span></div>';
-        if (p.iryoPhoto) h += '<div style="margin-top:4px;"><img src="' + p.iryoPhoto + '" style="max-height:80px;border-radius:4px;border:1px solid var(--border);"></div>';
+        if (p.iryoPhoto) h += '<div style="margin-top:4px;"><img src="' + esc(p.iryoPhoto) + '" style="max-height:80px;border-radius:4px;border:1px solid var(--border);"></div>';
         h += '</div>';
       }
       break;
@@ -2175,10 +2175,10 @@ function renderInsuranceOcrResultHTML(f) {
   rows.forEach(function(r) {
     if (!r.v) return;
     var icon = r.qr ? ' <span style="color:#28a745;font-size:10px;">&#10004;QR</span>' : ' <span style="color:#f59e0b;font-size:10px;">&#9888;要確認</span>';
-    h += '<div style="font-size:11px;display:flex;gap:4px;margin-bottom:2px;"><span style="color:var(--text-muted);min-width:70px;">' + r.l + '</span><b>' + r.v + '</b>' + icon + '</div>';
+    h += '<div style="font-size:11px;display:flex;gap:4px;margin-bottom:2px;"><span style="color:var(--text-muted);min-width:70px;">' + r.l + '</span><b>' + esc(r.v) + '</b>' + icon + '</div>';
   });
   if (f.rawText && !f.insurerNumber && !f.nameKana) {
-    h += '<div style="font-size:10px;white-space:pre-wrap;max-height:80px;overflow-y:auto;color:var(--text-muted);margin-top:4px;border-top:1px solid var(--border);padding-top:4px;">' + f.rawText + '</div>';
+    h += '<div style="font-size:10px;white-space:pre-wrap;max-height:80px;overflow-y:auto;color:var(--text-muted);margin-top:4px;border-top:1px solid var(--border);padding-top:4px;">' + esc(f.rawText) + '</div>';
   }
   if (!hasQR) {
     h += '<div style="font-size:10px;color:#856404;margin-top:4px;">&#9888; QRコード未検出。OCR参考値のため必ず目視確認してください。</div>';
