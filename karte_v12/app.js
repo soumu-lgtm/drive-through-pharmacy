@@ -834,7 +834,7 @@ function deleteSetOrderFromManager(i) {
   setOrders.splice(i,1); saveSetOrders(); renderSetOrders(); _renderSetManager(); showToast('セットを削除');
 }
 function searchDrug(q) { const r = document.getElementById('drugResults'); if (!q) { r.classList.remove('show'); return; } const f = drugs.filter(d => d.name.includes(q) || d.category.includes(q)); if (!f.length) { r.classList.remove('show'); return; } r.innerHTML = f.map(d => '<div class="drug-result-item" onclick="addDrug(\'' + esc(d.id) + '\')"><span>' + esc(d.name) + stockBadge(d.name) + '</span><span class="price">' + (d.price ? d.price.toFixed(1) + '円' : '') + '</span></div>').join(''); r.classList.add('show'); }
-function addDrug(id) { const d = drugs.find(x => x.id === id); if (!d) return; const k = karteData[currentPatientId]; const ex = k.prescriptions.find(rx => rx.drug.id === id); if (ex) ex.qty += 1; else { const savedNote = getDrugSavedNote(id); k.prescriptions.push({drug:d,qty:1,days:k.rxDays||7,note:savedNote||''}); } document.getElementById('drugSearch').value = ''; document.getElementById('drugResults').classList.remove('show'); renderRxList(); recalcBilling(); }
+function addDrug(id) { let d = drugs.find(x => x.id === id); if (!d && typeof id === 'string' && id.indexOf('inv_') === 0 && typeof invDrugMenu === 'function') { d = invDrugMenu().find(x => x.id === id); if (d) drugs.push(d); } if (!d) return; const k = karteData[currentPatientId]; const ex = k.prescriptions.find(rx => rx.drug.id === id); if (ex) ex.qty += 1; else { const savedNote = getDrugSavedNote(id); k.prescriptions.push({drug:d,qty:1,days:k.rxDays||7,note:savedNote||''}); } document.getElementById('drugSearch').value = ''; document.getElementById('drugResults').classList.remove('show'); renderRxList(); recalcBilling(); }
 function removeDrug(i) { karteData[currentPatientId].prescriptions.splice(i,1); renderRxList(); recalcBilling(); }
 function updateDrugQty(i,v) { karteData[currentPatientId].prescriptions[i].qty = Math.max(0.5, parseFloat(v)||1); recalcBilling(); }
 function updateDrugDays(i,v) { karteData[currentPatientId].prescriptions[i].days = Math.max(1, parseInt(v)||1); recalcBilling(); }
@@ -989,13 +989,30 @@ function renderDrugTab(el) {
     '</div>';
 
   if (drugTabMode === 'internal') {
-    // 在庫管理リストの薬を表示
-    var filtered = drugs;
-    if (search) filtered = drugs.filter(function(d) { return d.name.toLowerCase().includes(search); });
+    // 在庫管理アプリの薬を在庫数＋横バー付きで表示（読み取り専用連携）
+    var invReady = (typeof invStockLoaded !== 'undefined') && invStockLoaded;
+    if (typeof invStockLoaded !== 'undefined' && !invStockLoaded) {
+      if (typeof loadInventoryStock === 'function') loadInventoryStock();
+      var loadingMsg = (typeof invStockLoading !== 'undefined' && invStockLoading)
+        ? '在庫管理アプリから読込中...'
+        : (typeof invStockError !== 'undefined' && invStockError ? '在庫連携失敗: ' + esc(invStockError) + '（従来リスト表示）' : '在庫読込待機中...');
+      if (!(typeof invStockError !== 'undefined' && invStockError)) {
+        el.innerHTML = header + '<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:11px;">' + loadingMsg + '</div>';
+        return;
+      }
+    }
+    // 在庫リストがあれば在庫121件、無ければ従来drugsにフォールバック
+    var invList = (invReady && typeof invDrugMenu === 'function') ? invDrugMenu() : [];
+    var source = invList.length ? invList : drugs;
+    var filtered = source;
+    if (search) filtered = source.filter(function(d) { return d.name.toLowerCase().includes(search); });
     el.innerHTML = header + filtered.map(function(d) {
+      var entry = d._inv || (typeof getInvEntry === 'function' ? getInvEntry(d.name) : null);
+      var right = (entry && typeof invStockBar === 'function')
+        ? invStockBar(entry)
+        : '<span class="bm-pts" style="font-size:10px;color:var(--text-muted);">' + esc(d.category || '') + '</span>';
       return '<div class="bm-item" style="cursor:pointer;" onclick="addDrugFromMenu(\'' + d.id + '\')">' +
-        '<span class="bm-item-label">' + esc(d.name) + '</span>' +
-        '<span class="bm-pts" style="font-size:10px;color:var(--text-muted);">' + esc(d.category) + '</span></div>';
+        '<span class="bm-item-label">' + esc(d.name) + '</span>' + right + '</div>';
     }).join('');
     if (filtered.length === 0) el.innerHTML = header + '<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:11px;">該当する薬品がありません</div>';
   } else {
