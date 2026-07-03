@@ -35,6 +35,7 @@ const ReceiptChecker = (() => {
     checkSanteiCount(receipt);
     checkByomeiRequirement(receipt);
     checkStandaloneDisease(receipt);
+    checkInoutRestriction(receipt);
   }
 
   // ============================================================
@@ -320,6 +321,21 @@ const ReceiptChecker = (() => {
         r.warnings.push({
           severity: 'mid',
           message: '単独使用禁止: ' + (MasterLoader.getDiseaseName(d.code) || d.code) + ' は部位等の修飾語との併記が必要です'
+        });
+      }
+    }
+  }
+
+  /** 入外区分チェック: 外来レセプトに入院限定(inout=1)の診療行為が混入していないか
+   *  ドライブスルー診療＝外来のみのため、入院限定行為は算定不可 */
+  function checkInoutRestriction(r) {
+    for (const p of r.procedures) {
+      if (p.isDrug || !p.code) continue;
+      const proc = MasterLoader.getProcedure(p.code);
+      if (proc && Number(proc.inout) === 1) {
+        r.warnings.push({
+          severity: 'high',
+          message: '入院限定: ' + codeName(p.code) + ' は入院でのみ算定可（外来レセプトで算定不可）'
         });
       }
     }

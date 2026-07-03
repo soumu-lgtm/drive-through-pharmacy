@@ -314,18 +314,17 @@ function checkReceipt(r) {
     r.warnings.push({ severity: 'mid', message: '外来管理加算算定不可: 処置行為との併算定' });
   }
 
-  // 4. 合計点数チェック（SI点数合計との比較）
+  // 4. 明細取得チェック（パース健全性）
+  // 注意: レセ電のSI点数欄は「点数×回数の単純和」ではなく包括・加算・逓減が絡むため、
+  //       請求合計(RE)との単純比較は成立しない（旧「合計点数差異」は全件誤検知だったため廃止）。
+  //       ここでは明細から点数を1つも取得できなかった=パース不全のみを警告する。
   const calcPoints = r.procedures.reduce((s, p) => {
     if (p.points && p.quantity) return s + p.points * p.quantity;
     if (p.points) return s + p.points;
     return s;
   }, 0);
-  // 点数マスター(SSK Sマスター)導入済みのため、合計点数チェックを有効化
-  if (MasterLoader.isLoaded() && r.totalPoints > 0 && calcPoints > 0) {
-    const diff = Math.abs(r.totalPoints - calcPoints);
-    if (diff > r.totalPoints * 0.1) {
-      r.warnings.push({ severity: 'mid', message: '合計点数に差異: 請求=' + r.totalPoints.toLocaleString() + ' 計算=' + calcPoints.toLocaleString() + ' (差' + diff.toLocaleString() + ')' });
-    }
+  if (r.totalPoints > 0 && calcPoints === 0 && r.procedures.length > 0) {
+    r.warnings.push({ severity: 'low', message: '明細の点数を取得できませんでした（請求合計=' + r.totalPoints.toLocaleString() + '点）' });
   }
 
   // 5. 返戻フラグ
