@@ -26,6 +26,7 @@ const MasterLoader = (() => {
     syRelation: null,        // 傷病名関連区分 {procCode: {sy, name}} (col24)
     diseaseFlags: null,      // 傷病名フラグ {diseaseCode: {tk,nb,tan}} (特定疾患/難病/単独禁止)
     procAge: null,           // 診療行為の年齢制限 {procCode: {lo,hi,name}} (下限/上限年齢)
+    memoRules: null,         // 摘要リマインドルール {rules:[{matchKeywords,memo}]}
   };
 
   let loaded = false;
@@ -59,6 +60,7 @@ const MasterLoader = (() => {
         { key: 'syRelation',        file: 'sy_relation.json',         label: '傷病名関連区分' },
         { key: 'diseaseFlags',      file: 'disease_flags.json',       label: '傷病名フラグ' },
         { key: 'procAge',           file: 'proc_age.json',            label: '年齢制限' },
+        { key: 'memoRules',         file: 'memo_reminder_rules.json',  label: '摘要リマインド' },
       ];
 
       const allFiles = [...masterFiles, ...tableFiles];
@@ -84,7 +86,7 @@ const MasterLoader = (() => {
             masters[key] = new Map();
           } else {
             tables[key] = key === 'santeiCount' ? new Map() :
-                          (key === 'houkatsu' || key === 'syRelation' || key === 'diseaseFlags' || key === 'procAge') ? {} : [];
+                          (key === 'houkatsu' || key === 'syRelation' || key === 'diseaseFlags' || key === 'procAge' || key === 'memoRules') ? {} : [];
           }
         }
       }
@@ -219,6 +221,11 @@ const MasterLoader = (() => {
     return tables.procAge?.[code] || null;
   }
 
+  /** 摘要リマインドルール配列を取得 [{matchKeywords:[], memo}] */
+  function getMemoRules() {
+    return (tables.memoRules && tables.memoRules.rules) || [];
+  }
+
   function isLoaded() {
     return loaded;
   }
@@ -257,6 +264,7 @@ const MasterLoader = (() => {
     getSyRelation,
     getDiseaseFlags,
     getProcAge,
+    getMemoRules,
     isLoaded,
     getStats,
   };

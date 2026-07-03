@@ -36,6 +36,7 @@ const ReceiptChecker = (() => {
     checkByomeiRequirement(receipt);
     checkStandaloneDisease(receipt);
     checkInoutRestriction(receipt);
+    checkMemoReminders(receipt);
   }
 
   // ============================================================
@@ -355,6 +356,32 @@ const ReceiptChecker = (() => {
         r.warnings.push({
           severity: 'high',
           message: '入院限定: ' + codeName(p.code) + ' は入院でのみ算定可（外来レセプトで算定不可）'
+        });
+      }
+    }
+  }
+
+  // ============================================================
+  // 摘要要否リマインド（E案+D案）: 断定せず「確認してください」と注意表示
+  //  ※ 摘要記載が必要になりやすい項目を検知。誤検知ゼロ方針（エラーではなく確認喚起）。
+  //     ルールは memo_reminder_rules.json（医師・事務が随時調整）。
+  // ============================================================
+  function checkMemoReminders(r) {
+    if (!MasterLoader.getMemoRules) return;
+    const rules = MasterLoader.getMemoRules();
+    if (!rules.length) return;
+    // レセプト内の診療行為名を集める（マスタ名＋レコード名）
+    const names = r.procedures
+      .filter(p => !p.isDrug && p.code)
+      .map(p => (MasterLoader.getProcedureName(p.code) || p.name || ''));
+    if (!names.length) return;
+    for (const rule of rules) {
+      const kws = rule.matchKeywords || [];
+      const hit = names.some(nm => kws.some(kw => kw && nm.indexOf(kw) !== -1));
+      if (hit) {
+        r.warnings.push({
+          severity: 'low',
+          message: '摘要確認: ' + (rule.memo || '摘要記載が必要な場合があります') + '（記載漏れにご注意ください）'
         });
       }
     }
