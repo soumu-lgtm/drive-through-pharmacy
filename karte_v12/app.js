@@ -1990,13 +1990,12 @@ function renderAddedBillingList() {
   const container = document.getElementById('addedBillingList');
   const itemsEl = document.getElementById('addedBillingItems');
   var clearBtn = document.getElementById('btnClearBilling');
-  if (!k || !k.addedBillingItems || !k.addedBillingItems.length) { if (container) container.style.display = 'none'; if (clearBtn) clearBtn.style.display = 'none'; return; }
+  if (!k || !k.addedBillingItems || !k.addedBillingItems.length) { if (container) container.style.display = 'none'; if (clearBtn) clearBtn.disabled = true; return; }
   container.style.display = '';
   itemsEl.innerHTML = k.addedBillingItems.map((it,i) =>
     '<div class="added-billing-item"><span>' + esc(it.name) + '</span><span class="added-billing-pts">' + it.points + '点</span><span class="added-billing-del" onclick="removeAddedBilling(' + i + ')" title="削除">&times;</span></div>'
   ).join('');
-  var clearBtn = document.getElementById('btnClearBilling');
-  if (clearBtn) clearBtn.style.display = k.addedBillingItems.length ? '' : 'none';
+  if (clearBtn) clearBtn.disabled = !k.addedBillingItems.length;
 }
 function removeAddedBilling(i) {
   const k = karteData[currentPatientId];

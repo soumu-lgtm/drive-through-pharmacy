@@ -517,7 +517,8 @@ body.resizing img {
 .billing-divider { border-top: 1px solid var(--border); margin: 4px 0; }
 .billing-total { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; font-weight: 700; }
 .billing-burden { display: flex; justify-content: space-between; padding: 6px 8px; background: var(--primary-light); border-radius: var(--radius); font-size: 16px; font-weight: 700; color: var(--primary); margin-top: 4px; }
-.billing-actions { display: flex; gap: 6px; margin-top: 8px; }
+.billing-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.btn-clear-billing { color: #dc2626 !important; border-color: #dc2626 !important; font-size: 11px !important; }
 
 /* ===== Exam + Document ===== */
 .exam-check-list { list-style: none; }
