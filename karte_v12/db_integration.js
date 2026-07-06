@@ -8,6 +8,8 @@
 
 // 夜間休日外来DB API
 const DB_API_URL = 'https://script.google.com/macros/s/AKfycbwWCL1aVy4RcCZsr2Wzrpy5JE8LU8pGWa2u_CY7qo7OGMgXrB0OZGir6rGJZiiV6hRd/exec';
+// 夜間外来GAS側 API_TOKEN と同じ値にすること（無差別CSRF/drive-by遮断用）
+const DB_API_TOKEN = 'dtp_f929bbd860e2e96224ded613cd06177e';
 
 // DB連携データ格納
 let dbDrugs = [];      // DB薬品マスタ
@@ -141,7 +143,7 @@ async function loadDbData() {
     updateDbLoadingMessage('DB読込中...', '直近' + DB_DEFAULT_DAYS + '日分のデータを取得しています');
 
     const dateRange = getDateRangeForDays(selectedDate, DB_DEFAULT_DAYS);
-    const url = DB_API_URL + '?action=all&date_from=' + encodeURIComponent(dateRange.fromMD) + '&date_to=' + encodeURIComponent(dateRange.toMD);
+    const url = DB_API_URL + '?action=all&token=' + encodeURIComponent(DB_API_TOKEN) + '&date_from=' + encodeURIComponent(dateRange.fromMD) + '&date_to=' + encodeURIComponent(dateRange.toMD);
     const res = await fetch(url);
     const data = await res.json();
     if (!data.success) throw new Error(data.error || 'DB API error');
@@ -228,7 +230,7 @@ async function loadDbDataForDate(targetIso) {
     const dateRange = getDateRangeForDays(targetIso, extendDays);
     showDbMiniIndicator('追加データ読込中...');
 
-    const url = DB_API_URL + '?action=all&date_from=' + encodeURIComponent(dateRange.fromMD) + '&date_to=' + encodeURIComponent(dateRange.toMD);
+    const url = DB_API_URL + '?action=all&token=' + encodeURIComponent(DB_API_TOKEN) + '&date_from=' + encodeURIComponent(dateRange.fromMD) + '&date_to=' + encodeURIComponent(dateRange.toMD);
     const res = await fetch(url);
     const data = await res.json();
     if (!data.success) throw new Error(data.error || 'DB API error');
