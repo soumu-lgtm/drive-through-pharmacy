@@ -5,13 +5,26 @@
 // デプロイ手順:
 // 1. 上記スプレッドシートを開く → 拡張機能 → Apps Script
 // 2. このコードを貼り付け
-// 3. デプロイ → 新しいデプロイ → ウェブアプリ → 全員アクセス可
-// 4. 生成されたURLを karte_v03/app.js の DB_API_URL に設定
+// 3. デプロイ → 新しいデプロイ → ウェブアプリ →
+//    ★アクセスできるユーザー: 可能なら「組織アカウント限定」にすること（恒久対策）。
+//     公開のままにする場合も、下記の共有トークン必須化で無差別アクセスを遮断する。
+// 4. 生成されたURLを karte_v07/db_integration.js の DB_API_URL に設定
+//    （db_integration.js 側の DB_API_TOKEN と、下の API_TOKEN を同じ値にすること）
 // ====================================================
+
+// 共有トークン（db_integration.js の DB_API_TOKEN と一致させる）
+var API_TOKEN = 'dtp_f929bbd860e2e96224ded613cd06177e';
 
 function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) || 'all';
   var result = {};
+
+  // 認証: 共有トークン必須（無差別CSRF/drive-by遮断）。恒久対策はデプロイの組織限定。
+  if (!e || !e.parameter || e.parameter.token !== API_TOKEN) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: false, error: 'unauthorized' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 
   try {
     var ss = SpreadsheetApp.openById('12ylHWZhQO2ABfT6xhMM3z8jfD31kH7lRbaGY-Br4Y-k');

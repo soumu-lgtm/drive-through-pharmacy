@@ -171,6 +171,8 @@ function renderPatientList() {
     document.getElementById('listDone').textContent = 0;
     return;
   }
+  // XSS対策: 患者名・住所等（DB/外部由来）をHTMLに入れる際はエスケープする
+  const escHtml = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   tbody.innerHTML = filtered.map((p, i) => {
     if (p.dbSource) {
       // DB患者行
@@ -180,14 +182,14 @@ function renderPatientList() {
       const doctor = visit ? (visit.doctor || '') : '';
       const tests = visit ? [visit.covid ? 'C+' : '', visit.flu ? 'Flu+' : '', visit.strep ? '溶+' : ''].filter(Boolean).join(' ') : '';
       const typeBadge = p.type === '新規' ? '<span class="status-badge" style="background:#dcfce7;color:#16a34a;">新規</span>' : '<span class="status-badge" style="background:#dbeafe;color:#2563eb;">再診</span>';
-      return '<tr onclick="openKarte(\'' + p.id + '\')" style="cursor:pointer;background:#f8faff;"><td>' + (i+1) + '</td><td class="td-status">' + typeBadge + '</td><td class="td-name">' + p.name + '<div class="sub">DB / ' + (p.address || '') + ' / ' + time + '</div></td><td>' + p.age + '歳 ' + p.sex + '</td><td>' + p.insurance + '</td><td class="td-allergy">' + (tests || '-') + '</td><td class="td-lane">' + doctor + '</td><td class="td-questionnaire">' + (p.route || '-') + '</td><td class="td-actions"><button class="action-btn karte-btn" onclick="event.stopPropagation();openKarte(\'' + p.id + '\')">カルテ</button></td></tr>';
+      return '<tr onclick="openKarte(\'' + p.id + '\')" style="cursor:pointer;background:#f8faff;"><td>' + (i+1) + '</td><td class="td-status">' + typeBadge + '</td><td class="td-name">' + escHtml(p.name) + '<div class="sub">DB / ' + escHtml(p.address || '') + ' / ' + escHtml(time) + '</div></td><td>' + escHtml(p.age) + '歳 ' + escHtml(p.sex) + '</td><td>' + escHtml(p.insurance) + '</td><td class="td-allergy">' + escHtml(tests || '-') + '</td><td class="td-lane">' + escHtml(doctor) + '</td><td class="td-questionnaire">' + escHtml(p.route || '-') + '</td><td class="td-actions"><button class="action-btn karte-btn" onclick="event.stopPropagation();openKarte(\'' + p.id + '\')">カルテ</button></td></tr>';
     }
     if (p.status === 'waiting') waitC++; else if (p.status === 'active') activeC++; else if (p.status === 'done') doneC++;
     const statusBadge = p.status === 'active' ? '<span class="status-badge active">診察中</span>' : p.status === 'done' ? '<span class="status-badge done">完了</span>' : '<span class="status-badge waiting">待機</span>';
     const allergyStr = p.allergies.length > 0 ? p.allergies.join(', ') : '-';
     const qBadge = p.questionnaire ? '<span class="q-badge received">受信済</span>' : '<span class="q-badge none">-</span>';
     const rowClass = p.status === 'done' ? ' class="status-done-row"' : '';
-    return '<tr' + rowClass + ' onclick="openKarte(\'' + p.id + '\')" style="cursor:pointer;"><td>' + (i+1) + '</td><td class="td-status">' + statusBadge + '</td><td class="td-name">' + p.name + '<div class="sub">' + (p.nameKana||'') + ' / ' + p.id + ' / ' + (p.arrivedAt||'') + '</div></td><td>' + p.age + '歳 ' + p.sex + '</td><td>' + p.insurance + '</td><td class="td-allergy">' + allergyStr + '</td><td class="td-lane">L' + p.vehicle.lane + '</td><td class="td-questionnaire">' + qBadge + '</td><td class="td-actions"><button class="action-btn karte-btn" onclick="event.stopPropagation();openKarte(\'' + p.id + '\')">カルテ</button>' + (p.status === 'waiting' ? '<button class="action-btn call-btn" onclick="event.stopPropagation();callPatientFromList(\'' + p.id + '\')">呼出</button>' : '') + '</td></tr>';
+    return '<tr' + rowClass + ' onclick="openKarte(\'' + p.id + '\')" style="cursor:pointer;"><td>' + (i+1) + '</td><td class="td-status">' + statusBadge + '</td><td class="td-name">' + escHtml(p.name) + '<div class="sub">' + escHtml(p.nameKana||'') + ' / ' + p.id + ' / ' + escHtml(p.arrivedAt||'') + '</div></td><td>' + escHtml(p.age) + '歳 ' + escHtml(p.sex) + '</td><td>' + escHtml(p.insurance) + '</td><td class="td-allergy">' + escHtml(allergyStr) + '</td><td class="td-lane">L' + p.vehicle.lane + '</td><td class="td-questionnaire">' + qBadge + '</td><td class="td-actions"><button class="action-btn karte-btn" onclick="event.stopPropagation();openKarte(\'' + p.id + '\')">カルテ</button>' + (p.status === 'waiting' ? '<button class="action-btn call-btn" onclick="event.stopPropagation();callPatientFromList(\'' + p.id + '\')">呼出</button>' : '') + '</td></tr>';
   }).join('');
   document.getElementById('listWait').textContent = waitC;
   document.getElementById('listActive').textContent = activeC;

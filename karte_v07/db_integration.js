@@ -7,6 +7,12 @@
 
 // 夜間休日外来DB API
 const DB_API_URL = 'https://script.google.com/macros/s/AKfycbwWCL1aVy4RcCZsr2Wzrpy5JE8LU8pGWa2u_CY7qo7OGMgXrB0OZGir6rGJZiiV6hRd/exec';
+// GAS側の API_TOKEN と同じ値にすること。無差別CSRF/drive-byの遮断用。
+// ※恒久対策は「GASデプロイを組織アカウント限定」にすること（このトークンは公開HTML上にあり万能ではない）。
+const DB_API_TOKEN = 'dtp_f929bbd860e2e96224ded613cd06177e';
+
+// XSS対策: 患者名・住所などDB/外部由来の値をHTMLに描画する際にエスケープする
+function escHtml(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 
 // DB連携データ格納
 let dbDrugs = [];      // DB薬品マスタ
@@ -25,7 +31,7 @@ async function loadDbData() {
     indicator.textContent = 'DB読込中...';
     document.body.appendChild(indicator);
 
-    const res = await fetch(DB_API_URL + '?action=all');
+    const res = await fetch(DB_API_URL + '?action=all&token=' + encodeURIComponent(DB_API_TOKEN));
     const data = await res.json();
     if (!data.success) throw new Error(data.error || 'DB API error');
 
@@ -206,8 +212,8 @@ function onDbPatientSearch(q) {
     const visits = p.dbVisits ? p.dbVisits.length : 0;
     const lastDate = p.pastKartes && p.pastKartes.length > 0 ? p.pastKartes[0].date : '-';
     return '<div style="padding:6px 10px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onclick="openKarte(\'' + p.id + '\')" onmouseenter="this.style.background=\'var(--bg)\'" onmouseleave="this.style.background=\'#fff\'">' +
-      '<div><strong>' + p.name + '</strong> <span style="color:var(--text-muted);font-size:10px;">' + p.age + '歳 ' + p.sex + ' / ' + p.insurance + '</span></div>' +
-      '<div style="font-size:10px;color:var(--text-muted);">' + visits + '回来院 / 最終:' + lastDate + '</div></div>';
+      '<div><strong>' + escHtml(p.name) + '</strong> <span style="color:var(--text-muted);font-size:10px;">' + escHtml(p.age) + '歳 ' + escHtml(p.sex) + ' / ' + escHtml(p.insurance) + '</span></div>' +
+      '<div style="font-size:10px;color:var(--text-muted);">' + visits + '回来院 / 最終:' + escHtml(lastDate) + '</div></div>';
   }).join('');
   if (dbPats.length > 20) results.innerHTML += '<div style="padding:6px;text-align:center;color:var(--text-muted);font-size:10px;">他' + (dbPats.length - 20) + '件</div>';
   results.style.display = 'block';
@@ -225,8 +231,8 @@ function toggleDbPatientList() {
       const lastDate = p.pastKartes && p.pastKartes.length > 0 ? p.pastKartes[0].date : '-';
       const typeBadge = p.type === '新規' ? '<span style="background:#dcfce7;color:#16a34a;padding:0 4px;border-radius:3px;font-size:9px;margin-left:4px;">新規</span>' : p.type === '再診' ? '<span style="background:#dbeafe;color:#2563eb;padding:0 4px;border-radius:3px;font-size:9px;margin-left:4px;">再診</span>' : '';
       return '<div style="padding:5px 10px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onclick="openKarte(\'' + p.id + '\')" onmouseenter="this.style.background=\'var(--bg)\'" onmouseleave="this.style.background=\'#fff\'">' +
-        '<div><strong>' + p.name + '</strong>' + typeBadge + ' <span style="color:var(--text-muted);font-size:10px;">' + p.age + '歳 ' + p.sex + ' / ' + p.insurance + '</span></div>' +
-        '<div style="font-size:10px;color:var(--text-muted);">' + (p.address || '') + ' / ' + visits + '回 / ' + lastDate + '</div></div>';
+        '<div><strong>' + escHtml(p.name) + '</strong>' + typeBadge + ' <span style="color:var(--text-muted);font-size:10px;">' + escHtml(p.age) + '歳 ' + escHtml(p.sex) + ' / ' + escHtml(p.insurance) + '</span></div>' +
+        '<div style="font-size:10px;color:var(--text-muted);">' + escHtml(p.address || '') + ' / ' + visits + '回 / ' + escHtml(lastDate) + '</div></div>';
     }).join('');
   results.style.display = 'block';
   dbListVisible = true;

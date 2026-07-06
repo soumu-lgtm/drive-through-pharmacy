@@ -9,6 +9,18 @@
 // ===== 設定 =====
 const SPREADSHEET_ID = '13AId0dOUOrrZLnFnZi_V4NcOo5OT9pkaFr1UJPIK02c';
 
+// Web API 共有トークン（クライアント index.html / demo.html の GAS_TOKEN と同じ値にすること）。
+// 目的: 無差別CSRF・drive-by（罠ページのimgタグ等）による書き込み/読み取りを遮断する。
+// ※このトークンは公開HTML上にも置かれるため万能ではない。恒久対策は
+//   「デプロイ → ウェブアプリ → アクセスできるユーザー」を組織アカウント限定にすること。
+const API_TOKEN = 'dtp_f929bbd860e2e96224ded613cd06177e';
+
+function unauthorized_() {
+  return ContentService
+    .createTextOutput(JSON.stringify({ error: 'unauthorized' }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
 const SHEET_NAMES = {
   MEDICINE_MASTER: '薬品マスタ',
   STOCK_IN: '入庫履歴',
@@ -44,6 +56,9 @@ function normalizeCode(code) {
  */
 function doGet(e) {
   const action = e.parameter.action;
+
+  // 認証: 共有トークン必須（無差別CSRF/drive-by遮断）
+  if (!e || !e.parameter || e.parameter.token !== API_TOKEN) return unauthorized_();
 
   let result;
   switch (action) {
@@ -116,6 +131,9 @@ function doGet(e) {
 function doPost(e) {
   const data = JSON.parse(e.postData.contents);
   const action = data.action;
+
+  // 認証: 共有トークン必須
+  if (!data || data.token !== API_TOKEN) return unauthorized_();
 
   let result;
   switch (action) {
