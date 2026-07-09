@@ -1811,7 +1811,7 @@
         }
 
         // GASから在庫データを取得
-        // マスターはローカル埋め込みstockData (薬品マスタ準拠82品目)。GASは在庫数同期のみ。
+        // マスターはローカル埋め込みstockData (薬品マスタ準拠84品目)。GASは在庫数同期のみ。
         // コードマッチ優先、不一致時は薬品名マッチでフォールバック。
         async function loadStockFromGAS() {
             const result = await gasGet('getStock');
@@ -1879,7 +1879,7 @@
             }
         }
 
-        // ===== データ（薬品マスタ準拠 82品目 2026-06-18） =====
+        // ===== データ（薬品マスタ準拠 84品目 2026-06-18, M021/M022追加 2026-07-09） =====
         // コード体系: M001-M020=成人内服薬, M050-M069=外用・坐剤・検査キット, M100-M141=小児内服薬
         let stockData = [
             // ===== M001-M020: 成人内服薬 =====
@@ -1903,6 +1903,8 @@
             { code: 'M018', name: '麻黄湯エキス顆粒', stock: 0, unit: '包', threshold: 42, category: '成人/漢方薬', usage: '', price: '11.4', maker: '', target: '', csvGroup: 'master' },
             { code: 'M019', name: 'メリスロン錠　６ｍｇ', stock: 0, unit: '錠', threshold: 50, category: '成人/鎮暈剤', usage: '', price: '10.8', maker: '', target: '', csvGroup: 'master' },
             { code: 'M020', name: 'オセルタミビルカプセル　７５ｍｇ', stock: 0, unit: '錠', threshold: 50, category: '成人/抗インフルエンザ薬', usage: '', price: '108', maker: '', target: '', csvGroup: 'master' },
+            { code: 'M021', name: 'セファレキシン錠　２５０ｍｇ', stock: 0, unit: '錠', threshold: 50, category: '成人/抗生剤', usage: '', price: '', maker: '', target: '', csvGroup: 'master' },
+            { code: 'M022', name: 'メトクロプラミド錠　５ｍｇ', stock: 0, unit: '錠', threshold: 50, category: '成人/吐気止め', usage: '', price: '', maker: '', target: '', csvGroup: 'master' },
             // ===== M050-M069: 外用薬・坐剤・検査キット =====
             { code: 'M050', name: 'アンヒバ坐剤　１００ｍｇ', stock: 0, unit: '個', threshold: 50, category: '小児/解熱薬', usage: '', price: '21.6', maker: '', target: '', csvGroup: 'master' },
             { code: 'M051', name: 'アンヒバ坐剤　２００ｍｇ', stock: 0, unit: '個', threshold: 50, category: '小児/解熱薬', usage: '', price: '21.6', maker: '', target: '', csvGroup: 'master' },
@@ -2604,12 +2606,12 @@
         const weightDoseMap = {
             '6m': {
                 label: '6ヶ月(7kg)',
-                codes: ['M005','M010','M016','M015','M031','M021','M026','M032'],
+                codes: ['M005','M010','M016','M015','M031','M026','M032'],
                 notes: { 'M015': '0.3g×1包', 'M031': '1.0g処方' }
             },
             '1y': {
                 label: '1歳(10kg)',
-                codes: ['M001','M006','M011','M017','M015','M031','M022','M027','M033'],
+                codes: ['M001','M006','M011','M017','M015','M031','M027','M033'],
                 notes: { 'M015': '0.3g×1包', 'M031': '1.5g処方' }
             },
             '3y': {
