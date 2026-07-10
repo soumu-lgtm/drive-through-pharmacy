@@ -1848,36 +1848,43 @@
         let historyDisplayCount = 50; // how many to show initially
         const HISTORY_PAGE_SIZE = 50;
 
-        async function loadHistoryFromGAS(dateFrom, dateTo, search) {
-            let params = {};
-            if (dateFrom && dateTo) {
-                params.dateFrom = dateFrom;
-                params.dateTo = dateTo;
-            }
-            if (search) {
-                params.search = search;
-            }
-            const result = await gasGet('getHistory', params);
-            if (result && result.success) {
-                allHistoryData = result.history.map(h => ({
-                    date: h.timestamp ? h.timestamp.substring(0, 10) : '',
-                    time: (() => { try { return new Date(h.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }); } catch(e) { return ''; } })(),
-                    timestamp: h.timestamp,
-                    type: h.type,
-                    medicine: h.name,
-                    code: h.code,
-                    quantity: h.type === 'adjust' ? h.newStock : h.quantity,
-                    unit: h.unit || '',
-                    patient: h.patientName || null,
-                    previousStock: h.previousStock,
-                    diff: h.diff,
-                    reason: h.reason,
-                    operator: h.operator || ''
-                }));
-                historyDisplayCount = HISTORY_PAGE_SIZE;
-                applyHistoryFilter();
-            }
+        // JST(日本時間)変換ヘルパー
+        function _sbToJst(iso) {
+            const d = new Date(iso);
+            const date = d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' }); // YYYY-MM-DD
+            const time = d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' });
+            return { date, time };
         }
+
+        // Supabase(pharmacy_transactions)から履歴を取得。GAS非依存でトークン露出を回避。
+        // 注: Supabase移行前の旧GAS履歴(1000件超)はこのテーブルには含まれない。
+        async function loadHistoryFromSupabase() {
+            const rows = await sbFetch('pharmacy_transactions?select=id,medicine_code,transaction_type,quantity,patient_name,note,created_at&order=created_at.desc&limit=5000');
+            if (!rows) return;
+            allHistoryData = rows.map(r => {
+                const t = _sbToJst(r.created_at);
+                const med = stockData.find(m => normalizeCode(m.code) === normalizeCode(r.medicine_code));
+                const operator = (r.note && /^担当[:：]/.test(r.note)) ? r.note.replace(/^担当[:：]/, '').trim() : '';
+                return {
+                    date: t.date,
+                    time: t.time,
+                    timestamp: r.created_at,
+                    type: r.transaction_type,
+                    medicine: med ? med.name : (r.medicine_code || ''),
+                    code: r.medicine_code,
+                    quantity: r.quantity,
+                    unit: med ? (med.unit || '') : '',
+                    patient: r.patient_name || null,
+                    operator: operator,
+                    _sbId: r.id
+                };
+            });
+            historyDisplayCount = HISTORY_PAGE_SIZE;
+            applyHistoryFilter();
+        }
+
+        // 後方互換: 旧名の呼び出しはSupabase版へ委譲（引数は無視し全件ローカル絞り込み）
+        async function loadHistoryFromGAS() { return loadHistoryFromSupabase(); }
 
         // ===== データ（薬品マスタ準拠 84品目 2026-06-18, M021/M022追加 2026-07-09） =====
         // コード体系: M001-M020=成人内服薬, M050-M069=外用・坐剤・検査キット, M100-M141=小児内服薬
@@ -2850,17 +2857,9 @@
         let filteredHistoryData = [];
 
         function filterHistory() {
-            const dateFrom = document.getElementById('history-date-from').value;
-            const dateTo = document.getElementById('history-date-to').value;
-            const search = document.getElementById('history-search').value;
-
-            // If date range changed, re-fetch from GAS
-            if (USE_GAS && (dateFrom || dateTo)) {
-                loadHistoryFromGAS(dateFrom, dateTo, search);
-            } else {
-                historyDisplayCount = HISTORY_PAGE_SIZE;
-                applyHistoryFilter();
-            }
+            // 全履歴をローカル保持しているため再取得不要。日付・検索はローカルで絞り込み。
+            historyDisplayCount = HISTORY_PAGE_SIZE;
+            applyHistoryFilter();
         }
 
         function applyHistoryFilter() {
@@ -3020,32 +3019,29 @@
             }
 
             if (USE_GAS) {
-                // GASに削除リクエスト送信（gasPostはredirect:manualで応答を待たない）
-                const result = await gasPost('deleteHistory', {
-                    items: toDelete.map(h => ({
-                        type: h.type,
-                        code: h.code,
-                        date: h.date,
-                        time: h.time,
-                        quantity: h.quantity,
-                        medicine: h.medicine,
-                        patient: h.patient || ''
-                    }))
+                // Supabaseから該当トランザクションを削除（idベース）。GAS非依存。
+                const ids = toDelete.map(h => h._sbId).filter(v => v != null);
+                if (ids.length === 0) {
+                    showToast('この履歴はSupabaseに存在しないため削除できません', 'error');
+                    return;
+                }
+                const delRes = await sbFetch('pharmacy_transactions?id=in.(' + ids.join(',') + ')', {
+                    method: 'DELETE',
+                    headers: { 'Prefer': 'return=representation' }
                 });
-                if (!result.success) {
-                    showToast('通信エラー: ' + (result.error || ''), 'error');
+                if (!delRes) {
+                    showToast('削除に失敗しました', 'error');
                     return;
                 }
                 showToast(`${count}件の履歴を削除しました`, 'success');
 
-                // ローカルデータも同期
+                // ローカルデータと在庫を同期し、Supabaseの在庫数も戻す
                 for (const h of toDelete) {
                     const localIdx = historyData.indexOf(h);
                     if (localIdx >= 0) historyData.splice(localIdx, 1);
                     const allIdx = allHistoryData.indexOf(h);
                     if (allIdx >= 0) allHistoryData.splice(allIdx, 1);
 
-                    // ローカル在庫も調整
                     const normalizedCode = normalizeCode(h.code);
                     const stockIdx = stockData.findIndex(m => normalizeCode(m.code) === normalizedCode);
                     if (stockIdx >= 0) {
@@ -3055,14 +3051,16 @@
                             const isExt = (stockData[stockIdx].category || '').replace('[旧]','').startsWith('外用');
                             if (!isExt) stockData[stockIdx].stock += h.quantity;
                         }
+                        // Supabaseの在庫数も更新（adjustは元値不明のため在庫調整しない＝GAS版と同じ挙動）
+                        if (h.type === 'in' || h.type === 'out') {
+                            await sbFetch('pharmacy_medicines?code=eq.' + encodeURIComponent(stockData[stockIdx].code), {
+                                method: 'PATCH',
+                                body: JSON.stringify({ current_stock: stockData[stockIdx].stock, last_updated: new Date().toISOString() })
+                            });
+                        }
                     }
                 }
-
-                // GASから最新在庫を再取得
-                setTimeout(async () => {
-                    await loadStockFromGAS();
-                    renderStockList();
-                }, 2000);
+                renderStockList();
             } else {
                 // ローカルモード：ローカルデータのみ操作
                 for (const h of toDelete) {
@@ -3323,6 +3321,7 @@
         // ===== 月別消費量 =====
         let _consumptionData = null;
 
+        // Supabase(pharmacy_transactions)の out(出庫=消費)を月次集計。GAS非依存。
         async function loadMonthlyConsumption() {
             const loading = document.getElementById('consumption-loading');
             const tableWrap = document.getElementById('consumption-table-wrap');
@@ -3331,16 +3330,45 @@
             tableWrap.style.display = 'none';
             summary.innerHTML = '';
 
-            const result = await gasGet('getMonthlyConsumption');
+            const rows = await sbFetch('pharmacy_transactions?select=medicine_code,quantity,transaction_type,created_at&transaction_type=eq.out&order=created_at.asc&limit=20000');
             loading.style.display = 'none';
 
-            if (!result || !result.success) {
-                summary.innerHTML = '<div style="color:var(--danger);padding:10px;">データ取得エラー: ' + (result?.error || '通信失敗') + '</div>';
+            if (!rows) {
+                summary.innerHTML = '<div style="color:var(--danger);padding:10px;">データ取得エラー: 通信失敗</div>';
                 return;
             }
 
+            // 月リスト（データが存在する月・直近6ヶ月に限定）
+            const monthSet = new Set();
+            rows.forEach(r => monthSet.add(_sbToJst(r.created_at).date.slice(0, 7)));
+            let months = [...monthSet].sort();
+            if (months.length > 6) months = months.slice(-6);
+            const shown = new Set(months);
+
+            // 薬品コードごとに月次集計
+            const byCode = {};
+            rows.forEach(r => {
+                const mo = _sbToJst(r.created_at).date.slice(0, 7);
+                if (!shown.has(mo)) return;
+                const code = r.medicine_code;
+                if (!byCode[code]) byCode[code] = { monthly: {}, total: 0 };
+                byCode[code].monthly[mo] = (byCode[code].monthly[mo] || 0) + (r.quantity || 0);
+                byCode[code].total += (r.quantity || 0);
+            });
+
+            const drugs = Object.keys(byCode).map(code => {
+                const med = stockData.find(m => normalizeCode(m.code) === normalizeCode(code));
+                return {
+                    name: med ? med.name : code,
+                    code: code,
+                    stock: med ? (med.stock || 0) : 0,
+                    monthly: byCode[code].monthly,
+                    total: byCode[code].total
+                };
+            });
+
             window._consumptionLoaded = true;
-            _consumptionData = result;
+            _consumptionData = { months, drugs };
             renderConsumption();
         }
 
