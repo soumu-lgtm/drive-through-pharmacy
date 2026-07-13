@@ -31,3 +31,7 @@ Thumbs.db
 
 # Allow karte_v02 manual screenshots
 !karte_v02/manual/screenshots/
+
+# 患者レセプトUKEテストデータは公開しない（個人情報・医療情報）
+_uke_test/
+*.uke
