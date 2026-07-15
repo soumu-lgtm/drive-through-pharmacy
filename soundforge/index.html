@@ -34,54 +34,31 @@
   <div class="deco-text deco-text-menu">サウンド<br>フォージ</div>
 
   <div class="menu-columns">
-    <div class="menu-col">
-      <span class="menu-cat">動画・配信・ゲーム</span>
-      <a class="menu-item mi-active" href="trpg.html">
-        <span class="mi-text">ファンタジー</span>
-      </a>
-      <a class="menu-item" href="streaming.html">
-        <span class="mi-text">配信待機画面等</span>
-      </a>
-      <a class="menu-item" href="student-life.html">
-        <span class="mi-text">学生生活</span>
-      </a>
-      <a class="menu-item" href="story.html">
-        <span class="mi-text">ゆっくり解説</span>
-      </a>
-      <a class="menu-item" href="cyberpunk.html">
-        <span class="mi-text">サイバーパンク</span>
-      </a>
-      <a class="menu-item" href="horror.html">
-        <span class="mi-text">ホラー</span>
-      </a>
-      <a class="menu-item" href="rpg-battle.html">
-        <span class="mi-text">RPGバトル</span>
-      </a>
-    </div>
-    <div class="menu-col">
-      <span class="menu-cat">ライフスタイル・BGM</span>
-      <a class="menu-item" href="vlog-cafe.html">
-        <span class="mi-text">Vlog・カフェ</span>
-      </a>
-      <a class="menu-item" href="city-rpg.html">
-        <span class="mi-text">都市RPG風</span>
-      </a>
-      <a class="menu-item" href="sleep.html">
-        <span class="mi-text">睡眠・ヒーリング</span>
-      </a>
-      <a class="menu-item" href="focus.html">
-        <span class="mi-text">集中・作業用</span>
-      </a>
-      <a class="menu-item" href="relax.html">
-        <span class="mi-text">リラックス</span>
-      </a>
+    <!-- シーンから探す（横断・主軸） -->
+    <div class="menu-col menu-col-scene">
+      <span class="menu-cat">シーンから探す</span>
+      <button class="menu-item mi-active mi-scene" data-scene="normal_battle"><span class="mi-icon">⚔</span><span class="mi-text">戦闘</span></button>
+      <button class="menu-item mi-scene" data-scene="tension"><span class="mi-icon">⚡</span><span class="mi-text">緊迫・ハプニング</span></button>
+      <button class="menu-item mi-scene" data-scene="explore"><span class="mi-icon">◎</span><span class="mi-text">探索・不穏</span></button>
+      <button class="menu-item mi-scene" data-scene="daily"><span class="mi-icon">☀</span><span class="mi-text">日常</span></button>
+      <button class="menu-item mi-scene" data-scene="chill"><span class="mi-icon">～</span><span class="mi-text">まったり</span></button>
+      <button class="menu-item mi-scene" data-scene="emotional"><span class="mi-icon">❦</span><span class="mi-text">感傷・シリアス</span></button>
       <div class="menu-col-sep"></div>
-      <button class="menu-item" data-target="sc-browse">
-        <span class="mi-text">楽曲</span>
-      </button>
-      <button class="menu-item" data-target="sc-about">
-        <span class="mi-text">案内</span>
-      </button>
+      <button class="menu-item mi-strong" data-scene="all"><span class="mi-text">すべての楽曲を見る</span></button>
+    </div>
+
+    <!-- テーマから探す（世界観別・副） -->
+    <div class="menu-col menu-col-theme">
+      <span class="menu-cat">テーマから探す</span>
+      <a class="menu-item mi-sub" href="trpg.html"><span class="mi-text">ファンタジー / 異能</span></a>
+      <a class="menu-item mi-sub" href="rpg-battle.html"><span class="mi-text">RPGバトル</span></a>
+      <a class="menu-item mi-sub" href="city-rpg.html"><span class="mi-text">都市RPG・現代</span></a>
+      <a class="menu-item mi-sub" href="horror.html"><span class="mi-text">ホラー</span></a>
+      <a class="menu-item mi-sub" href="cyberpunk.html"><span class="mi-text">サイバーパンク・SF</span></a>
+      <a class="menu-item mi-sub" href="streaming.html"><span class="mi-text">配信・実況BGM</span></a>
+      <a class="menu-item mi-sub" href="vlog-cafe.html"><span class="mi-text">Vlog・くつろぎ</span></a>
+      <div class="menu-col-sep"></div>
+      <button class="menu-item mi-ghost" data-target="sc-about"><span class="mi-text">利用について</span></button>
     </div>
   </div>
 
@@ -91,25 +68,45 @@
   </div>
 
   <div class="info-box">
-    <span class="info-num" id="heroCount">51</span>
+    <span class="info-num" id="heroCount">--</span>
     <span class="info-label">曲 / 無料ダウンロード</span>
   </div>
 </section>
 
-<!-- ══════════ SCENE: 楽曲一覧 ══════════ -->
+<!-- ══════════ SCENE: 楽曲一覧（シーン別横断ブラウズ） ══════════ -->
 <section class="sc sc-browse" id="sc-browse">
   <div class="deco-text deco-text-browse">楽<br>曲</div>
 
   <div class="browse-head">
-    <span class="bh-title">楽曲一覧</span>
-    <div class="bh-tabs" id="genreFilter">
-      <button class="genre-tab gt-active" data-genre="all">すべて</button>
-      <button class="genre-tab" data-genre="jazz">ジャズ</button>
-      <button class="genre-tab" data-genre="horror">ホラー</button>
-      <button class="genre-tab" data-genre="rpg-battle">バトル</button>
-      <button class="genre-tab" data-genre="rpg-town">タウン</button>
-      <button class="genre-tab" data-genre="chillhop">Lo-Fi</button>
-      <button class="genre-tab" data-genre="dungeon">ダンジョン</button>
+    <span class="bh-title">楽曲をシーンで探す</span>
+
+    <!-- シーン別タグ（主軸） -->
+    <div class="filter-row" id="sceneFilter">
+      <button class="sf-tab sf-active" data-scene="all">すべて</button>
+      <span class="sf-group">
+        <span class="sf-group-label">戦闘</span>
+        <button class="sf-tab sf-battle" data-scene="normal_battle">通常</button>
+        <button class="sf-tab sf-battle" data-scene="boss_battle">ボス</button>
+        <button class="sf-tab sf-battle" data-scene="climax">決戦</button>
+      </span>
+      <button class="sf-tab" data-scene="tension">緊迫・ハプニング</button>
+      <button class="sf-tab" data-scene="explore">探索・不穏</button>
+      <button class="sf-tab" data-scene="daily">日常</button>
+      <button class="sf-tab" data-scene="chill">まったり</button>
+      <button class="sf-tab" data-scene="emotional">感傷</button>
+      <button class="sf-tab" data-scene="comical">軽快</button>
+    </div>
+
+    <!-- 雰囲気タグ（補助） -->
+    <div class="filter-row filter-row-mood" id="moodFilter">
+      <span class="mf-label">雰囲気</span>
+      <button class="mf-tab mf-active" data-mood="all">指定なし</button>
+      <button class="mf-tab" data-mood="modern">現代・都市</button>
+      <button class="mf-tab" data-mood="fantasy">ファンタジー</button>
+      <button class="mf-tab" data-mood="wafu">和風</button>
+      <button class="mf-tab" data-mood="scifi">SF・サイバー</button>
+      <button class="mf-tab" data-mood="horror">ホラー</button>
+      <button class="mf-tab" data-mood="lofi">Lo-Fi・アコースティック</button>
     </div>
   </div>
 
@@ -125,8 +122,8 @@
         <h2 class="df-title" id="dfTitle">--</h2>
         <p class="df-desc" id="dfDesc">--</p>
         <div class="df-specs">
-          <div class="df-spec"><span class="dfs-k">テンポ</span><span class="dfs-v" id="dfBpm">--</span></div>
-          <div class="df-spec"><span class="dfs-k">キー</span><span class="dfs-v" id="dfKey">--</span></div>
+          <div class="df-spec"><span class="dfs-k">シーン</span><span class="dfs-v" id="dfScene">--</span></div>
+          <div class="df-spec"><span class="dfs-k">雰囲気</span><span class="dfs-v" id="dfMood">--</span></div>
           <div class="df-spec"><span class="dfs-k">再生時間</span><span class="dfs-v" id="dfTime">--</span></div>
         </div>
         <div class="df-tags" id="dfTags"></div>
@@ -222,7 +219,8 @@
   </div>
 </div>
 
-<script src="assets/js/tracks.js"></script>
+<script src="assets/js/collections.js"></script>
+<script src="assets/js/taxonomy.js"></script>
 <script src="assets/js/app.js"></script>
 </body>
 </html>

@@ -1,15 +1,26 @@
 // ============================================
-// SoundForge — P3R Faithful UI
+// SoundForge — シーン別タグ 横断ブラウズ UI
 // ============================================
 (function(){
   'use strict';
 
-  let currentScene='menu', focusIdx=-1, playIdx=-1, isPlaying=false, ws=null, activeGenre='all';
+  let currentScene='menu', focusIdx=-1, playIdx=-1, isPlaying=false, ws=null;
+  let activeScene='all', activeMood='all';
+
+  const TRACKS = (typeof UNIFIED_TRACKS !== 'undefined') ? UNIFIED_TRACKS.slice() : [];
+  // シーンタグ順 → コレクション順で安定ソート
+  const ORDER = {}; (typeof SCENE_TAGS!=='undefined'?SCENE_TAGS:[]).forEach((t,i)=>ORDER[t.key]=i);
+  TRACKS.sort((a,b)=>(ORDER[a.sceneTag]-ORDER[b.sceneTag])||a.collection.localeCompare(b.collection));
 
   const barList=document.getElementById('barList');
   const detailEmpty=document.getElementById('detailEmpty');
   const detailFilled=document.getElementById('detailFilled');
   const mp=document.getElementById('mp');
+
+  const sceneLabel=k=>(SCENE_TAG_MAP[k]?SCENE_TAG_MAP[k].label:k);
+  const sceneShort=k=>(SCENE_TAG_MAP[k]?SCENE_TAG_MAP[k].short:k);
+  const sceneIcon =k=>(SCENE_TAG_MAP[k]?SCENE_TAG_MAP[k].icon:'');
+  const moodLabel =k=>(MOOD_TAG_MAP[k]?MOOD_TAG_MAP[k].label:k);
 
   // ── シーン切替 ──
   function go(id){
@@ -20,7 +31,6 @@
       document.querySelectorAll('.sc').forEach(s=>s.classList.remove('active'));
       document.getElementById('sc-'+id).classList.add('active');
       currentScene=id;
-      // ブラウザ履歴に追加
       history.pushState({scene:id},'','#'+id);
       t.classList.remove('in');t.classList.add('out');
       setTimeout(()=>t.classList.remove('out'),400);
@@ -28,7 +38,6 @@
   }
   window.goScene=go;
 
-  // ── ブラウザ戻る/進む対応 ──
   window.addEventListener('popstate',e=>{
     const id=e.state?.scene||(location.hash?location.hash.slice(1):'menu');
     if(id===currentScene)return;
@@ -58,45 +67,39 @@
     ws.on('pause',()=>{isPlaying=false;syncUI()});
   }
 
-  const GENRE_JP={'jazz':'ジャズ','horror':'ホラー','rpg-battle':'バトル','rpg-town':'タウン','chillhop':'Lo-Fi','dungeon':'ダンジョン'};
-
-  function filt(){return TRACKS.filter(t=>activeGenre==='all'||t.genre===activeGenre)}
+  // ── フィルタ ──
+  function filt(){
+    return TRACKS.filter(t=>
+      (activeScene==='all'||t.sceneTag===activeScene) &&
+      (activeMood==='all'||t.moodTag===activeMood)
+    );
+  }
 
   // ── バーリスト描画 ──
   function render(){
     const list=filt();
-    const rc=list.filter(t=>t.status==='ready').length;
-    document.getElementById('browseCount').textContent=
-      '全'+list.length+'曲（'+rc+'曲公開中）';
-
+    document.getElementById('browseCount').textContent='全'+list.length+'曲';
     const hn=document.getElementById('heroCount');
     if(hn)hn.textContent=TRACKS.length;
 
-    barList.innerHTML=list.map((t,i)=>{
+    if(!list.length){
+      barList.innerHTML='<div class="bar-empty">該当する楽曲がありません</div>';
+      return;
+    }
+
+    barList.innerHTML=list.map(t=>{
       const gi=TRACKS.indexOf(t);
       const sel=gi===focusIdx;
-      const soon=t.status==='soon';
-      const gl=GENRE_JP[t.genre]||t.genre;
       return `
-        <div class="p3r-bar${sel?' bar-selected':''}${soon?' bar-soon':''}" data-gi="${gi}">
-          <div class="bar-label">${gl}</div>
-          <span class="bar-name">${t.title}${soon?'<span class="bar-soon-tag">準備中</span>':''}</span>
-          <span class="bar-meta">${fmt(t.duration)}</span>
+        <div class="p3r-bar${sel?' bar-selected':''}" data-gi="${gi}">
+          <div class="bar-label bar-label-${t.sceneTag}">${sceneIcon(t.sceneTag)} ${sceneShort(t.sceneTag)}</div>
+          <span class="bar-name">${t.title}<span class="bar-sub">${moodLabel(t.moodTag)}</span></span>
+          <span class="bar-meta">▶</span>
         </div>`;
     }).join('');
 
     barList.querySelectorAll('.p3r-bar').forEach(b=>{
-      b.addEventListener('click',()=>{
-        const gi=+b.dataset.gi;
-        if(TRACKS[gi].status==='soon'){
-          // 準備中の曲 → 一瞬揺れるフィードバック
-          b.style.animation='none';
-          b.offsetHeight; // reflow
-          b.style.animation='barShake .3s ease';
-          return;
-        }
-        focus(gi);
-      });
+      b.addEventListener('click',()=>focus(+b.dataset.gi));
     });
   }
 
@@ -107,33 +110,38 @@
     const list=filt();
     const di=list.indexOf(t);
 
-    // バーのフォーカス
     barList.querySelectorAll('.p3r-bar').forEach(b=>b.classList.remove('bar-selected'));
     const row=barList.querySelector(`.p3r-bar[data-gi="${gi}"]`);
     if(row){row.classList.add('bar-selected');row.scrollIntoView({block:'nearest',behavior:'smooth'})}
 
-    // 詳細
     detailEmpty.style.display='none';
     detailFilled.style.display='';
 
-    // 背景画像
     const dfImage=document.getElementById('dfImage');
     const dfImg=document.getElementById('dfImg');
-    if(t.image){dfImg.src=t.image;dfImage.style.display=''}
+    if(t.image){dfImg.src=t.image;dfImage.style.display='';dfImg.onerror=()=>{dfImage.style.display='none'}}
     else{dfImage.style.display='none';dfImg.src=''}
 
     document.getElementById('dfNum').textContent='#'+String(di+1).padStart(2,'0');
     document.getElementById('dfTitle').textContent=t.title;
-    document.getElementById('dfDesc').textContent=t.description;
-    document.getElementById('dfBpm').textContent=t.bpm;
-    document.getElementById('dfKey').textContent=t.key;
-    document.getElementById('dfTime').textContent=fmt(t.duration);
+    document.getElementById('dfDesc').textContent=t.desc;
+    document.getElementById('dfScene').textContent=sceneLabel(t.sceneTag);
+    document.getElementById('dfMood').textContent=moodLabel(t.moodTag);
+
+    // 再生時間はメタデータから取得
+    const timeEl=document.getElementById('dfTime');
+    timeEl.textContent='--';
+    const a=new Audio();a.preload='metadata';a.src=t.audio;
+    a.onloadedmetadata=()=>{if(isFinite(a.duration))timeEl.textContent=fmt(a.duration)};
+
     document.getElementById('dfTags').innerHTML=
-      `<span class="dtag">${t.genreLabel}</span><span class="dtag">${t.moodLabel}</span>`;
+      `<span class="dtag dtag-scene dtag-${t.sceneTag}">${sceneLabel(t.sceneTag)}</span>`+
+      `<span class="dtag">${moodLabel(t.moodTag)}</span>`+
+      (t.collectionTitle?`<span class="dtag dtag-col">${t.collectionTitle.split(/[\/｜]/)[0].trim()}</span>`:'');
 
     const dl=document.getElementById('dfDl');
-    dl.style.display=t.file_mp3?'':'none';
-    if(t.file_mp3){dl.href=t.file_mp3;dl.download=t.title+'.mp3'}
+    dl.style.display=t.audio?'':'none';
+    if(t.audio){dl.href=t.audio;dl.download=(t.titleEn||t.title)+'.mp3'}
 
     syncDetailBtn();
   }
@@ -141,21 +149,20 @@
   // ── 再生 ──
   function play(gi){
     const t=TRACKS[gi];
-    if(!t||t.status==='soon')return;
+    if(!t)return;
     if(playIdx===gi&&isPlaying){ws.pause();return}
     if(playIdx===gi&&!isPlaying){ws.play();return}
     playIdx=gi;
     document.getElementById('mpTitle').textContent=t.title;
     mp.classList.add('visible');
     document.getElementById('mpProg').style.width='0%';
-    // ミニプレイヤー表示時、各シーンの下部にパディング追加
     document.body.classList.add('mp-active');
-    ws.load(t.file_mp3);
+    ws.load(t.audio);
     ws.once('ready',()=>ws.play());
   }
 
   function adj(dir){
-    const p=filt().filter(t=>t.status==='ready');
+    const p=filt();
     if(!p.length)return;
     const c=p.findIndex(t=>TRACKS.indexOf(t)===playIdx);
     const n=(c+dir+p.length)%p.length;
@@ -181,33 +188,59 @@
 
   function fmt(s){const m=Math.floor(s/60);return m+':'+Math.floor(s%60).toString().padStart(2,'0')}
 
+  // メニューのシーンボタン → ブラウズをそのタグでフィルタ
+  function jumpToScene(sceneKey){
+    activeScene=sceneKey; activeMood='all';
+    focusIdx=-1;
+    detailEmpty.style.display='';detailFilled.style.display='none';
+    // タブUI同期
+    document.querySelectorAll('#sceneFilter .sf-tab').forEach(t=>t.classList.toggle('sf-active',t.dataset.scene===sceneKey));
+    document.querySelectorAll('#moodFilter .mf-tab').forEach(t=>t.classList.toggle('mf-active',t.dataset.mood==='all'));
+    render();
+    go('browse');
+  }
+
   // ── イベント ──
   function bind(){
-    // メニュー項目クリック
-    document.querySelectorAll('.menu-item').forEach(mi=>{
-      mi.addEventListener('click',()=>{
-        const target=mi.dataset.target;
+    // メニュー：シーンボタン（横断ブラウズへ）
+    document.querySelectorAll('.menu-item[data-scene]').forEach(mi=>{
+      mi.addEventListener('click',()=>jumpToScene(mi.dataset.scene));
+      mi.addEventListener('mouseenter',()=>{
         document.querySelectorAll('.menu-item').forEach(m=>m.classList.remove('mi-active'));
         mi.classList.add('mi-active');
-        go(target.replace('sc-',''));
       });
+    });
+    // メニュー：シーン切替ボタン（案内など）
+    document.querySelectorAll('.menu-item[data-target]').forEach(mi=>{
+      mi.addEventListener('click',()=>go(mi.dataset.target.replace('sc-','')));
       mi.addEventListener('mouseenter',()=>{
         document.querySelectorAll('.menu-item').forEach(m=>m.classList.remove('mi-active'));
         mi.classList.add('mi-active');
       });
     });
 
-    // シーン内ナビリンク（楽曲↔案内の相互移動）
+    // シーン内ナビリンク
     document.querySelectorAll('.nav-link[data-nav]').forEach(link=>{
       link.addEventListener('click',()=>go(link.dataset.nav));
     });
 
-    // ジャンルタブ
-    document.querySelectorAll('#genreFilter .genre-tab').forEach(tab=>{
+    // シーン別タグ
+    document.querySelectorAll('#sceneFilter .sf-tab').forEach(tab=>{
       tab.addEventListener('click',()=>{
-        document.querySelectorAll('#genreFilter .genre-tab').forEach(t=>t.classList.remove('gt-active'));
-        tab.classList.add('gt-active');
-        activeGenre=tab.dataset.genre;
+        document.querySelectorAll('#sceneFilter .sf-tab').forEach(t=>t.classList.remove('sf-active'));
+        tab.classList.add('sf-active');
+        activeScene=tab.dataset.scene;
+        focusIdx=-1;
+        detailEmpty.style.display='';detailFilled.style.display='none';
+        render();
+      });
+    });
+    // 雰囲気タグ
+    document.querySelectorAll('#moodFilter .mf-tab').forEach(tab=>{
+      tab.addEventListener('click',()=>{
+        document.querySelectorAll('#moodFilter .mf-tab').forEach(t=>t.classList.remove('mf-active'));
+        tab.classList.add('mf-active');
+        activeMood=tab.dataset.mood;
         focusIdx=-1;
         detailEmpty.style.display='';detailFilled.style.display='none';
         render();
@@ -215,16 +248,12 @@
     });
 
     // 詳細の再生
-    document.getElementById('dfPlay').addEventListener('click',()=>{
-      if(focusIdx>=0)play(focusIdx);
-    });
+    document.getElementById('dfPlay').addEventListener('click',()=>{if(focusIdx>=0)play(focusIdx)});
 
     // ミニプレイヤー
     document.getElementById('mpPlay').addEventListener('click',()=>{if(playIdx>=0)ws.playPause()});
     document.getElementById('mpPrev').addEventListener('click',()=>adj(-1));
     document.getElementById('mpNext').addEventListener('click',()=>adj(1));
-
-    // ミニプレイヤーの曲名クリック → 楽曲一覧でフォーカス
     document.getElementById('mpTitle').addEventListener('click',()=>{
       if(playIdx>=0){
         if(currentScene!=='browse')go('browse');
@@ -234,11 +263,8 @@
 
     // キーボード
     document.addEventListener('keydown',e=>{
-      // Escapeはどのシーンでもメニューに戻る
       if(e.key==='Escape'&&currentScene!=='menu'){e.preventDefault();go('menu');return}
-
       if(currentScene==='menu'){
-        // メニューでのキーボード操作
         const items=[...document.querySelectorAll('.menu-item')];
         const ci=items.findIndex(m=>m.classList.contains('mi-active'));
         if(e.key==='ArrowDown'||e.key==='ArrowUp'){
@@ -247,16 +273,11 @@
           items.forEach(m=>m.classList.remove('mi-active'));
           items[ni].classList.add('mi-active');
         }
-        if(e.key==='Enter'){
-          e.preventDefault();
-          const active=items.find(m=>m.classList.contains('mi-active'));
-          if(active)active.click();
-        }
+        if(e.key==='Enter'){e.preventDefault();const a=items.find(m=>m.classList.contains('mi-active'));if(a)a.click()}
         return;
       }
-
       if(currentScene!=='browse')return;
-      const list=filt().filter(t=>t.status==='ready');
+      const list=filt();
       if(!list.length)return;
       if(e.key==='ArrowDown'||e.key==='ArrowUp'){
         e.preventDefault();
@@ -272,8 +293,6 @@
 
   function init(){
     initWS();render();bind();
-
-    // URL ハッシュから初期シーン復元
     const hash=location.hash.slice(1);
     if(hash&&document.getElementById('sc-'+hash)){
       document.querySelectorAll('.sc').forEach(s=>s.classList.remove('active'));
@@ -281,8 +300,6 @@
       currentScene=hash;
     }
     history.replaceState({scene:currentScene},'','#'+currentScene);
-
-    // エントリートランジション
     const t=document.getElementById('trans');
     t.classList.add('in');
     setTimeout(()=>{t.classList.remove('in');t.classList.add('out');

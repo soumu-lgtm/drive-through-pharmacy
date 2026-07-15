@@ -616,8 +616,81 @@ a{text-decoration:none;color:inherit}
 .mp-title{cursor:pointer}
 .mp-title:hover{color:var(--cyan)}
 
+/* ══════════════════════════════════
+   シーン別タグ リニューアル 追加分
+   ══════════════════════════════════ */
+
+/* ── メニュー階層 ── */
+.menu-item.mi-scene{display:flex;align-items:baseline;gap:10px}
+.mi-scene .mi-text{font-size:clamp(24px,2.9vw,40px);letter-spacing:3px}
+.mi-icon{
+  font-size:clamp(15px,1.7vw,21px);color:var(--cyan);
+  transform:skewX(var(--skew));text-shadow:0 0 12px rgba(77,232,244,.3);
+  transition:all .3s;display:inline-block;
+}
+.menu-item.mi-active .mi-icon{color:var(--red)}
+.menu-item:hover .mi-icon{color:#fff}
+.mi-strong .mi-text{
+  font-size:clamp(17px,1.9vw,25px);letter-spacing:2px;color:var(--w);
+  border-bottom:2px solid var(--cyan);padding-bottom:3px;
+}
+.mi-strong.mi-active .mi-text{border-color:var(--red)}
+.mi-sub .mi-text{font-size:clamp(18px,2.1vw,29px);letter-spacing:3px}
+.mi-ghost .mi-text{font-size:clamp(14px,1.5vw,19px);letter-spacing:2px;color:var(--w30)}
+
+/* ── ブラウズ見出し（タイトル＋2段フィルタ） ── */
+.browse-head{
+  flex-direction:column;align-items:flex-start;gap:8px;top:14px;
+}
+.browse-main{top:104px}
+.filter-row{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.sf-tab,.mf-tab{
+  padding:5px 13px;font-size:11px;font-weight:800;letter-spacing:1px;
+  color:var(--w30);background:var(--w04);
+  clip-path:polygon(0 0,100% 0,calc(100% - 6px) 100%,0 100%);
+  transition:all .22s;
+}
+.sf-tab:hover,.mf-tab:hover{color:var(--w);background:var(--w08)}
+.sf-tab.sf-active{color:var(--bg);background:var(--cyan);box-shadow:0 0 12px rgba(77,232,244,.25)}
+/* 戦闘グループ枠 */
+.sf-group{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:2px 8px 2px 7px;background:rgba(232,35,42,.06);
+  border:1px solid rgba(232,35,42,.20);
+}
+.sf-group-label{font-size:10px;font-weight:900;letter-spacing:1px;color:var(--red2);margin-right:1px}
+.sf-tab.sf-battle{background:rgba(232,35,42,.10);color:#ffb0b4}
+.sf-tab.sf-battle:hover{background:rgba(232,35,42,.22);color:#fff}
+.sf-tab.sf-battle.sf-active{color:#fff;background:var(--red);box-shadow:0 0 12px rgba(232,35,42,.35)}
+/* 雰囲気フィルタ */
+.filter-row-mood{gap:4px}
+.mf-label{font-size:10px;font-weight:900;letter-spacing:1px;color:var(--w30);margin-right:2px}
+.mf-tab{font-size:10px;padding:4px 11px}
+.mf-tab.mf-active{color:var(--bg);background:var(--cyan3);box-shadow:0 0 10px rgba(160,248,255,.2)}
+
+/* ── バーの左ラベル：シーンタグ色分け ── */
+.bar-label{width:82px;letter-spacing:0;gap:3px;font-size:10px}
+.bar-label-normal_battle{background:#e8232a;color:#fff}
+.bar-label-boss_battle{background:#9c1019;color:#fff}
+.bar-label-climax{background:#f0a81e;color:#241400}
+.bar-label-tension{background:#ff7a2e;color:#241000}
+.bar-label-explore{background:#8f6ad8;color:#fff}
+.bar-label-daily{background:#4de8f4;color:var(--bg)}
+.bar-label-chill{background:#3fd6a0;color:#052018}
+.bar-label-emotional{background:#5b8bff;color:#fff}
+.bar-label-comical{background:#ff7ab0;color:#2a0016}
+.bar-sub{font-size:10px;color:var(--w15);font-weight:600;margin-left:10px;letter-spacing:.5px}
+.bar-empty{padding:44px 24px;color:var(--w15);font-size:13px;font-weight:700}
+
+/* ── 詳細タグ ── */
+.df-tags .dtag.dtag-scene{
+  background:rgba(77,232,244,.12);border-color:rgba(77,232,244,.35);color:var(--cyan3);
+}
+.df-tags .dtag.dtag-col{color:var(--w15)}
+
 /* ══════════ レスポンシブ ══════════ */
 @media(max-width:900px){
+  .browse-main{top:132px}
   .browse-main{flex-direction:column}
   .bar-list{width:100%;max-width:none;max-height:50%}
   .detail-area{padding:12px 16px}
