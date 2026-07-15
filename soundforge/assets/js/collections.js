@@ -1442,5 +1442,151 @@ const COLLECTIONS = {
         "status": "ready"
       }
     ]
+  },
+  "modern_ability": {
+    "id": "modern_ability",
+    "title": "現代異能・都市 BGM",
+    "titleEn": "Modern Ability / Urban BGM",
+    "description": "現代を舞台にした能力バトル・都市ドラマ向け。戦闘/緊迫/日常/感傷を横断",
+    "audio_folder": "modern_ability",
+    "scenes": [
+      {
+        "id": "ma_awakening_hour",
+        "name": "覚醒の刻",
+        "nameEn": "Awakening Hour",
+        "desc": "力に目覚める瞬間。現代異能バトルの幕開け",
+        "bgmStyle": "シネマティック・ハイブリッド / 高揚",
+        "audio_folder": "modern_ability",
+        "audio_v1": "awakening_hour_v1.mp3",
+        "status": "ready",
+        "audio_v2": "awakening_hour_v2.mp3"
+      },
+      {
+        "id": "ma_crossfire",
+        "name": "交差する銃火",
+        "nameEn": "Crossfire",
+        "desc": "銃火と異能が交差する市街戦。疾走する戦闘",
+        "bgmStyle": "ハイブリッドオーケストラ / アクション",
+        "audio_folder": "modern_ability",
+        "audio_v1": "crossfire_v1.mp3",
+        "status": "ready",
+        "audio_v2": "crossfire_v2.mp3"
+      },
+      {
+        "id": "ma_shadow_of_the_abyss",
+        "name": "深淵の巨影",
+        "nameEn": "Shadow of the Abyss",
+        "desc": "圧倒的な脅威との対峙。重く禍々しいボス戦",
+        "bgmStyle": "ダークオーケストラ / 重低音・コーラス",
+        "audio_folder": "modern_ability",
+        "audio_v1": "shadow_of_the_abyss_v1.mp3",
+        "status": "ready",
+        "audio_v2": "shadow_of_the_abyss_v2.mp3"
+      },
+      {
+        "id": "ma_the_turning_point",
+        "name": "世界の分水嶺",
+        "nameEn": "The Turning Point",
+        "desc": "全てを賭けた最終決戦。壮大なクライマックス",
+        "bgmStyle": "フルオーケストラ / エピック",
+        "audio_folder": "modern_ability",
+        "audio_v1": "the_turning_point_v1.mp3",
+        "status": "ready",
+        "audio_v2": "the_turning_point_v2.mp3"
+      },
+      {
+        "id": "ma_creeping_presence",
+        "name": "忍び寄る気配",
+        "nameEn": "Creeping Presence",
+        "desc": "夜の街に潜む不穏。調査と探索の緊張",
+        "bgmStyle": "ダークアンビエント / 不穏",
+        "audio_folder": "modern_ability",
+        "audio_v1": "creeping_presence_v1.mp3",
+        "status": "ready",
+        "audio_v2": "creeping_presence_v2.mp3"
+      },
+      {
+        "id": "ma_midnight_pursuit",
+        "name": "深夜の追跡",
+        "nameEn": "Midnight Pursuit",
+        "desc": "ネオンの高速道路を駆ける追跡劇",
+        "bgmStyle": "ダークシンセ / 追跡",
+        "audio_folder": "modern_ability",
+        "audio_v1": "midnight_pursuit_v1.mp3",
+        "status": "ready",
+        "audio_v2": "midnight_pursuit_v2.mp3"
+      },
+      {
+        "id": "ma_secret_pact",
+        "name": "密約",
+        "nameEn": "Secret Pact",
+        "desc": "薄暗い一室での取引。ノワールな駆け引き",
+        "bgmStyle": "ジャズノワール / サスペンス",
+        "audio_folder": "modern_ability",
+        "audio_v1": "secret_pact_v1.mp3",
+        "status": "ready",
+        "audio_v2": "secret_pact_v2.mp3"
+      },
+      {
+        "id": "ma_afternoon_classroom",
+        "name": "昼下がりの教室",
+        "nameEn": "Afternoon Classroom",
+        "desc": "穏やかな学園の午後。日常のひととき",
+        "bgmStyle": "アコースティック / Lo-Fi",
+        "audio_folder": "modern_ability",
+        "audio_v1": "afternoon_classroom_v1.mp3",
+        "status": "ready",
+        "audio_v2": "afternoon_classroom_v2.mp3"
+      },
+      {
+        "id": "ma_neon_way_home",
+        "name": "ネオンの帰り道",
+        "nameEn": "Neon Way Home",
+        "desc": "雨のネオン街を歩く帰り道。まったりチル",
+        "bgmStyle": "シティポップ Lo-Fi / チル",
+        "audio_folder": "modern_ability",
+        "audio_v1": "neon_way_home_v1.mp3",
+        "status": "ready",
+        "audio_v2": "neon_way_home_v2.mp3"
+      },
+      {
+        "id": "ma_the_briefing",
+        "name": "作戦会議",
+        "nameEn": "The Briefing",
+        "desc": "静かに張り詰めた作戦会議。クールな緊張",
+        "bgmStyle": "ミニマル / 緊張感",
+        "audio_folder": "modern_ability",
+        "audio_v1": "the_briefing_v1.mp3",
+        "status": "ready",
+        "audio_v2": "the_briefing_v2.mp3"
+      },
+      {
+        "id": "ma_quiet_resolve",
+        "name": "静かな決意",
+        "nameEn": "Quiet Resolve",
+        "desc": "嵐の前の静かな決意。ピアノが奏でる覚悟",
+        "bgmStyle": "ソロピアノ / 感傷",
+        "audio_folder": "modern_ability",
+        "audio_v1": "quiet_resolve_v1.mp3",
+        "status": "ready",
+        "audio_v2": "quiet_resolve_v2.mp3"
+      },
+      {
+        "id": "ma_what_was_lost",
+        "name": "失ったもの",
+        "nameEn": "What Was Lost",
+        "desc": "喪失と記憶。哀しみに満ちたシリアス",
+        "bgmStyle": "メランコリック / ピアノ",
+        "audio_folder": "modern_ability",
+        "audio_v1": "what_was_lost_v1.mp3",
+        "status": "ready",
+        "audio_v2": "what_was_lost_v2.mp3"
+      }
+    ],
+    "stats": {
+      "total": 12,
+      "bgm": 12,
+      "ready": 12
+    }
   }
 };
