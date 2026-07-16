@@ -6,6 +6,8 @@
 
 // 薬品在庫管理アプリ本番GAS（portalの「薬品在庫管理」= getStockで121件・thresholdあり）
 const INV_GAS_URL = 'https://script.google.com/macros/s/AKfycbzK2lx3UDMxKoOdVJy53HpVSyHhMmJaVaf4Cjh90JUALwLj5aQk8_fN2ncYzVlqPZ-mCg/exec';
+// 在庫管理GASのAPI_TOKEN（トークン必須化済み。未送信だと unauthorized で院内薬が空になる）
+const INV_GAS_TOKEN = 'dtp_f929bbd860e2e96224ded613cd06177e';
 
 let invStockList = [];     // [{code,name,currentStock,unit,threshold}]
 let invStockMap = {};      // 正規化名 → entry
@@ -28,7 +30,7 @@ async function loadInventoryStock() {
   invStockLoading = true;
   invStockError = null;
   try {
-    const res = await fetch(INV_GAS_URL + '?action=getStock');
+    const res = await fetch(INV_GAS_URL + '?action=getStock&token=' + encodeURIComponent(INV_GAS_TOKEN));
     const data = await res.json();
     if (!data || !data.success || !Array.isArray(data.stock)) {
       throw new Error((data && data.error) || 'getStock応答が不正');

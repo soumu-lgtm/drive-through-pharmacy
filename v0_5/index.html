@@ -1642,6 +1642,8 @@
     <script>
         // ===== GAS連携設定 =====
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbzK2lx3UDMxKoOdVJy53HpVSyHhMmJaVaf4Cjh90JUALwLj5aQk8_fN2ncYzVlqPZ-mCg/exec';
+        // GAS側 Code.gs の API_TOKEN と同じ値（無差別CSRF/drive-by遮断用・トークン必須化済み）
+        const GAS_TOKEN = 'dtp_f929bbd860e2e96224ded613cd06177e';
         const USE_GAS = true;
 
         // ===== GAS API関数 =====
@@ -1650,6 +1652,7 @@
             try {
                 const url = new URL(GAS_URL);
                 url.searchParams.append('action', action);
+                url.searchParams.append('token', GAS_TOKEN);
                 Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, String(v)));
                 // キャッシュ防止（ブラウザが同一URLのGETをキャッシュして2件目を送信しない問題の対策）
                 url.searchParams.append('_t', Date.now() + '_' + Math.random().toString(36).slice(2));
@@ -1670,7 +1673,7 @@
                 const res = await fetch(GAS_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({ action, ...data }),
+                    body: JSON.stringify({ action, token: GAS_TOKEN, ...data }),
                     redirect: 'manual'
                 });
                 // res.type === 'opaqueredirect', status === 0 が正常
