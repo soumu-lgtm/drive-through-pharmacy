@@ -1343,11 +1343,7 @@ function openInsuranceModal() {
   document.getElementById('insSymbol').value = p.insSymbol || '';
   document.getElementById('insNumber').value = p.insNumber || '';
   document.getElementById('insEdaban').value = p.insEdaban || '';
-  document.getElementById('recipientNumber').value = p.recipientNumber || '';
-  document.getElementById('recipientEdaban').value = p.recipientEdaban || '';
   document.getElementById('insurerNumberInput').value = p.insurerNumber || '';
-  document.getElementById('kouhiNumberInput').value = p.kouhiNumber || '';
-  document.getElementById('kouhiEdaban').value = p.kouhiEdaban || '';
   document.getElementById('incomeLevelSelect').value = p.incomeLevel || 'ippan';
   document.getElementById('insuranceRatio').value = String(p.ratio);
   if (p.insurance.includes('社保')) document.getElementById('insuranceType').value = '社保';
@@ -1364,7 +1360,6 @@ function openInsuranceModal() {
   document.getElementById('iryoType').value = p.iryoType || '';
   document.getElementById('iryoHobetsu').value = p.iryoHobetsu || '';
   document.getElementById('iryoRecipientNumber').value = p.iryoRecipientNumber || '';
-  document.getElementById('iryoRecipientEdaban').value = p.iryoRecipientEdaban || '';
   document.getElementById('iryoValidFrom').value = p.iryoValidFrom || '';
   document.getElementById('iryoValidTo').value = p.iryoValidTo || '';
   document.getElementById('iryoMemo').value = p.iryoMemo || '';
@@ -1391,7 +1386,8 @@ function runInsuranceCalc() {
   const p = patients.find(x => x.id === currentPatientId);
   if (!p) return;
   const insurerNum = document.getElementById('insurerNumberInput').value;
-  const kouhiNum = document.getElementById('kouhiNumberInput').value || undefined;
+  const kouhiEl = document.getElementById('kouhiNumberInput');
+  const kouhiNum = (kouhiEl && kouhiEl.value) ? kouhiEl.value : undefined;
   const incomeLevel = document.getElementById('incomeLevelSelect').value;
 
   if (!insurerNum.replace(/[^0-9]/g, '')) {
@@ -1426,11 +1422,7 @@ function saveInsuranceInfo() {
   p.insEdaban = document.getElementById('insEdaban').value;
   // 後方互換: insuranceNumberも生成
   p.insuranceNumber = buildInsuranceNumberStr({ symbol: p.insSymbol, memberNumber: p.insNumber, edaban: p.insEdaban });
-  p.recipientNumber = document.getElementById('recipientNumber').value;
-  p.recipientEdaban = document.getElementById('recipientEdaban').value;
   p.insurerNumber = document.getElementById('insurerNumberInput').value;
-  p.kouhiNumber = document.getElementById('kouhiNumberInput').value;
-  p.kouhiEdaban = document.getElementById('kouhiEdaban').value;
   p.incomeLevel = document.getElementById('incomeLevelSelect').value;
   const type = document.getElementById('insuranceType').value;
   const ratio = parseFloat(document.getElementById('insuranceRatio').value);
@@ -1441,7 +1433,6 @@ function saveInsuranceInfo() {
   p.iryoType = document.getElementById('iryoType').value;
   p.iryoHobetsu = document.getElementById('iryoHobetsu').value;
   p.iryoRecipientNumber = document.getElementById('iryoRecipientNumber').value;
-  p.iryoRecipientEdaban = document.getElementById('iryoRecipientEdaban').value;
   p.iryoValidFrom = document.getElementById('iryoValidFrom').value;
   p.iryoValidTo = document.getElementById('iryoValidTo').value;
   p.iryoMemo = document.getElementById('iryoMemo').value;
