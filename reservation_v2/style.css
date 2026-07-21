@@ -154,6 +154,8 @@ table.confirm th { width:32%; }
 .badge.first { background:var(--warn-light); color:var(--warn); }
 .badge.web { background:#e0e7ff; color:#4338ca; }
 .badge.phone { background:#dcfce7; color:#15803d; }
+.badge.visited { background:#dcfce7; color:#15803d; }
+.badge.no-show { background:#e5e7eb; color:#6b7280; }
 
 /* ---- アラート ---- */
 .alert { background:var(--red-light); border:1px solid var(--red); color:var(--red); border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:14px; }
