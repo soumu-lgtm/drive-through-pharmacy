@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>受付ライブボード｜予約統括システム</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="admin-header">
+  <div class="admin-header-top">
+    <span class="brand">予約統括システム 受付ボード <small>佐川案の同期 × 西村案のUI</small></span>
+    <span style="display:flex;gap:14px;align-items:center">
+      <span class="latency" id="latency">同期待機中…</span>
+      <a class="to-patient" href="index.html" target="_blank">患者向けサイトを開く ↗</a>
+    </span>
+  </div>
+  <nav class="admin-tabs">
+    <span class="tab">予約一覧</span>
+    <span class="tab active">日別ボード</span>
+    <span class="tab">電話予約の代理入力</span>
+    <span class="tab">予約枠の管理</span>
+    <span class="tab">美容メニュー</span>
+    <span class="tab">スタッフ</span>
+    <span class="tab">CSV取り込み</span>
+  </nav>
+</header>
+<main>
+  <div class="board-toolbar">
+    <button class="secondary small" onclick="shift(-1)">‹ 前日</button>
+    <input type="date" id="dateInput" onchange="setDate(this.value)">
+    <button class="secondary small" onclick="shift(1)">翌日 ›</button>
+    <span class="day" id="dayLabel"></span>
+    <span style="margin-left:auto"><button class="small" onclick="resetDemo()">デモ初期化</button></span>
+  </div>
+  <div class="stat-row" id="stats"></div>
+  <div id="board"></div>
+</main>
+
+<script>window.__RSV_SUPABASE__ = true;</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="store.js"></script>
+<script>
+/* 受付ライブボード：患者予約が入った瞬間に行が増え、黄色くフラッシュする（佐川案の同期） */
+let curDate = Store.todayStr();
+let prevCodes = new Set();
+
+function setDate(d){ curDate = d; render(); }
+function shift(n){ curDate = Store.addDays(curDate, n); render(); }
+
+function render(flashCodes){
+  document.getElementById("dateInput").value = curDate;
+  document.getElementById("dayLabel").textContent = Store.fmtJa(curDate);
+  const rows = Store.dayReservations(curDate);
+
+  // クリニック単位でグルーピング
+  const byClinic = {};
+  rows.forEach(r=>{
+    const c = Store.clinicOfCs(r.csId);
+    (byClinic[c.name] = byClinic[c.name] || []).push(r);
+  });
+
+  const total = rows.length;
+  const firstVisit = rows.filter(r=>r.visitType==="FIRST").length;
+  const web = rows.filter(r=>r.channel==="WEB").length;
+  document.getElementById("stats").innerHTML = `
+    <div class="stat"><div class="num">${total}</div><div class="label">本日の予約</div></div>
+    <div class="stat"><div class="num warn">${firstVisit}</div><div class="label">初診</div></div>
+    <div class="stat"><div class="num">${web}</div><div class="label">Web予約</div></div>
+    <div class="stat"><div class="num">${total-web}</div><div class="label">電話/その他</div></div>`;
+
+  if(total===0){ document.getElementById("board").innerHTML = '<div class="card">この日の予約はありません。患者向けサイトから予約すると、ここに即時反映されます。</div>'; return; }
+
+  document.getElementById("board").innerHTML = Object.entries(byClinic).map(([name, list])=>{
+    const trs = list.map(r=>{
+      const svc = Store.serviceOfCs(r.csId);
+      const menu = r.menuId ? Store.menuById(r.menuId) : null;
+      const isNew = flashCodes && flashCodes.has(r.code);
+      return `<tr class="${isNew?"flash-new":""}">
+        <td style="font-weight:700">${r.time}</td>
+        <td>${esc(svc.name)}${menu?`<div class="muted" style="font-size:12px">${esc(menu.name)}</div>`:""}</td>
+        <td>${esc(r.name)} 様${r.visitType==="FIRST"?'<span class="badge first" style="margin-left:4px">初診</span>':""}${isNew?'<span class="new-tag">NEW</span>':""}</td>
+        <td>${r.channel==="WEB"?'<span class="badge web">Web</span>':'<span class="badge phone">電話</span>'}</td>
+        <td><span class="muted" style="font-size:12px">${esc(r.phone)}</span></td>
+        <td><button class="small secondary" onclick="markVisited('${esc(r.code)}')">来院</button> <button class="small danger" onclick="cancel('${esc(r.code)}')">取消</button></td>
+      </tr>`;
+    }).join("");
+    return `<div class="card">
+      <h2 style="margin-top:0">${esc(name)}クリニック（${list.length}件）</h2>
+      <table><thead><tr><th style="width:64px">時刻</th><th>内容</th><th>患者</th><th style="width:60px">経路</th><th>電話</th><th style="width:130px">操作</th></tr></thead>
+      <tbody>${trs}</tbody></table>
+    </div>`;
+  }).join("");
+}
+
+function esc(s){ return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+async function markVisited(code){ await Store.updateStatus(code, "VISITED"); prevCodes=currentCodes(); render(); }  // 本日確定分から外れる
+async function cancel(code){ if(!confirm("この予約を取り消しますか？")) return; await Store.updateStatus(code, "CANCELLED"); prevCodes=currentCodes(); render(); }
+async function resetDemo(){ await Store.resetDemo(); prevCodes=currentCodes(); render(); }
+
+/* 同期受信：新規予約コードを検出してフラッシュ＋レイテンシ表示 */
+function currentCodes(){ return new Set(Store.dayReservations(curDate).map(r=>r.code)); }
+
+Store.onSync((msg)=>{
+  const now = currentCodes();
+  const flash = new Set([...now].filter(c=>!prevCodes.has(c)));
+  prevCodes = now;
+  if(msg && msg.at && msg.type==="reservation"){
+    const ms = (msg.latency!=null) ? msg.latency : (Date.now() - msg.at);
+    document.getElementById("latency").innerHTML = `⚡ 最終同期 <b>${ms}ms</b>（サブ秒）`;
+  }
+  render(flash);
+});
+
+// バックエンド確定後に初期描画（Supabaseの既存予約を反映）
+render();
+Store.ready.then(()=>{
+  prevCodes = currentCodes();
+  const b = Store.getBackend();
+  const brand = document.querySelector(".admin-header .brand small");
+  if(brand) brand.textContent = b==="supabase" ? "佐川案の同期(Supabase) × 西村案のUI" : "佐川案の同期(ローカル) × 西村案のUI";
+  render();
+});
+</script>
+</body>
+</html>

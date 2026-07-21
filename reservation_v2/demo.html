@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>リアルタイム同期デモ｜プロトタイプ2（佐川案×西村案）</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="demo-head">
+  <h1>プロトタイプ2 リアルタイム同期デモ</h1>
+  <span class="desc">左（患者）で予約すると、右（受付ボード）に<strong style="color:#4ade80">サブ秒で反映</strong>されます。佐川案の同期エンジン × 西村案のUI/画面遷移。</span>
+</div>
+<div class="demo-grid">
+  <div class="demo-pane">
+    <div class="demo-label"><span class="tag patient">患者</span> 予約サイト（index.html）</div>
+    <iframe src="index.html" title="患者向け"></iframe>
+  </div>
+  <div class="demo-pane">
+    <div class="demo-label"><span class="tag admin">受付</span> ライブボード（board.html）</div>
+    <iframe src="board.html" title="受付ボード"></iframe>
+  </div>
+</div>
+<!-- BroadcastChannel は同一オリジンのiframe間で共有されるため、親の中継なしで各iframeが独立に同期を受信する。
+     （本番では各画面が独立に Supabase Realtime を購読する構成に対応） -->
+</body>
+</html>
