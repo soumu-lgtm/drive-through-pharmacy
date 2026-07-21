@@ -209,9 +209,9 @@ function renderWeekPicker(clinic, svc, menu){
       <div><strong>${esc(menu.name)}</strong><div class="muted">所要 約${menu.durationMin}分 ・ ${menu.firstVisitPrice!=null?`初回 ¥${menu.firstVisitPrice.toLocaleString()}`:menu.price?`¥${menu.price.toLocaleString()}〜`:"要問合せ"}</div></div>
     </div>
     <div class="week-nav">
-      <button class="secondary" ${weekOffset===0?"disabled":""} onclick="weekOffset--;render()">‹ 前の週</button>
+      <button class="secondary" ${weekOffset===0?"disabled":""} onclick="weekPrev()">‹ 前の週</button>
       <span class="muted">${week[0].label.replace(/\(.*/,"")} 〜 ${week[week.length-1].label.replace(/\(.*/,"")}</span>
-      <button class="secondary" ${weekOffset>=totalWeeks-1?"disabled":""} onclick="weekOffset++;render()">次の週 ›</button>
+      <button class="secondary" ${weekOffset>=totalWeeks-1?"disabled":""} onclick="weekNext()">次の週 ›</button>
     </div>
     <div class="week-strip">${cells}</div>
     <h2>${selDay?selDay.label:""} の時間</h2>
@@ -278,8 +278,8 @@ function renderForm(){
           <label class="field">メールアドレス<input id="f_email" type="email" value="${esc(form.email)}" placeholder="例）hanako@example.com"></label>
           <div class="field">当院のご利用<span class="req">必須</span>
             <div class="radio-row">
-              <label><input type="radio" name="vt" ${form.visitType==="FIRST"?"checked":""} onclick="form.visitType='FIRST'">初めて（初診）</label>
-              <label><input type="radio" name="vt" ${form.visitType==="REVISIT"?"checked":""} onclick="form.visitType='REVISIT'">2回目以降（再診）</label>
+              <label><input type="radio" name="vt" value="FIRST" ${form.visitType==="FIRST"?"checked":""}>初めて（初診）</label>
+              <label><input type="radio" name="vt" value="REVISIT" ${form.visitType==="REVISIT"?"checked":""}>2回目以降（再診）</label>
             </div>
           </div>
           <label class="field">ご相談内容・気になること（任意）<textarea id="f_note" rows="3">${esc(form.note)}</textarea></label>
@@ -287,14 +287,14 @@ function renderForm(){
             <strong style="font-size:14px">同意書のご確認<span class="req">必須</span></strong>
             <p style="font-size:13px;margin:6px 0">施術・診療に関する同意書を必ずご確認ください。</p>
             <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-              <button type="button" class="secondary" onclick="consentOpen=true;renderForm()">同意書を確認する</button>
+              <button type="button" class="secondary" onclick="openConsent()">同意書を確認する</button>
               ${form.consent?'<span class="rel-added">✓ 同意済み</span>':""}
             </div>
           </div>
           <div class="policy-box">
             <strong style="font-size:14px">ご予約にあたっての注意事項</strong>
             <p style="font-size:13px;margin:6px 0">ご予約の変更・キャンセルは前日までにお願いいたします。当日・無断キャンセルが続いた場合、以降のご予約をお受けできないことがあります。</p>
-            <label style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600"><input type="checkbox" ${form.agree?"checked":""} onclick="form.agree=this.checked">注意事項に同意します</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600"><input type="checkbox" id="f_agree" ${form.agree?"checked":""}>注意事項に同意します</label>
           </div>
         </div>
         <div class="cta-bar"><button onclick="goConfirm()">入力内容を確認する</button></div>
@@ -319,14 +319,14 @@ function renderForm(){
         </tbody></table>
         <div class="cta-bar">
           <button onclick="submitReservation()">この内容で予約を確定する</button>
-          <button class="secondary" onclick="formStep='input';renderForm()">入力内容を修正する</button>
+          <button class="secondary" onclick="editInput()">入力内容を修正する</button>
         </div>
       </div>`;
   }
 }
 
 function consentModal(){
-  return `<div class="modal-overlay" onclick="if(event.target===this){consentOpen=false;renderForm()}">
+  return `<div class="modal-overlay" onclick="if(event.target===this)closeConsent()">
     <div class="modal-box">
       <h2 style="margin-top:0">施術・診療に関する同意書</h2>
       <div class="modal-body">
@@ -336,8 +336,8 @@ function consentModal(){
         <h4>4. 個人情報の取り扱い</h4><p>ご入力いただいた個人情報は診療・予約管理・ご連絡の目的にのみ使用します。</p>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
-        <button onclick="form.consent=true;consentOpen=false;renderForm()">内容を確認し、同意します</button>
-        <button class="secondary" onclick="consentOpen=false;renderForm()">閉じる</button>
+        <button onclick="confirmConsent()">内容を確認し、同意します</button>
+        <button class="secondary" onclick="closeConsent()">閉じる</button>
       </div>
     </div></div>`;
 }
@@ -349,7 +349,20 @@ function readForm(){
   form.phone = (document.getElementById("f_phone")||{}).value ?? form.phone;
   form.email = (document.getElementById("f_email")||{}).value ?? form.email;
   form.note = (document.getElementById("f_note")||{}).value ?? form.note;
+  // ラジオ（初診/再診）・チェック（注意事項同意）はDOMから読む（インラインで変数へ代入しない）
+  const vt = document.querySelector('input[name="vt"]:checked');
+  if (vt) form.visitType = vt.value;
+  const ag = document.getElementById("f_agree");
+  if (ag) form.agree = ag.checked;
 }
+// 同意書モーダル・週送りの状態操作（インラインハンドラから変数へ直接代入すると
+// input要素の form プロパティ等に化けて壊れるため、必ずグローバル関数経由にする）
+function openConsent(){ readForm(); consentOpen = true; renderForm(); }
+function closeConsent(){ consentOpen = false; renderForm(); }
+function confirmConsent(){ form.consent = true; consentOpen = false; renderForm(); }
+function weekPrev(){ if(weekOffset>0){ weekOffset--; render(); } }
+function weekNext(){ weekOffset++; render(); }
+function editInput(){ formStep = "input"; renderForm(); }
 function err(msg){ document.getElementById("formErr").innerHTML = `<div class="alert">${esc(msg)}</div>`; }
 
 function goConfirm(){
