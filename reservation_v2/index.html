@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>クリニックご予約サイト｜佐川案 プロトタイプ2</title>
+<title>クリニックご予約サイト</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -23,9 +23,9 @@
 <script src="store.js"></script>
 <script>
 /* =========================================================
-   佐川案 プロトタイプ2 ── 患者向けSPA
-   西村案の画面遷移（クリニック選択→施術/枠→2ステップ入力→完了）を採用し、
-   佐川案の同期ストア(store.js)に接続。予約は即座に受付ボードへ反映される。
+   患者向けSPA
+   クリニック選択→施術/枠→2ステップ入力→完了。
+   store.js の同期ストアに接続し、予約は即座に受付ボードへ反映される。
    ========================================================= */
 const app = document.getElementById("app");
 
@@ -397,7 +397,7 @@ function renderDone(){
         <tr><th>初診・再診</th><td>${rr.visitType==="FIRST"?"初めて（初診）":"2回目以降（再診）"}</td></tr>
       </tbody></table>
       <p class="muted" style="margin-top:12px">※確認メール（第2弾でLINE通知）をお送りします。予約番号は大切に保管してください。</p>
-      <p class="success" style="margin-top:12px">✓ この予約は<strong>受付ボードへリアルタイムで反映</strong>されました（佐川案の同期エンジン）。</p>
+      <p class="success" style="margin-top:12px">✓ この予約は<strong>受付ボードへリアルタイムで反映</strong>されました。</p>
     </div>
     <div class="card">
       <h2>ご来院について</h2>

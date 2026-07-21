@@ -9,7 +9,7 @@
 <body>
 <header class="admin-header">
   <div class="admin-header-top">
-    <span class="brand">予約統括システム 受付ボード <small>佐川案の同期 × 西村案のUI</small></span>
+    <span class="brand">予約統括システム 受付ボード <small>リアルタイム同期</small></span>
     <span style="display:flex;gap:14px;align-items:center">
       <span class="latency" id="latency">同期待機中…</span>
       <a class="to-patient" href="index.html" target="_blank">患者向けサイトを開く ↗</a>
@@ -41,7 +41,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="store.js"></script>
 <script>
-/* 受付ライブボード：患者予約が入った瞬間に行が増え、黄色くフラッシュする（佐川案の同期） */
+/* 受付ライブボード：患者予約が入った瞬間に行が増え、黄色くフラッシュする */
 let curDate = Store.todayStr();
 let prevCodes = new Set();
 
@@ -118,7 +118,7 @@ Store.ready.then(()=>{
   prevCodes = currentCodes();
   const b = Store.getBackend();
   const brand = document.querySelector(".admin-header .brand small");
-  if(brand) brand.textContent = b==="supabase" ? "佐川案の同期(Supabase) × 西村案のUI" : "佐川案の同期(ローカル) × 西村案のUI";
+  if(brand) brand.textContent = b==="supabase" ? "Supabase リアルタイム同期" : "リアルタイム同期（ローカル）";
   render();
 });
 </script>
