@@ -169,7 +169,13 @@ const Store = (() => {
   let backendName = "local";
 
   function makeSupabaseBackend() {
-    const client = window.supabase.createClient(SUPA_URL, SUPA_KEY, { realtime: { params: { eventsPerSecond: 20 } } });
+    // ★重要: anon専用クライアント。同一ドメイン(github.io)のカルテ等のログインセッションを
+    //   読まない/触らない（persistSession:false）。予約アプリは常にanonロールで動作し、
+    //   カルテ側の認証に干渉しない。RLSポリシーは to public（anon/authenticated両対応）。
+    const client = window.supabase.createClient(SUPA_URL, SUPA_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+      realtime: { params: { eventsPerSecond: 20 } },
+    });
     const fromRow = r => ({
       code: r.code, csId: r.cs_id, slotId: r.slot_id, date: r.rdate, time: r.rtime,
       name: r.name, kana: r.kana || "", phone: r.phone, birthDate: r.birth || "", email: r.email || "",
