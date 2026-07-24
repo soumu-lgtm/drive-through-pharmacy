@@ -97,18 +97,31 @@ const Store = (() => {
   function menusOfCs(csId) { return MENUS.filter(m => m.csId === csId); }
   function menuById(id) { return MENUS.find(m => m.id === id); }
 
-  /* ---------- 診察室の割り当て（枠内の先着順で決定的に） ----------
-     同一の枠(csId×date×time)に入った予約を作成順に並べ、1件目=診察室1／2件目=診察室2。
-     capacity=室数 のため各枠は最大でも室数まで。DBにroom列を持たせずに導出する。 */
-  function roomIndexOf(res) {
-    if (!res) return -1;
-    const peers = _cache
+  /* ---------- 診察室の割り当て ----------
+     ・予約は診察室IDを保存（roomId）。受付が任意に切り替えられる。
+     ・roomId未設定の旧データは、同枠(csId×date×time)の空き室を先着順で埋めて導出（互換）。 */
+  function sameSlotPeers(res) {
+    return _cache
       .filter(r => r.status === "CONFIRMED" && r.csId === res.csId && r.date === res.date && r.time === res.time)
       .sort((a, b) => String(a.createdAt||"").localeCompare(String(b.createdAt||"")) || String(a.code||"").localeCompare(String(b.code||"")));
-    return peers.findIndex(r => r.code === res.code);
   }
-  function roomOf(res) { const i = roomIndexOf(res); return (i >= 0 && ROOMS[i]) ? ROOMS[i].id : null; }
+  function roomOf(res) {
+    if (!res) return null;
+    if (res.roomId) return res.roomId;                 // 明示割当があればそれを優先
+    const peers = sameSlotPeers(res);                  // 旧データ互換：空き室を先着順で
+    const taken = new Set(peers.filter(p => p.roomId).map(p => p.roomId));
+    const free = ROOMS.map(r => r.id).filter(id => !taken.has(id));
+    const idx = peers.filter(p => !p.roomId).findIndex(p => p.code === res.code);
+    return (idx >= 0 && free[idx]) ? free[idx] : null;
+  }
   function roomName(res) { const id = roomOf(res); const rm = ROOMS.find(r => r.id === id); return rm ? rm.name : ""; }
+  // 枠内で空いている診察室を1つ返す（無ければnull=満員）
+  function freeRoom(csId, date, time) {
+    const taken = new Set(_cache
+      .filter(r => r.status === "CONFIRMED" && r.csId === csId && r.date === date && r.time === time)
+      .map(r => roomOf(r)));
+    return ROOMS.map(r => r.id).find(id => !taken.has(id)) || null;
+  }
 
   /* ---------- 予約キャッシュ（getDays等が同期参照） ---------- */
   let _cache = [];   // 予約の正本（メモリ）。ローカル=localStorageと同期／Supabase=DBと同期
@@ -119,6 +132,7 @@ const Store = (() => {
       csId: o.csId, slotId: `${o.csId}_${o.date}_${o.time}`,
       date: o.date, time: o.time,
       name: o.name, kana: o.kana || "", phone: o.phone, birthDate: o.birthDate || "",
+      roomId: o.roomId ?? null,
       email: o.email || "", visitType: o.visitType || "", menuId: o.menuId || null,
       note: o.note || "", status: "CONFIRMED", channel: o.channel || "WEB",
       createdAt: o.createdAt || new Date().toISOString(), sentAt: o.sentAt || null,
@@ -197,12 +211,14 @@ const Store = (() => {
     const fromRow = r => ({
       code: r.code, csId: r.cs_id, slotId: r.slot_id, date: r.rdate, time: r.rtime,
       name: r.name, kana: r.kana || "", phone: r.phone, birthDate: r.birth || "", email: r.email || "",
+      roomId: r.room_id ?? null,
       visitType: r.visit_type || "", menuId: r.menu_id, note: r.note || "", status: r.status,
       channel: r.channel || "WEB", createdAt: r.created_at, sentAt: r.sent_at,
     });
     const toRow = res => ({
       code: res.code, cs_id: res.csId, slot_id: res.slotId, rdate: res.date, rtime: res.time,
       name: res.name, kana: res.kana, phone: res.phone, birth: res.birthDate, email: res.email,
+      room_id: res.roomId ?? null,
       visit_type: res.visitType, menu_id: res.menuId, note: res.note, status: res.status,
       channel: res.channel, sent_at: res.sentAt,
     });
@@ -227,7 +243,12 @@ const Store = (() => {
       },
       async insert(res) {
         res.sentAt = Date.now();
-        const { error } = await client.from(TABLE).insert(toRow(res));
+        const row = toRow(res);
+        let { error } = await client.from(TABLE).insert(row);
+        if (error && /room_id/.test(error.message||"") ) {   // room_id列が無い環境 → 外して再送（予約は通す）
+          delete row.room_id;
+          ({ error } = await client.from(TABLE).insert(row));
+        }
         if (error) throw error;
         const i = _cache.findIndex(x => x.code === res.code);
         if (i<0) _cache.push(res);
@@ -236,6 +257,13 @@ const Store = (() => {
         const { error } = await client.from(TABLE).update({ status }).eq("code", code);
         if (error) throw error;
         const r = _cache.find(x => x.code === code); if (r) r.status = status;
+      },
+      async setRoom(updates) {
+        for (const u of updates) {
+          const { error } = await client.from(TABLE).update({ room_id: u.roomId }).eq("code", u.code);
+          if (error) { if (/room_id/.test(error.message||"")) throw new Error("NO_ROOM_COLUMN"); throw error; }
+        }
+        updates.forEach(u => { const r = _cache.find(x => x.code === u.code); if (r) r.roomId = u.roomId; });
       },
       async resetDemo() {
         await client.from(TABLE).delete().not("code","like","SEED%");
@@ -273,6 +301,7 @@ const Store = (() => {
       },
       async insert(res) { const l = load(); l.push(res); save(l); _cache = l; fire({ type:"reservation", at: Date.now() }); },
       async setStatus(code, status) { const l = load(); const r = l.find(x=>x.code===code); if (r){ r.status=status; save(l); _cache=l; fire({type:"reservation",at:Date.now()}); } },
+      async setRoom(updates) { const l = load(); updates.forEach(u=>{ const r=l.find(x=>x.code===u.code); if(r) r.roomId=u.roomId; }); save(l); _cache=l; fire({type:"reservation",at:Date.now()}); },
       async resetDemo() { localStorage.removeItem(LS_KEY); seed(); _cache = load(); fire({ type:"reservation", at: Date.now() }); },
     };
   }
@@ -301,9 +330,31 @@ const Store = (() => {
     const dup = _cache.find(r => r.status === "CONFIRMED" && r.date === input.date && r.time === input.time
       && r.phone.replace(/-/g,"") === input.phone.replace(/-/g,"") && r.name === input.name);
     if (dup) return { ok: false, error: "同じ日時に既にご予約があります。" };
+    if (input.roomId == null) input.roomId = freeRoom(input.csId, input.date, input.time);  // 空き診察室を自動割当
     const r = mkRes(input);
     try { await backend.insert(r); } catch (e) { return { ok: false, error: "通信エラーで予約できませんでした。時間をおいてお試しください。" }; }
     return { ok: true, reservation: r };
+  }
+  // 診察室の切り替え（対象室に別の予約があれば入れ替え）
+  async function setRoom(code, targetRoomId) {
+    targetRoomId = Number(targetRoomId);
+    if (!ROOMS.some(r => r.id === targetRoomId)) return { ok: false, error: "診察室の指定が不正です。" };
+    const res = _cache.find(x => x.code === code && x.status === "CONFIRMED");
+    if (!res) return { ok: false, error: "予約が見つかりません。" };
+    const cur = roomOf(res);
+    if (cur === targetRoomId) return { ok: true };
+    const other = _cache.find(x => x.status === "CONFIRMED" && x.code !== code
+      && x.csId === res.csId && x.date === res.date && x.time === res.time && roomOf(x) === targetRoomId);
+    const updates = [{ code: res.code, roomId: targetRoomId }];
+    if (other) updates.push({ code: other.code, roomId: cur });   // 入れ替え
+    try {
+      await backend.setRoom(updates);
+    } catch (e) {
+      if (String(e && e.message) === "NO_ROOM_COLUMN")
+        return { ok: false, error: "診察室の変更を保存できません（DBに room_id 列の追加が必要です）。" };
+      return { ok: false, error: "通信エラーで診察室を変更できませんでした。" };
+    }
+    return { ok: true, swapped: !!other };
   }
   async function cancelReservation(code, phone) {
     const r = _cache.find(x => x.code === (code||"").toUpperCase().trim());
@@ -318,8 +369,8 @@ const Store = (() => {
   return {
     CLINICS, MENUS, ROOMS, WD, getBackend: () => backendName,
     todayStr, addDays, fmtJa, weekday,
-    clinicOfCs, serviceOfCs, menusOfCs, menuById, roomOf, roomName,
-    getDays, createReservation, findReservation, cancelReservation, updateStatus,
+    clinicOfCs, serviceOfCs, menusOfCs, menuById, roomOf, roomName, freeRoom,
+    getDays, createReservation, setRoom, findReservation, cancelReservation, updateStatus,
     dayReservations, loadReservations,
     onSync, ready,
     resetDemo() { return backend.resetDemo(); },
