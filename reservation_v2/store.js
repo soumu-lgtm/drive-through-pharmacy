@@ -134,7 +134,7 @@ const Store = (() => {
       csId: o.csId, slotId: `${o.csId}_${o.date}_${o.time}`,
       date: o.date, time: o.time,
       name: o.name, kana: o.kana || "", phone: o.phone, birthDate: o.birthDate || "",
-      roomId: o.roomId ?? null,
+      roomId: o.roomId ?? null, lineUserId: o.lineUserId || null,
       email: o.email || "", visitType: o.visitType || "", menuId: o.menuId || null,
       note: o.note || "", status: "CONFIRMED", channel: o.channel || "WEB",
       createdAt: o.createdAt || new Date().toISOString(), sentAt: o.sentAt || null,
@@ -216,13 +216,14 @@ const Store = (() => {
       roomId: r.room_id ?? null,
       visitType: r.visit_type || "", menuId: r.menu_id, note: r.note || "", status: r.status,
       channel: r.channel || "WEB", createdAt: r.created_at, sentAt: r.sent_at,
+      lineUserId: r.line_user_id || null,
     });
     const toRow = res => ({
       code: res.code, cs_id: res.csId, slot_id: res.slotId, rdate: res.date, rtime: res.time,
       name: res.name, kana: res.kana, phone: res.phone, birth: res.birthDate, email: res.email,
       room_id: res.roomId ?? null,
       visit_type: res.visitType, menu_id: res.menuId, note: res.note, status: res.status,
-      channel: res.channel, sent_at: res.sentAt,
+      channel: res.channel, sent_at: res.sentAt, line_user_id: res.lineUserId || null,
     });
     return {
       async init() {
