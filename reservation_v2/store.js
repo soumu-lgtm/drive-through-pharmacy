@@ -19,9 +19,11 @@
 const Store = (() => {
   "use strict";
 
-  /* ---------- Supabase 接続設定（公開キー相当のレガシー anon JWT） ---------- */
-  const SUPA_URL = "https://dyjhxkqzxibcpgoefbiv.supabase.co";
-  const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5amh4a3F6eGliY3Bnb2VmYml2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2MjMwNzYsImV4cCI6MjA5MTE5OTA3Nn0.Oaf15-nIvyidZftbBamLpwbDK1DpI8CpVThYjxE8RqI";
+  /* ---------- Supabase 接続設定（新HDGプロジェクト vypw・公開キー相当のレガシー anon JWT） ----------
+     移行方針: 予約システムは業務アカウント soumu-hdg の新プロジェクト vypwgxkqtxuzqfaaeamf を参照。
+     Realtime(postgres_changes) を効かせるため publishable ではなくレガシー anon JWT を使用。 */
+  const SUPA_URL = "https://vypwgxkqtxuzqfaaeamf.supabase.co";
+  const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ5cHdneGtxdHh1enFmYWFlYW1mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3NzMxNTgsImV4cCI6MjEwMDM0OTE1OH0.Vyo6iOvAYF4DOVF1bfNwNWoA1e8ja-9byx8dULmWzb8";
   const TABLE = "rsv2_reservations";
   const USE_SUPABASE = typeof window !== "undefined" && window.__RSV_SUPABASE__ && window.supabase;
 
