@@ -20,6 +20,16 @@
   .slot-cap{ display:inline-flex; flex-direction:column; align-items:center; min-width:66px; border:1px solid var(--border); border-radius:8px; padding:6px 4px; font-size:13px; }
   .slot-cap.full{ background:#f3f4f6; color:#9ca3af; }
   .slot-cap .rem{ font-size:11px; color:var(--sub); }
+  /* クリニック切替（受付側・暗色ヘッダー内） */
+  .clinic-switch{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:9px; }
+  .clinic-switch .cs-label{ font-size:12px; color:#94a3b8; margin-right:2px; }
+  .clinic-pill{ font:inherit; font-size:13px; color:#e2e8f0; background:#334155; border:1px solid #475569; border-radius:999px; padding:5px 15px; cursor:pointer; }
+  .clinic-pill:hover{ background:#3f4d63; color:#fff; }
+  .clinic-pill.active{ background:#fff; color:var(--dark); font-weight:700; border-color:#fff; }
+  .clinic-pill small{ font-size:10px; opacity:.7; margin-left:4px; font-weight:400; }
+  /* 診察室バッジ */
+  .room-badge{ display:inline-block; font-size:11.5px; font-weight:700; color:#0e7490; background:#cffafe; border:1px solid #a5f3fc; border-radius:6px; padding:1px 8px; white-space:nowrap; }
+  .room-badge.r2{ color:#7c3aed; background:#ede9fe; border-color:#ddd6fe; }
 </style>
 </head>
 <body>
@@ -31,6 +41,7 @@
       <a class="to-patient" href="index.html" target="_blank">患者向けサイトを開く ↗</a>
     </span>
   </div>
+  <div class="clinic-switch" id="clinicSwitch"></div>
   <nav class="admin-tabs" id="adminTabs">
     <a class="tab active" data-tab="board" onclick="showAdminTab('board')">日別ボード</a>
     <a class="tab" data-tab="list" onclick="showAdminTab('list')">予約一覧</a>
@@ -79,7 +90,26 @@ function esc(s){ return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&l
 
 let curTab = "board";
 let curDate = Store.todayStr();
+let curClinic = 1;              // 表示中のクリニック（既定=西春）。demo.html右側はこれで切替
 let prevCodes = new Set();
+
+/* ---------------- クリニック切替（受付側の確認ウィンドウを院ごとに） ---------------- */
+function curClinicObj(){ return Store.CLINICS.find(c=>c.id===curClinic) || Store.CLINICS[0]; }
+function firstCsOfClinic(){ const c=curClinicObj(); return c && c.services[0] ? c.services[0].id : null; }
+function inCurClinic(csId){ const c=Store.clinicOfCs(csId); return c && c.id===curClinic; }
+function renderClinicSwitch(){
+  const el=document.getElementById('clinicSwitch'); if(!el) return;
+  el.innerHTML = '<span class="cs-label">クリニック：</span>' + Store.CLINICS.map(c=>
+    `<button class="clinic-pill ${c.id===curClinic?'active':''}" onclick="setClinic(${c.id})">${esc(c.name)}${c.openingNote?'<small>開業前</small>':''}</button>`
+  ).join("");
+}
+function setClinic(id){
+  curClinic=id;
+  nf.csId=null; slotsCs=null;          // 代理入力・枠確認の選択を新クリニックへ
+  renderClinicSwitch();
+  prevCodes = currentCodes();
+  renderTab(curTab);
+}
 
 /* ---------------- タブ切替 ---------------- */
 function showAdminTab(id){
@@ -102,14 +132,16 @@ function renderTab(id){
 /* ---------------- 日別ボード ---------------- */
 function setDate(d){ curDate = d; renderBoard(); }
 function shift(n){ curDate = Store.addDays(curDate, n); renderBoard(); }
-function currentCodes(){ return new Set(Store.dayReservations(curDate).map(r=>r.code)); }
+function clinicRows(date){ return Store.dayReservations(date).filter(r=>inCurClinic(r.csId)); }
+function roomTag(r){ const rm=Store.roomName(r); return rm?`<span class="room-badge ${rm.endsWith("2")?"r2":""}">${esc(rm)}</span>`:'<span class="muted" style="font-size:12px">—</span>'; }
+function currentCodes(){ return new Set(clinicRows(curDate).map(r=>r.code)); }
 
 function renderBoard(flashCodes){
   document.getElementById("dateInput").value = curDate;
   document.getElementById("dayLabel").textContent = Store.fmtJa(curDate);
-  const rows = Store.dayReservations(curDate);
-  const byClinic = {};
-  rows.forEach(r=>{ const c = Store.clinicOfCs(r.csId); (byClinic[c.name] = byClinic[c.name] || []).push(r); });
+  const clinic = curClinicObj();
+  // 表示中クリニックの予約を、時刻→診察室 の順に整列
+  const rows = clinicRows(curDate).slice().sort((a,b)=> a.time.localeCompare(b.time) || String(Store.roomName(a)).localeCompare(String(Store.roomName(b))));
 
   const total = rows.length, firstVisit = rows.filter(r=>r.visitType==="FIRST").length, web = rows.filter(r=>r.channel==="WEB").length;
   document.getElementById("stats").innerHTML = `
@@ -118,26 +150,25 @@ function renderBoard(flashCodes){
     <div class="stat"><div class="num">${web}</div><div class="label">Web予約</div></div>
     <div class="stat"><div class="num">${total-web}</div><div class="label">電話/その他</div></div>`;
 
-  if(total===0){ document.getElementById("board").innerHTML = '<div class="card">この日の予約はありません。患者向けサイトや「電話予約の代理入力」から予約すると、ここに即時反映されます。</div>'; return; }
+  if(total===0){ document.getElementById("board").innerHTML = `<div class="card"><strong>${esc(clinic.name)}クリニック</strong>のこの日の予約はありません。${clinic.openingNote?`（${esc(clinic.openingNote)}）`:""}<br><span class="muted">患者向けサイトや「電話予約の代理入力」から予約すると、ここに即時反映されます。</span></div>`; return; }
 
-  document.getElementById("board").innerHTML = Object.entries(byClinic).map(([name, list])=>{
-    const trs = list.map(r=>{
-      const svc = Store.serviceOfCs(r.csId), menu = r.menuId ? Store.menuById(r.menuId) : null, isNew = flashCodes && flashCodes.has(r.code);
-      return `<tr class="${isNew?"flash-new":""}">
-        <td style="font-weight:700">${r.time}</td>
-        <td>${esc(svc.name)}${menu?`<div class="muted" style="font-size:12px">${esc(menu.name)}</div>`:""}</td>
-        <td>${esc(r.name)} 様${r.visitType==="FIRST"?'<span class="badge first" style="margin-left:4px">初診</span>':""}${isNew?'<span class="new-tag">NEW</span>':""}</td>
-        <td>${r.channel==="WEB"?'<span class="badge web">Web</span>':'<span class="badge phone">電話</span>'}</td>
-        <td><span class="muted" style="font-size:12px">${esc(r.phone)}</span></td>
-        <td><button class="small secondary" onclick="markVisited('${esc(r.code)}')">来院</button> <button class="small danger" onclick="cancelRes('${esc(r.code)}')">取消</button></td>
-      </tr>`;
-    }).join("");
-    return `<div class="card">
-      <h2 style="margin-top:0">${esc(name)}クリニック（${list.length}件）</h2>
-      <table><thead><tr><th style="width:64px">時刻</th><th>内容</th><th>患者</th><th style="width:60px">経路</th><th>電話</th><th style="width:130px">操作</th></tr></thead>
-      <tbody>${trs}</tbody></table>
-    </div>`;
+  const trs = rows.map(r=>{
+    const svc = Store.serviceOfCs(r.csId), menu = r.menuId ? Store.menuById(r.menuId) : null, isNew = flashCodes && flashCodes.has(r.code);
+    return `<tr class="${isNew?"flash-new":""}">
+      <td style="font-weight:700">${r.time}</td>
+      <td>${roomTag(r)}</td>
+      <td>${esc(svc.name)}${menu?`<div class="muted" style="font-size:12px">${esc(menu.name)}</div>`:""}</td>
+      <td>${esc(r.name)} 様${r.visitType==="FIRST"?'<span class="badge first" style="margin-left:4px">初診</span>':""}${isNew?'<span class="new-tag">NEW</span>':""}</td>
+      <td>${r.channel==="WEB"?'<span class="badge web">Web</span>':'<span class="badge phone">電話</span>'}</td>
+      <td><span class="muted" style="font-size:12px">${esc(r.phone)}</span></td>
+      <td><button class="small secondary" onclick="markVisited('${esc(r.code)}')">来院</button> <button class="small danger" onclick="cancelRes('${esc(r.code)}')">取消</button></td>
+    </tr>`;
   }).join("");
+  document.getElementById("board").innerHTML = `<div class="card">
+    <h2 style="margin-top:0">${esc(clinic.name)}クリニック（${rows.length}件）</h2>
+    <table><thead><tr><th style="width:60px">時刻</th><th style="width:84px">診察室</th><th>内容</th><th>患者</th><th style="width:56px">経路</th><th>電話</th><th style="width:130px">操作</th></tr></thead>
+    <tbody>${trs}</tbody></table>
+  </div>`;
 }
 
 async function markVisited(code){ await Store.updateStatus(code, "VISITED"); afterMutate(); }
@@ -149,7 +180,7 @@ function afterMutate(){ prevCodes = currentCodes(); renderTab(curTab); }
 let listFilter = "ALL";
 function setListFilter(f){ listFilter = f; renderList(); }
 function renderList(){
-  let all = Store.loadReservations().slice().sort((a,b)=> (b.date+b.time).localeCompare(a.date+a.time));
+  let all = Store.loadReservations().filter(r=>inCurClinic(r.csId)).sort((a,b)=> (b.date+b.time).localeCompare(a.date+a.time));
   if(listFilter!=="ALL") all = all.filter(r=>r.status===listFilter);
   const STATUS = { CONFIRMED:['予約確定','confirmed'], VISITED:['来院済','visited'], CANCELLED:['キャンセル','cancelled'], NO_SHOW:['不履行','no-show'] };
   const chips = [['ALL','すべて'],['CONFIRMED','予約確定'],['VISITED','来院済'],['CANCELLED','キャンセル']]
@@ -157,9 +188,10 @@ function renderList(){
   const rows = all.map(r=>{
     const c=Store.clinicOfCs(r.csId), svc=Store.serviceOfCs(r.csId), menu=r.menuId?Store.menuById(r.menuId):null;
     const st = STATUS[r.status]||[r.status,'confirmed'];
+    const rm = r.status==="CONFIRMED" ? Store.roomName(r) : "";
     return `<tr style="${r.status==='CANCELLED'?'opacity:.55':''}">
       <td style="white-space:nowrap">${Store.fmtJa(r.date)} ${r.time}</td>
-      <td>${esc(c.name)}／${esc(svc.name)}${menu?`<div class="muted" style="font-size:12px">${esc(menu.name)}</div>`:""}</td>
+      <td>${esc(c.name)}／${esc(svc.name)}${rm?` <span class="room-badge ${rm.endsWith("2")?"r2":""}">${esc(rm)}</span>`:""}${menu?`<div class="muted" style="font-size:12px">${esc(menu.name)}</div>`:""}</td>
       <td>${esc(r.name)} 様${r.visitType==="FIRST"?'<span class="badge first" style="margin-left:4px">初診</span>':""}<div class="muted" style="font-size:12px">${esc(r.phone)}</div></td>
       <td>${r.channel==="WEB"?'<span class="badge web">Web</span>':'<span class="badge phone">電話</span>'}</td>
       <td><span class="badge ${st[1]}">${st[0]}</span></td>
@@ -167,7 +199,7 @@ function renderList(){
     </tr>`;
   }).join("");
   document.getElementById("view-list").innerHTML = `
-    <h1>予約一覧</h1>
+    <h1>予約一覧<span class="muted" style="font-size:15px;font-weight:400;margin-left:8px">${esc(curClinicObj().name)}クリニック</span></h1>
     <div class="chips" style="margin-bottom:6px">${chips}</div>
     <div class="card" style="padding:0;overflow:auto">
       <table><thead><tr><th style="width:120px">日時</th><th>クリニック／区分</th><th>患者</th><th style="width:60px">経路</th><th style="width:96px">状態</th><th style="width:130px">操作</th></tr></thead>
@@ -178,11 +210,18 @@ function renderList(){
 /* ---------------- 電話予約の代理入力 ---------------- */
 let nf = { csId:null, date:Store.todayStr(), time:null };
 function csOptions(sel){
-  return Store.CLINICS.filter(c=>!c.openingNote).flatMap(c=>c.services.map(s=>
-    `<option value="${s.id}" ${s.id==sel?'selected':''}>${esc(c.name)}クリニック ／ ${esc(s.name)}</option>`)).join("");
+  const c=curClinicObj();
+  return c.services.map(s=>
+    `<option value="${s.id}" ${s.id==sel?'selected':''}>${esc(c.name)}クリニック ／ ${esc(s.name)}</option>`).join("");
+}
+function preparingCard(title){
+  return `<h1>${esc(title)}<span class="muted" style="font-size:15px;font-weight:400;margin-left:8px">${esc(curClinicObj().name)}クリニック</span></h1>
+    <div class="card placeholder-box"><div class="pi">このクリニックは開業前です（${esc(curClinicObj().openingNote||"準備中")}）</div>
+    <div>開業後にこの画面から予約の代理入力・枠確認が行えます。上部のクリニック切替から開業中のクリニックをお選びください。</div></div>`;
 }
 function renderNew(){
-  if(nf.csId==null){ const first=Store.CLINICS.find(c=>!c.openingNote); nf.csId=first.services[0].id; }
+  if(curClinicObj().openingNote){ document.getElementById("view-new").innerHTML = preparingCard("電話予約の代理入力"); return; }
+  if(nf.csId==null || !inCurClinic(nf.csId)){ nf.csId=firstCsOfClinic(); }
   document.getElementById("view-new").innerHTML = `
     <h1>電話予約の代理入力</h1>
     <p class="muted">電話でお受けした予約を受付が代理入力します。登録すると日別ボード・予約一覧へ即時反映されます。</p>
@@ -250,16 +289,17 @@ async function nfSubmit(){
 /* ---------------- 予約枠の確認（読み取り専用） ---------------- */
 let slotsCs = null;
 function renderSlots(){
-  if(slotsCs==null){ const first=Store.CLINICS.find(c=>!c.openingNote); slotsCs=first.services[0].id; }
+  if(curClinicObj().openingNote){ document.getElementById("view-slots").innerHTML = preparingCard("予約枠の確認"); return; }
+  if(slotsCs==null || !inCurClinic(slotsCs)){ slotsCs=firstCsOfClinic(); }
   const days=Store.getDays(slotsCs, 14);
   const body=days.map(d=>{
     if(!d.slots.length) return `<div class="slot-grid-day"><div class="d">${d.label}<span class="muted" style="font-weight:400;margin-left:8px">休診</span></div></div>`;
-    const chips=d.slots.map(s=>`<span class="slot-cap ${s.remaining===0?'full':''}">${s.time}<span class="rem">空き ${s.remaining}/${s.capacity}</span></span>`).join(" ");
+    const chips=d.slots.map(s=>`<span class="slot-cap ${s.remaining===0?'full':''}">${s.time}<span class="rem">空き ${s.remaining}/${s.capacity}室</span></span>`).join(" ");
     return `<div class="slot-grid-day"><div class="d">${d.label}</div>${chips}</div>`;
   }).join("");
   document.getElementById("view-slots").innerHTML = `
-    <h1>予約枠の確認</h1>
-    <p class="muted">診療時間マスタから自動生成された枠の空き状況です（今後2週間）。<br>※プロトタイプでは閲覧のみ。枠の停止・定員変更・臨時休診の編集は今後実装予定です。</p>
+    <h1>予約枠の確認<span class="muted" style="font-size:15px;font-weight:400;margin-left:8px">${esc(curClinicObj().name)}クリニック</span></h1>
+    <p class="muted">診療時間マスタから自動生成された枠の空き状況です（今後2週間）。各時間帯は<strong>診察室1・診察室2の2室</strong>を用意しています。<br>※プロトタイプでは閲覧のみ。枠の停止・定員変更・臨時休診の編集は今後実装予定です。</p>
     <div class="card">
       <label class="field" style="max-width:400px;margin-bottom:14px">クリニック／診療区分
         <select onchange="slotsCs=Number(this.value);renderSlots()">${csOptions(slotsCs)}</select>
@@ -307,6 +347,7 @@ Store.onSync((msg)=>{
 });
 
 /* ---------------- 起動 ---------------- */
+renderClinicSwitch();
 renderBoard();
 Store.ready.then(()=>{
   prevCodes = currentCodes();

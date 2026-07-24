@@ -20,8 +20,8 @@ const Store = (() => {
   "use strict";
 
   /* ---------- Supabase 接続設定（公開キー相当のレガシー anon JWT） ---------- */
-  const SUPA_URL = "https://vypwgxkqtxuzqfaaeamf.supabase.co";
-  const SUPA_KEY = "sb_publishable_WVbE1jJE6sBDli7qO-xSJA_GqDqu4OE";
+  const SUPA_URL = "https://dyjhxkqzxibcpgoefbiv.supabase.co";
+  const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5amh4a3F6eGliY3Bnb2VmYml2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2MjMwNzYsImV4cCI6MjA5MTE5OTA3Nn0.Oaf15-nIvyidZftbBamLpwbDK1DpI8CpVThYjxE8RqI";
   const TABLE = "rsv2_reservations";
   const USE_SUPABASE = typeof window !== "undefined" && window.__RSV_SUPABASE__ && window.supabase;
 
@@ -47,11 +47,16 @@ const Store = (() => {
     { id: 202, csId: 21, name: "ダーマペン4", concerns: "毛穴・ニキビ跡", price: 20800, firstVisitPrice: 15800, durationMin: 60, popular: false, catch: "肌の生まれ変わりを促す", downtime: "赤みが数時間", staffType: "看護師（医師診察あり）" },
   ];
 
+  /* ---------- 診察室：各クリニック・各区分に2室（診察室1／診察室2） ---------- */
+  //   予約枠 = 「時間帯 × 診察室数」で用意する。capacity = 室数(2) とし、
+  //   各予約がどの室かは枠内の先着順で決定的に割り当てる（roomOf）。
+  const ROOMS = [ { id: 1, name: "診察室1" }, { id: 2, name: "診察室2" } ];
+
   const TEMPLATES = {
-    "外来":     { weekdays: [1,2,3,4,5],   times: gen("09:00","11:30",30).concat(gen("15:00","17:30",30)), capacity: 2, dur: 30 },
-    "在宅":     { weekdays: [1,3,5],       times: gen("13:00","16:00",60), capacity: 1, dur: 60 },
-    "美容":     { weekdays: [2,3,4,5,6],   times: gen("10:00","17:30",30), capacity: 1, dur: 30, role: "NURSE" },
-    "夜間休日": { weekdays: [0,6],         times: gen("19:00","21:30",30), capacity: 1, dur: 30 },
+    "外来":     { weekdays: [1,2,3,4,5],   times: gen("09:00","11:30",30).concat(gen("15:00","17:30",30)), capacity: ROOMS.length, dur: 30 },
+    "在宅":     { weekdays: [1,3,5],       times: gen("13:00","16:00",60), capacity: ROOMS.length, dur: 60 },
+    "美容":     { weekdays: [2,3,4,5,6],   times: gen("10:00","17:30",30), capacity: ROOMS.length, dur: 30, role: "NURSE" },
+    "夜間休日": { weekdays: [0,6],         times: gen("19:00","21:30",30), capacity: ROOMS.length, dur: 30 },
   };
 
   function gen(from, to, step) {
@@ -91,6 +96,19 @@ const Store = (() => {
   }
   function menusOfCs(csId) { return MENUS.filter(m => m.csId === csId); }
   function menuById(id) { return MENUS.find(m => m.id === id); }
+
+  /* ---------- 診察室の割り当て（枠内の先着順で決定的に） ----------
+     同一の枠(csId×date×time)に入った予約を作成順に並べ、1件目=診察室1／2件目=診察室2。
+     capacity=室数 のため各枠は最大でも室数まで。DBにroom列を持たせずに導出する。 */
+  function roomIndexOf(res) {
+    if (!res) return -1;
+    const peers = _cache
+      .filter(r => r.status === "CONFIRMED" && r.csId === res.csId && r.date === res.date && r.time === res.time)
+      .sort((a, b) => String(a.createdAt||"").localeCompare(String(b.createdAt||"")) || String(a.code||"").localeCompare(String(b.code||"")));
+    return peers.findIndex(r => r.code === res.code);
+  }
+  function roomOf(res) { const i = roomIndexOf(res); return (i >= 0 && ROOMS[i]) ? ROOMS[i].id : null; }
+  function roomName(res) { const id = roomOf(res); const rm = ROOMS.find(r => r.id === id); return rm ? rm.name : ""; }
 
   /* ---------- 予約キャッシュ（getDays等が同期参照） ---------- */
   let _cache = [];   // 予約の正本（メモリ）。ローカル=localStorageと同期／Supabase=DBと同期
@@ -298,9 +316,9 @@ const Store = (() => {
   async function updateStatus(code, status) { try { await backend.setStatus(code, status); } catch {} }
 
   return {
-    CLINICS, MENUS, WD, getBackend: () => backendName,
+    CLINICS, MENUS, ROOMS, WD, getBackend: () => backendName,
     todayStr, addDays, fmtJa, weekday,
-    clinicOfCs, serviceOfCs, menusOfCs, menuById,
+    clinicOfCs, serviceOfCs, menusOfCs, menuById, roomOf, roomName,
     getDays, createReservation, findReservation, cancelReservation, updateStatus,
     dayReservations, loadReservations,
     onSync, ready,

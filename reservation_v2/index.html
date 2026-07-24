@@ -406,6 +406,7 @@ function renderDone(){
         <tr><th>クリニック</th><td>${esc(clinic.name)}（${esc(svc.name)}）</td></tr>
         ${menu?`<tr><th>メニュー</th><td>${esc(menu.name)}</td></tr>`:""}
         <tr><th>日時</th><td>${Store.fmtJa(rr.date)} ${rr.time}</td></tr>
+        ${Store.roomName(rr)?`<tr><th>診察室</th><td>${esc(Store.roomName(rr))}</td></tr>`:""}
         <tr><th>お名前</th><td>${esc(rr.name)} 様</td></tr>
         <tr><th>初診・再診</th><td>${rr.visitType==="FIRST"?"初めて（初診）":"2回目以降（再診）"}</td></tr>
       </tbody></table>
