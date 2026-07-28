@@ -137,7 +137,8 @@ const MasterLoader = (() => {
 
   function getProcedurePoints(code) {
     const entry = masters.s?.get(code);
-    return entry ? (entry.pts || 0) : 0;
+    // pts は "291.00" 等の文字列保持がありうる。B相の算定計算で使う際のNaN/文字列連結地雷を防ぐため数値化する。
+    return entry ? (parseFloat(entry.pts) || 0) : 0;
   }
 
   function getDrug(code) {
