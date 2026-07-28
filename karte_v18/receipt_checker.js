@@ -44,7 +44,27 @@ const ReceiptChecker = (() => {
     checkVisitConsistency(receipt);
     checkDrugIndication(receipt);      // ★v0.17 ①適応症突合（薬⇔病名）
     checkConsultationAdd(receipt);     // ★v0.17 ②診察料加算（併算定不可・算定もれ）
+    checkDrugLimits(receipt);          // 投薬上限リマインド（湿布70枚超）
     checkMemoReminders(receipt);
+  }
+
+  /** 投薬上限リマインド。誤検知ゼロ=断定せずlow確認。
+   *  湿布(貼付剤)は1処方70枚超で投与理由の摘要記載が必要になりやすい（非湿布テープは除外）。 */
+  function checkDrugLimits(r) {
+    for (const p of r.procedures) {
+      if (!p.isDrug) continue;
+      const nm = (p.name || codeName(p.code) || '');
+      if (/(湿布|パップ|貼付|テープ)/.test(nm) &&
+          !/(ニトロ|ホクナリン|ツロブテロール|フランドル|ニコチン|エストラーナ|フェント|ノルスパン|リバスタッチ|イクセロン|ジクトル|ロナセン|ニュープロ)/.test(nm)) {
+        const qty = Number(p.quantity || 0) * Math.max(1, Number(p.count || 1));
+        if (qty > 70) {
+          r.warnings.push({
+            severity: 'low',
+            message: '摘要確認: ' + nm + '（合計' + qty + '枚）― 1処方70枚超は投与理由の摘要記載が必要な場合があります'
+          });
+        }
+      }
+    }
   }
 
   // ============================================================
