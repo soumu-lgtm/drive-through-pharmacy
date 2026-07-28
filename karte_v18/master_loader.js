@@ -149,6 +149,35 @@ const MasterLoader = (() => {
     return masters.y?.get(code) || null;
   }
 
+  // 医薬品名→薬価の索引（院内薬など SSKコードを持たない薬の薬価を名称照合で引く）。
+  // 正規化: メーカー名の括弧を"中身ごと"除去＋漢方接頭辞除去＋剤形/塩/規格記号除去。
+  function priceNorm(s) {
+    let x = String(s || '').normalize('NFKC');
+    x = x.replace(/「[^」]*」|〈[^〉]*〉|（[^）]*）|\([^)]*\)|【[^】]*】/g, ''); // メーカー名等の括弧を中身ごと
+    x = x.replace(/^後）?/, '');                                              // 後発の「後）」
+    x = x.replace(/^(ツムラ|クラシエ|コタロー|小太郎|ジュンコウ|本草|オースギ|JPS|三和|東洋|太虎堂|マツウラ)/, ''); // 漢方接頭辞
+    const isPowder = /細粒|散|顆粒|DS|ドライシロップ|シロップ/.test(x);       // 粉末/液剤（用量分割されやすい）
+    x = x.replace(/(錠剤|錠|カプセル|OD|口腔内崩壊|徐放|坐剤|坐薬|細粒|顆粒|ドライシロップ|DS|散|末|テープ|軟膏|点眼液|点眼|クリーム|ローション|ゲル|吸入液|吸入|注射液|注射|注|液|シロップ|FC|エキス|医療用|配合)/g, '');
+    x = x.replace(/[\s　・,，.。／/\-]/g, '');
+    x = x.replace(/(塩酸塩|硫酸塩|臭化水素酸塩|マレイン酸塩|カリウム|ナトリウム|水和物)/g, '');
+    // 院内プリセットの末尾"分量"を除去（粉末は数量、それ以外は濃度%の後の分量）
+    if (isPowder) x = x.replace(/[\d]+(?:g|mg|ml)$/i, '');
+    else x = x.replace(/([%％])[\d]+(?:g|mg|ml)$/i, '$1');
+    return x.toLowerCase();
+  }
+  let _nameToPrice = null;
+  function getDrugPriceByName(name) {
+    if (!masters.y) return null;
+    if (!_nameToPrice) {
+      _nameToPrice = Object.create(null);
+      masters.y.forEach((d) => {
+        if (d && d.price != null) { const k = priceNorm(d.name); if (!(k in _nameToPrice)) _nameToPrice[k] = d.price; }
+      });
+    }
+    const v = _nameToPrice[priceNorm(name)];
+    return (v == null) ? null : v;
+  }
+
   function getDrugName(code) {
     const entry = masters.y?.get(code);
     return entry ? entry.name : '';
@@ -349,6 +378,7 @@ const MasterLoader = (() => {
     getProcedurePoints,
     getDrug,
     getDrugName,
+    getDrugPriceByName,
     getDiseaseName,
     getDisease,
     getModifierName,
