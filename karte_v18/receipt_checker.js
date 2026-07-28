@@ -45,7 +45,80 @@ const ReceiptChecker = (() => {
     checkDrugIndication(receipt);      // ★v0.17 ①適応症突合（薬⇔病名）
     checkConsultationAdd(receipt);     // ★v0.17 ②診察料加算（併算定不可・算定もれ）
     checkDrugLimits(receipt);          // 投薬上限リマインド（湿布70枚超）
+    checkCopayConsistency(receipt);    // 一部負担金の検算（枠＝負担割合推定表＋期待額スロット・安全弁つき）
+    checkConditionalMemo(receipt);     // 摘要の条件付き記載事項（枠＝条件つきルール・摘要が実際に無い時だけ発火）
     checkMemoReminders(receipt);
+  }
+
+  // ============================================================
+  // 摘要の条件付き記載事項（データ駆動フレームワーク）
+  //   別表Ⅰの「（…の場合）記載」型を、機械可読な条件で表現する"枠"。
+  //   各ルール = { trigger: この加算/行為があり, memoHas: この語を含む摘要が"無ければ", memo: 確認文 }
+  //   ★肝: 摘要(CO)が実際に記録されていれば発火しない＝条件付きを正しく扱い誤検知を出さない。
+  //   条件を機械可読にできた項目だけ順次ここへ追加していく（記載要領データが来れば拡張）。
+  // ============================================================
+  const CONDITIONAL_MEMO = [
+    { id: 'jikan_time', trigger: ['時間外加算', '休日加算', '深夜加算', '夜間・早朝等加算', '時間外特例'],
+      memoHas: ['時', '：', ':', '時刻', '時頃'], memo: '時間帯加算（時間外/休日/深夜）には診療時刻の摘要記載が必要です' }
+  ];
+  function checkConditionalMemo(r) {
+    const names = r.procedures.filter(p => !p.isDrug && p.code)
+      .map(p => (MasterLoader.getProcedureName(p.code) || p.name || ''));
+    if (!names.length) return;
+    const memoTexts = (r.comments || []).map(c => (c.text || '') + ' ' + (c.official ? c.official.disp : ''));
+    for (const rule of CONDITIONAL_MEMO) {
+      const triggered = names.some(nm => rule.trigger.some(t => nm.indexOf(t) !== -1));
+      if (!triggered) continue;
+      const memoOk = memoTexts.some(mt => rule.memoHas.some(k => mt.indexOf(k) !== -1));
+      if (memoOk) continue; // 該当摘要が記録済み → 発火しない（条件付きの肝＝誤検知回避）
+      r.warnings.push({
+        severity: 'low',
+        message: '摘要確認: ' + rule.memo + '（該当加算あり・摘要が見当たりません）'
+      });
+    }
+  }
+
+  // ============================================================
+  // 一部負担金の検算（データ駆動フレームワーク）
+  //   ・COPAY_RATES = 保険種別→負担割合の"編集可能な枠"（所得区分など将来ここを精緻化）
+  //   ・r.copayRate / r.copayExpected に期待値スロットを常に格納（UI/精査で再利用可）
+  //   ・誤検知ゼロの安全弁: 公費併用/記録0円/未満（高額・減免の可能性）は警告しない。
+  //     明確な"過大請求方向(記録>概算)"のみ low 確認。
+  // ============================================================
+  const COPAY_RATES = [
+    { match: /後期高齢|長寿/, rate: 0.1, note: '後期高齢(既定1割・所得で3割あり)' },
+    { match: /高齢/,          rate: 0.2, note: '高齢受給(既定2割・所得で1/3割あり)' },
+    { match: /未就学|乳幼児|六歳|６歳/, rate: 0.2, note: '未就学2割' },
+    { match: /本人|家族|組合|協会|共済|国保|社保|一般/, rate: 0.3, note: '一般3割' }
+  ];
+  function estimateCopayRate(insType) {
+    const s = String(insType || '');
+    for (const r of COPAY_RATES) { if (r.match.test(s)) return r; }
+    return null;
+  }
+  function checkCopayConsistency(r) {
+    // 枠(スロット)は常に初期化
+    r.copayRate = null; r.copayExpected = null;
+    if (!r.totalPoints || r.totalPoints <= 0) return;
+    const recorded = (r.insurance && typeof r.insurance.copayAmount === 'number') ? r.insurance.copayAmount : null;
+    const info = estimateCopayRate(r.insuranceType);
+    if (!info) return;
+    r.copayRate = info.rate;
+    const expected = Math.round((r.totalPoints * 10 * info.rate) / 10) * 10; // 10円未満四捨五入
+    r.copayExpected = expected;
+    if (recorded == null) return;
+    // 安全弁: 公費併用/単独は負担金が変わる → 判定しない
+    if (r.kouhi && r.kouhi.length) return;
+    // 記録0円は公費・減免の可能性 → 判定しない
+    if (recorded === 0) return;
+    // 記録 < 概算 は 高額療養費の上限/減免の可能性が高い → 断定せず判定しない（誤検知回避）
+    if (recorded <= expected + 10) return;
+    // ここまで来る = 公費なし かつ 記録が概算を明確に上回る（過大請求方向）→ low確認
+    r.warnings.push({
+      severity: 'low',
+      message: '負担金確認: 記録' + recorded.toLocaleString() + '円 が概算' + expected.toLocaleString() +
+               '円（' + Math.round(info.rate * 10) + '割）を上回ります（要確認）'
+    });
   }
 
   /** 投薬上限リマインド。誤検知ゼロ=断定せずlow確認。

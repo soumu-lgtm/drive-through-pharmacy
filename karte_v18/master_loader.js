@@ -47,6 +47,9 @@ const MasterLoader = (() => {
     return res.json();
   }
 
+  // マスタJSON更新時はこの版数を上げる（キャッシュ無効化）。
+  const MASTER_VERSION = '20260728_v21';
+
   async function loadAll(basePath = 'master/') {
     if (loaded) return;
     if (loading) return loading;
@@ -86,7 +89,8 @@ const MasterLoader = (() => {
           progressEl.textContent = `マスター読込中... ${label} (${i + 1}/${allFiles.length})`;
         }
         try {
-          const data = await fetchJSON(basePath + file);
+          // ★マスタJSONにキャッシュバスターを付与（無いとマスタ更新がブラウザキャッシュで届かない）
+          const data = await fetchJSON(basePath + file + '?v=' + MASTER_VERSION);
           if (masterFiles.some(m => m.key === key)) {
             masters[key] = new Map(Object.entries(data));
           } else if (key === 'santeiCount') {
