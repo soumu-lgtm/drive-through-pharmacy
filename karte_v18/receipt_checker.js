@@ -202,43 +202,54 @@ const ReceiptChecker = (() => {
     }
   }
 
-  /** 年齢制限チェック */
+  /** 年齢制限チェック（受診日=算定日ベース。請求月ベースだと6歳/75歳到達月で最大1ヶ月ズレる） */
   function checkAgeRestrictions(r) {
     if (!r.dob || r.dob.length < 8) return;
 
     const birthYear = parseInt(r.dob.substring(0, 4));
     const birthMonth = parseInt(r.dob.substring(4, 6));
+    const birthDay = parseInt(r.dob.substring(6, 8));
     const billingYear = parseInt(r.billingMonth.substring(0, 4));
     const billingMonthNum = parseInt(r.billingMonth.substring(4, 6));
+    if (isNaN(billingYear) || isNaN(billingMonthNum)) return;
 
-    let age = billingYear - birthYear;
-    if (billingMonthNum < birthMonth) age--;
-
-    if (isNaN(age)) return;
+    // 診療月の指定日(day)時点の満年齢
+    function ageOnDay(day) {
+      let a = billingYear - birthYear;
+      if (billingMonthNum < birthMonth || (billingMonthNum === birthMonth && day < birthDay)) a--;
+      return a;
+    }
+    // 算定日不明時のfallback（請求月＝旧挙動。月末で最年長相当）
+    const ageMonth = (function () { let a = billingYear - birthYear; if (billingMonthNum < birthMonth) a--; return a; })();
+    if (isNaN(ageMonth)) return;
 
     for (const p of r.procedures) {
       if (p.isDrug || !p.code) continue;
       const nm = codeName(p.code);
+      const days = (Array.isArray(p.days) && p.days.length) ? p.days : null;
+      // 上限(hi=hi歳未満対象)は最終算定日の最年長で、下限(lo=lo歳以上対象)は最早算定日の最年少で判定
+      const ageMax = days ? ageOnDay(Math.max.apply(null, days)) : ageMonth;
+      const ageMin = days ? ageOnDay(Math.min.apply(null, days)) : ageMonth;
       // マスタの年齢制限(下限/上限・数値)を優先。上限年齢hiは「hi歳未満まで有効」
       const ageInfo = MasterLoader.getProcAge ? MasterLoader.getProcAge(p.code) : null;
       if (ageInfo) {
-        if (typeof ageInfo.hi === 'number' && age >= ageInfo.hi) {
+        if (typeof ageInfo.hi === 'number' && ageMax >= ageInfo.hi) {
           r.warnings.push({
             severity: 'high',
-            message: '年齢制限: ' + (ageInfo.name || nm) + ' は' + ageInfo.hi + '歳未満が対象（患者' + age + '歳）'
+            message: '年齢制限: ' + (ageInfo.name || nm) + ' は' + ageInfo.hi + '歳未満が対象（患者' + ageMax + '歳）'
           });
-        } else if (typeof ageInfo.lo === 'number' && age < ageInfo.lo) {
+        } else if (typeof ageInfo.lo === 'number' && ageMin < ageInfo.lo) {
           r.warnings.push({
             severity: 'high',
-            message: '年齢制限: ' + (ageInfo.name || nm) + ' は' + ageInfo.lo + '歳以上が対象（患者' + age + '歳）'
+            message: '年齢制限: ' + (ageInfo.name || nm) + ' は' + ageInfo.lo + '歳以上が対象（患者' + ageMin + '歳）'
           });
         }
       } else {
         // マスタ未収載時は名称ベースの簡易判定（fallback）
-        if (nm.includes('乳幼児') && age >= 6) {
-          r.warnings.push({ severity: 'mid', message: '年齢注意: ' + nm + ' は6歳未満対象の可能性（患者' + age + '歳）' });
-        } else if (nm.includes('小児') && age >= 15) {
-          r.warnings.push({ severity: 'low', message: '年齢注意: ' + nm + '（患者' + age + '歳）' });
+        if (nm.includes('乳幼児') && ageMax >= 6) {
+          r.warnings.push({ severity: 'mid', message: '年齢注意: ' + nm + ' は6歳未満対象の可能性（患者' + ageMax + '歳）' });
+        } else if (nm.includes('小児') && ageMax >= 15) {
+          r.warnings.push({ severity: 'low', message: '年齢注意: ' + nm + '（患者' + ageMax + '歳）' });
         }
       }
     }
@@ -349,7 +360,8 @@ const ReceiptChecker = (() => {
     }
   }
 
-  /** 背反テーブル4: 1週間以内に併算定不可 */
+  /** 背反テーブル4: 1週間以内に併算定不可
+   *  算定日情報(days)がある場合は「7日以内に算定されたか」まで確認し、別週なら警告しない(誤検知抑制) */
   function checkHaihanWeekly(r) {
     const codes = getProcedureCodes(r);
     if (codes.length < 2) return;
@@ -358,6 +370,14 @@ const ReceiptChecker = (() => {
     for (const [c1, c2] of pairs) {
       const key = [c1, c2].sort().join('-');
       if (seen.has(key)) continue;
+      // 両コードの算定日が判明していれば、7日以内(|差|<7)の組が存在する場合のみ週背反
+      const d1 = daysForCode(r, c1);
+      const d2 = daysForCode(r, c2);
+      if (d1.size && d2.size) {
+        let within = false;
+        for (const a of d1) { for (const b of d2) { if (Math.abs(a - b) < 7) { within = true; break; } } if (within) break; }
+        if (!within) continue; // すべて7日以上離れている → 同一週にあたらない
+      }
       seen.add(key);
       r.warnings.push({
         severity: 'mid',
