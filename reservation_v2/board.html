@@ -70,6 +70,26 @@
   .assign-sel{ font:inherit; font-size:11.5px; padding:3px 5px; border:1px solid var(--border); border-radius:6px; background:#fff; cursor:pointer; max-width:118px; margin:1px 0; display:block; }
   .assign-sel.staff{ color:#0369a1; border-color:#bae6fd; background:#f0f9ff; }
   .assign-sel.device{ color:#b45309; border-color:#fde68a; background:#fffbeb; }
+  /* 予約詳細モーダル */
+  .bk-modal-overlay{ position:fixed; inset:0; background:rgba(15,23,42,.5); display:flex; align-items:flex-start; justify-content:center; z-index:200; padding:32px 16px; overflow:auto; }
+  .bk-modal{ background:#fff; border-radius:14px; max-width:540px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+  .bk-head{ display:flex; align-items:center; justify-content:space-between; padding:15px 20px; border-bottom:1px solid var(--border); }
+  .bk-head h2{ margin:0; font-size:18px; }
+  .bk-close{ background:none; border:none; font-size:24px; cursor:pointer; color:var(--sub); line-height:1; padding:0 4px; }
+  .bk-body{ padding:16px 20px; }
+  .bk-sec{ margin-bottom:16px; }
+  .bk-sec h3{ font-size:11.5px; color:var(--sub); letter-spacing:.05em; margin:0 0 8px; font-weight:700; }
+  .bk-row{ display:flex; gap:10px; margin-bottom:6px; font-size:14px; }
+  .bk-row .k{ width:82px; color:var(--sub); flex:0 0 auto; }
+  .bk-row .v{ font-weight:600; }
+  .bk-assign{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+  .bk-assign label{ font-size:11px; color:var(--sub); display:block; margin-bottom:3px; font-weight:600; }
+  .bk-assign select{ width:100%; font-size:13px; padding:7px 6px; border:1px solid var(--border); border-radius:7px; }
+  .bk-actions{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; padding:14px 20px; border-top:1px solid var(--border); }
+  .bk-plus{ color:var(--blue); cursor:pointer; text-decoration:underline; }
+  tr .pt-link{ cursor:pointer; }
+  tr .pt-link:hover{ text-decoration:underline; }
+  .tl-blk{ cursor:pointer; }
 </style>
 </head>
 <body>
@@ -126,6 +146,9 @@
   <div id="view-menus" class="admin-view"></div>
   <div id="view-import" class="admin-view"></div>
 </main>
+
+<!-- 予約詳細モーダル（ブロック/患者名クリックで開く） -->
+<div id="bkModal" class="bk-modal-overlay" style="display:none" onclick="if(event.target===this)closeBooking()"></div>
 
 <script>window.__RSV_SUPABASE__ = true;</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -205,6 +228,65 @@ async function assignRes(code, kind, val){
   if(!res.ok){ alert(res.error==="COL_MISSING" ? "この環境では割当を保存できません（DB列の追加が必要）。" : res.error); }
   afterMutate();
 }
+
+/* ---------------- 予約詳細モーダル（クリックで詳細・割当編集） ---------------- */
+function ageFrom(birth){ try{ const [y,m,d]=birth.split("-").map(Number); const t=new Date(); let a=t.getFullYear()-y; if(t.getMonth()+1<m||(t.getMonth()+1===m&&t.getDate()<d))a--; return a>=0&&a<130?a:null; }catch{ return null; } }
+function openBooking(code){
+  const r=Store.loadReservations().find(x=>x.code===code); if(!r) return;
+  const clinic=Store.clinicOfCs(r.csId), svc=Store.serviceOfCs(r.csId), menu=r.menuId?Store.menuById(r.menuId):null, cid=clinic.id;
+  const dur=Store.durMin(r), end=tlHHMM(tlToMin(r.time)+dur), age=r.birthDate?ageFrom(r.birthDate):null;
+  const stMap={CONFIRMED:['予約確定','confirmed'],VISITED:['来院済','visited'],CANCELLED:['キャンセル','cancelled'],NO_SHOW:['不履行','no-show']};
+  const st=stMap[r.status]||[r.status,'confirmed'];
+  const roomOpts=Store.ROOMS.map(rm=>`<option value="${rm.id}" ${Store.roomOf(r)===rm.id?'selected':''}>${esc(rm.name)}</option>`).join("");
+  const staffOpts=`<option value="">担当なし</option>`+Store.resourcesOf(cid,'staff').map(x=>`<option value="${x.id}" ${Number(r.staffId)===Number(x.id)?'selected':''}>${esc(x.name)}</option>`).join("");
+  const devOpts=`<option value="">機材なし</option>`+Store.resourcesOf(cid,'device').map(x=>`<option value="${x.id}" ${Number(r.deviceId)===Number(x.id)?'selected':''}>${esc(x.name)}</option>`).join("");
+  document.getElementById('bkModal').innerHTML=`<div class="bk-modal" onclick="event.stopPropagation()">
+    <div class="bk-head"><h2>予約詳細</h2><button class="bk-close" onclick="closeBooking()">×</button></div>
+    <div class="bk-body">
+      <div class="bk-sec"><span class="badge ${st[1]}" style="font-size:12.5px">${st[0]}</span> <span class="muted" style="font-size:12px;margin-left:6px">予約番号 ${esc(r.code)}</span></div>
+      <div class="bk-sec"><h3>患者</h3>
+        <div class="bk-row"><span class="k">お名前</span><span class="v">${esc(r.name)} 様 ${r.visitType==="FIRST"?'<span class="badge first">初診</span>':(r.visitType==="REVISIT"?'<span class="badge confirmed">再診</span>':'')}</span></div>
+        ${r.kana?`<div class="bk-row"><span class="k">フリガナ</span><span class="v">${esc(r.kana)}</span></div>`:""}
+        ${r.birthDate?`<div class="bk-row"><span class="k">生年月日</span><span class="v">${esc(r.birthDate)}${age!=null?`（${age}歳）`:""}</span></div>`:""}
+        <div class="bk-row"><span class="k">電話</span><span class="v">${esc(r.phone)}</span></div>
+        ${r.email?`<div class="bk-row"><span class="k">メール</span><span class="v">${esc(r.email)}</span></div>`:""}
+        <div class="bk-row"><span class="k">LINE通知</span><span class="v" style="color:${r.lineUserId?'#06c755':'var(--sub)'}">${r.lineUserId?'連携済み（確定/リマインドを自動送信）':'未連携'}</span></div>
+      </div>
+      <div class="bk-sec"><h3>予約内容</h3>
+        <div class="bk-row"><span class="k">クリニック</span><span class="v">${esc(clinic.name)}（${esc(svc.name)}）</span></div>
+        ${menu?`<div class="bk-row"><span class="k">メニュー</span><span class="v">${esc(menu.name)}</span></div>`:""}
+        <div class="bk-row"><span class="k">日時</span><span class="v">${Store.fmtJa(r.date)} ${r.time}〜${end}（${dur}分）</span></div>
+        <div class="bk-row"><span class="k">経路</span><span class="v">${r.channel==="WEB"?"Web予約":r.channel==="PHONE"?"電話予約":esc(r.channel)}</span></div>
+        ${r.note?`<div class="bk-row"><span class="k">ご要望</span><span class="v" style="font-weight:400">${esc(r.note)}</span></div>`:""}
+      </div>
+      <div class="bk-sec"><h3>リソース割当（変更すると同時間帯の被りは自動で拒否）</h3>
+        <div class="bk-assign">
+          <div><label>診察室</label><select onchange="bkSet('${esc(r.code)}','room',this.value)">${roomOpts}</select></div>
+          <div><label>担当スタッフ</label><select onchange="bkSet('${esc(r.code)}','staff',this.value)">${staffOpts}</select></div>
+          <div><label>使用機材</label><select onchange="bkSet('${esc(r.code)}','device',this.value)">${devOpts}</select></div>
+        </div>
+      </div>
+    </div>
+    <div class="bk-actions">
+      ${r.status==="CONFIRMED"?`<button onclick="bkStatus('${esc(r.code)}','VISITED')">来院にする</button>`:""}
+      ${r.status!=="CANCELLED"?`<button class="danger" onclick="bkStatus('${esc(r.code)}','CANCELLED')">予約を取消</button>`:`<button class="secondary" onclick="bkStatus('${esc(r.code)}','CONFIRMED')">取消を戻す</button>`}
+      <button class="secondary" style="margin-left:auto" onclick="closeBooking()">閉じる</button>
+    </div>
+  </div>`;
+  document.getElementById('bkModal').style.display='flex';
+}
+function closeBooking(){ const m=document.getElementById('bkModal'); m.style.display='none'; m.innerHTML=''; }
+async function bkSet(code, kind, val){
+  const res = (kind==='room') ? await Store.setRoom(code, val) : await Store.assignResource(code, kind, val||null);
+  if(!res.ok){ alert(res.error==="COL_MISSING"?"この環境では保存できません（DB列が必要）。":res.error); }
+  afterMutate(); openBooking(code);
+}
+async function bkStatus(code, status){
+  if(status==="CANCELLED" && !confirm("この予約を取り消しますか？")) return;
+  await Store.updateStatus(code, status);
+  if(status==="CANCELLED"){ closeBooking(); afterMutate(); return; }
+  afterMutate(); openBooking(code);
+}
 function currentCodes(){ return new Set(clinicRows(curDate).map(r=>r.code)); }
 
 function renderBoard(flashCodes){
@@ -230,7 +312,7 @@ function renderBoard(flashCodes){
       <td>${roomSelect(r)}</td>
       <td class="assign-cell">${resSelect(r,'staff')}${resSelect(r,'device')}</td>
       <td>${esc(svc.name)}${menu?`<div class="muted" style="font-size:12px">${esc(menu.name)}</div>`:""}</td>
-      <td>${esc(r.name)} 様${r.visitType==="FIRST"?'<span class="badge first" style="margin-left:4px">初診</span>':""}${isNew?'<span class="new-tag">NEW</span>':""}</td>
+      <td><span class="pt-link" onclick="openBooking('${esc(r.code)}')">${esc(r.name)} 様</span>${r.visitType==="FIRST"?'<span class="badge first" style="margin-left:4px">初診</span>':""}${isNew?'<span class="new-tag">NEW</span>':""}</td>
       <td>${r.channel==="WEB"?'<span class="badge web">Web</span>':'<span class="badge phone">電話</span>'}</td>
       <td><span class="muted" style="font-size:12px">${esc(r.phone)}</span></td>
       <td><button class="small secondary" onclick="markVisited('${esc(r.code)}')">来院</button> <button class="small danger" onclick="cancelRes('${esc(r.code)}')">取消</button></td>
@@ -295,7 +377,8 @@ function renderTimeline(){
       const top=(st-sMin), h=Math.max(22,dur);
       const svc=Store.serviceOfCs(r.csId), menu=r.menuId?Store.menuById(r.menuId):null;
       return `<div class="tl-blk ${ci%2?'r2':'r1'}" style="top:${top}px;height:${h}px"
-                title="${esc(r.name)}様 ${r.time}-${tlHHMM(end)} / ${esc(menu?menu.name:svc.name)}">
+                onclick="openBooking('${esc(r.code)}')"
+                title="${esc(r.name)}様 ${r.time}-${tlHHMM(end)} / ${esc(menu?menu.name:svc.name)}（クリックで詳細）">
         <div class="w">${esc(r.name)} 様${r.channel==="PHONE"?' 📞':''}</div>
         <div class="m">${r.time}-${tlHHMM(end)}・${esc(menu?menu.name:svc.name)}</div>
       </div>`;
@@ -365,7 +448,7 @@ function renderList(){
     return `<tr style="${r.status==='CANCELLED'?'opacity:.55':''}">
       <td style="white-space:nowrap">${Store.fmtJa(r.date)} ${r.time}</td>
       <td>${esc(c.name)}／${esc(svc.name)}${rm?` <span class="room-badge ${rm.endsWith("2")?"r2":""}">${esc(rm)}</span>`:""}${menu?`<div class="muted" style="font-size:12px">${esc(menu.name)}</div>`:""}</td>
-      <td>${esc(r.name)} 様${r.visitType==="FIRST"?'<span class="badge first" style="margin-left:4px">初診</span>':""}<div class="muted" style="font-size:12px">${esc(r.phone)}</div></td>
+      <td><span class="pt-link" onclick="openBooking('${esc(r.code)}')">${esc(r.name)} 様</span>${r.visitType==="FIRST"?'<span class="badge first" style="margin-left:4px">初診</span>':""}<div class="muted" style="font-size:12px">${esc(r.phone)}</div></td>
       <td>${r.channel==="WEB"?'<span class="badge web">Web</span>':'<span class="badge phone">電話</span>'}</td>
       <td><span class="badge ${st[1]}">${st[0]}</span></td>
       <td>${r.status==="CONFIRMED"?`<button class="small secondary" onclick="markVisited('${esc(r.code)}')">来院</button> <button class="small danger" onclick="cancelRes('${esc(r.code)}')">取消</button>`:'<span class="muted" style="font-size:12px">—</span>'}</td>
