@@ -34,6 +34,23 @@
   .room-sel{ font:inherit; font-size:12.5px; font-weight:700; color:#0e7490; background:#ecfeff; border:1px solid #a5f3fc; border-radius:7px; padding:4px 6px; cursor:pointer; }
   .room-sel.r2{ color:#7c3aed; background:#f5f3ff; border-color:#ddd6fe; }
   .room-sel:focus{ outline:2px solid var(--blue-light); }
+  /* タイムライン（時間軸×診察室） */
+  .tl-toolbar{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
+  .tl-toolbar .day{ font-weight:700; font-size:15px; }
+  .tl-wrap{ border:1px solid var(--dark); background:#fff; overflow-x:auto; }
+  .tl-grid{ display:grid; grid-template-columns:56px repeat(var(--cols,2), minmax(150px,1fr)); }
+  .tl-head-cell{ position:sticky; top:0; background:#eef2f7; border-bottom:1px solid var(--dark); border-right:1px solid var(--border); padding:8px 6px; font-size:12.5px; font-weight:700; text-align:center; z-index:2; }
+  .tl-head-cell:last-child{ border-right:none; }
+  .tl-axis{ border-right:1px solid var(--border); }
+  .tl-axis .hr{ height:60px; border-bottom:1px solid var(--border); font-size:11px; color:var(--sub); padding:2px 6px; box-sizing:border-box; }
+  .tl-col{ position:relative; border-right:1px solid var(--border); }
+  .tl-col:last-child{ border-right:none; }
+  .tl-col .hr{ height:60px; border-bottom:1px dashed var(--border); box-sizing:border-box; }
+  .tl-blk{ position:absolute; left:3px; right:3px; border-radius:4px; padding:4px 7px; color:#fff; overflow:hidden; box-sizing:border-box; }
+  .tl-blk .w{ font-weight:700; font-size:11.5px; line-height:1.25; }
+  .tl-blk .m{ opacity:.92; font-size:10.5px; line-height:1.25; }
+  .tl-blk.r1{ background:#0e7490; } .tl-blk.r2{ background:#7c3aed; }
+  .tl-now{ position:absolute; height:2px; background:var(--red); z-index:1; }
 </style>
 </head>
 <body>
@@ -48,6 +65,7 @@
   <div class="clinic-switch" id="clinicSwitch"></div>
   <nav class="admin-tabs" id="adminTabs">
     <a class="tab active" data-tab="board" onclick="showAdminTab('board')">日別ボード</a>
+    <a class="tab" data-tab="timeline" onclick="showAdminTab('timeline')">タイムライン</a>
     <a class="tab" data-tab="list" onclick="showAdminTab('list')">予約一覧</a>
     <a class="tab" data-tab="new" onclick="showAdminTab('new')">電話予約の代理入力</a>
     <a class="tab" data-tab="slots" onclick="showAdminTab('slots')">予約枠の確認</a>
@@ -69,6 +87,9 @@
     <div class="stat-row" id="stats"></div>
     <div id="board"></div>
   </div>
+
+  <!-- タイムライン（時間軸×診察室） -->
+  <div id="view-timeline" class="admin-view"></div>
 
   <!-- 予約一覧 -->
   <div id="view-list" class="admin-view"></div>
@@ -125,6 +146,7 @@ function showAdminTab(id){
 }
 function renderTab(id){
   if(id==="board") renderBoard();
+  else if(id==="timeline") renderTimeline();
   else if(id==="list") renderList();
   else if(id==="new") renderNew();
   else if(id==="slots") renderSlots();
@@ -190,6 +212,59 @@ async function markVisited(code){ await Store.updateStatus(code, "VISITED"); aft
 async function cancelRes(code){ if(!confirm("この予約を取り消しますか？")) return; await Store.updateStatus(code, "CANCELLED"); afterMutate(); }
 async function resetDemo(){ await Store.resetDemo(); afterMutate(); }
 function afterMutate(){ prevCodes = currentCodes(); renderTab(curTab); }
+
+/* ---------------- タイムライン（時間軸 × 診察室・全院対応） ---------------- */
+function tlToMin(hhmm){ const [h,m]=hhmm.split(":").map(Number); return h*60+m; }
+function tlHHMM(min){ return `${String(Math.floor(min/60)).padStart(2,"0")}:${String(min%60).padStart(2,"0")}`; }
+function resDurMin(r){
+  if(r.menuId){ const m=Store.menuById(r.menuId); if(m&&m.durationMin) return m.durationMin; }
+  const s=Store.serviceOfCs(r.csId); return (s&&s.name==="在宅")?60:30;
+}
+function renderTimeline(){
+  const clinic=curClinicObj();
+  const rows=clinicRows(curDate).slice().sort((a,b)=>a.time.localeCompare(b.time));
+  // 表示レンジ（9:00-18:00基準・予約に合わせて拡張）
+  let sMin=9*60, eMin=18*60;
+  rows.forEach(r=>{ const st=tlToMin(r.time), en=st+resDurMin(r);
+    if(st<sMin) sMin=Math.floor(st/60)*60; if(en>eMin) eMin=Math.ceil(en/60)*60; });
+  const hours=[]; for(let m=sMin;m<eMin;m+=60) hours.push(m);
+  const rooms=Store.ROOMS;
+  const HEAD=34;                     // ヘッダー行の高さ(px)
+  const hrHtml=hours.map(m=>`<div class="hr">${tlHHMM(m)}</div>`).join("");   // 時刻ラベル付き（軸のみ）
+  const gridHr=hours.map(()=>`<div class="hr"></div>`).join("");             // 空目盛り（各列）
+
+  const head=`<div class="tl-head-cell">時刻</div>`+rooms.map(rm=>`<div class="tl-head-cell">${esc(rm.name)}</div>`).join("");
+  const axis=`<div class="tl-axis">${hrHtml}</div>`;
+  const cols=rooms.map(rm=>{
+    const blks=rows.filter(r=>Store.roomOf(r)===rm.id).map(r=>{
+      const st=tlToMin(r.time), dur=resDurMin(r), end=st+dur;
+      const top=(st-sMin), h=Math.max(22,dur);
+      const svc=Store.serviceOfCs(r.csId), menu=r.menuId?Store.menuById(r.menuId):null;
+      return `<div class="tl-blk ${rm.id===2?'r2':'r1'}" style="top:${top}px;height:${h}px"
+                title="${esc(r.name)}様 ${r.time}-${tlHHMM(end)} / ${esc(menu?menu.name:svc.name)}">
+        <div class="w">${esc(r.name)} 様${r.channel==="PHONE"?' 📞':''}</div>
+        <div class="m">${r.time}-${tlHHMM(end)}・${esc(menu?menu.name:svc.name)}</div>
+      </div>`;
+    }).join("");
+    return `<div class="tl-col">${gridHr}${blks}</div>`;
+  }).join("");
+
+  let now="";
+  if(curDate===Store.todayStr()){
+    const d=new Date(), nm=d.getHours()*60+d.getMinutes();
+    if(nm>=sMin && nm<=eMin) now=`<div class="tl-now" style="top:${HEAD+(nm-sMin)}px;left:56px;right:0"></div>`;
+  }
+  document.getElementById("view-timeline").innerHTML=`
+    <div class="tl-toolbar">
+      <button class="secondary small" onclick="shift(-1);renderTimeline()">‹ 前日</button>
+      <input type="date" value="${curDate}" onchange="setDate(this.value);renderTimeline()">
+      <button class="secondary small" onclick="shift(1);renderTimeline()">翌日 ›</button>
+      <span class="day">${esc(clinic.name)}クリニック ／ ${Store.fmtJa(curDate)}</span>
+      <span class="muted" style="margin-left:auto">${rows.length}件${clinic.openingNote?`（${esc(clinic.openingNote)}）`:""}</span>
+    </div>
+    <div class="tl-wrap"><div class="tl-grid" style="--cols:${rooms.length};position:relative">${head}${axis}${cols}${now}</div></div>
+    <p class="muted" style="margin-top:10px">診察室ごとの時系列。予約が入ると即反映されます。※現在は「診察室」軸のみ。<b>スタッフ・機材の軸</b>は院ごとのリソース設定（Phase 1後半）で追加します。</p>`;
+}
 
 /* ---------------- 予約一覧（全日・全ステータス） ---------------- */
 let listFilter = "ALL";
