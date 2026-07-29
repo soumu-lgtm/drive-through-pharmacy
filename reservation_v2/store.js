@@ -126,7 +126,15 @@ const Store = (() => {
   }
 
   /* ---------- 予約キャッシュ（getDays等が同期参照） ---------- */
-  let _cache = [];   // 予約の正本（メモリ）。ローカル=localStorageと同期／Supabase=DBと同期
+  let _cache = [];       // 予約の正本（メモリ）。ローカル=localStorageと同期／Supabase=DBと同期
+  let _resources = [];   // 院ごとのリソース（部屋/スタッフ/機材）。管理画面で編集
+
+  // 院×種別のリソース一覧（sort_order順）。kind省略で全種別。
+  function resourcesOf(clinicId, kind) {
+    return _resources
+      .filter(r => r.clinicId === clinicId && (!kind || r.kind === kind))
+      .sort((a,b) => (a.sortOrder-b.sortOrder) || (a.id-b.id));
+  }
 
   function mkRes(o) {
     return {
@@ -275,14 +283,33 @@ const Store = (() => {
         _cache = (data || []).map(fromRow);
         dispatch({ type: "reservation", at: Date.now() });
       },
+      /* --- リソース（部屋/スタッフ/機材） --- */
+      async loadResources() {
+        const { data, error } = await client.from("rsv2_resources").select("*").eq("active", true);
+        if (error) return [];   // テーブル未作成でも予約本体は動かす
+        return (data || []).map(r => ({ id: r.id, clinicId: r.clinic_id, kind: r.kind, name: r.name, sortOrder: r.sort_order }));
+      },
+      async addResource(r) { const { error } = await client.from("rsv2_resources").insert({ clinic_id:r.clinicId, kind:r.kind, name:r.name, sort_order:r.sortOrder||0 }); if (error) throw error; },
+      async renameResource(id, name) { const { error } = await client.from("rsv2_resources").update({ name }).eq("id", id); if (error) throw error; },
+      async removeResource(id) { const { error } = await client.from("rsv2_resources").delete().eq("id", id); if (error) throw error; },
     };
   }
 
   function makeLocalBackend() {
     /* ---- ローカル バックエンド（localStorage + BroadcastChannel） ---- */
     const LS_KEY = "rsv2.reservations";
+    const RES_KEY = "rsv2.resources";
     const load = () => { try { return JSON.parse(localStorage.getItem(LS_KEY) || "[]"); } catch { return []; } };
     const save = (l) => localStorage.setItem(LS_KEY, JSON.stringify(l));
+    function resSeed(){
+      if (localStorage.getItem(RES_KEY) !== null) return;
+      const out=[]; let id=1;
+      [1,2,3,4].forEach(cid=>{
+        [["room","部屋A",1],["room","部屋B",2],["staff","スタッフA",1],["staff","スタッフB",2],["device","機材A",1],["device","機材B",2]]
+          .forEach(([k,n,so])=>out.push({id:id++,clinicId:cid,kind:k,name:n,sortOrder:so}));
+      });
+      localStorage.setItem(RES_KEY, JSON.stringify(out));
+    }
     let bc = null; try { bc = new BroadcastChannel("rsv2_sync"); } catch { bc = null; }
     function fire(msg) { if (bc) bc.postMessage(msg); localStorage.setItem("rsv2.ping", JSON.stringify(msg)); }
     function seed() {
@@ -306,24 +333,40 @@ const Store = (() => {
       async setStatus(code, status) { const l = load(); const r = l.find(x=>x.code===code); if (r){ r.status=status; save(l); _cache=l; fire({type:"reservation",at:Date.now()}); } },
       async setRoom(updates) { const l = load(); updates.forEach(u=>{ const r=l.find(x=>x.code===u.code); if(r) r.roomId=u.roomId; }); save(l); _cache=l; fire({type:"reservation",at:Date.now()}); },
       async resetDemo() { localStorage.removeItem(LS_KEY); seed(); _cache = load(); fire({ type:"reservation", at: Date.now() }); },
+      /* --- リソース（localStorage） --- */
+      async loadResources() { resSeed(); try { return JSON.parse(localStorage.getItem(RES_KEY)||"[]"); } catch { return []; } },
+      async addResource(r) { resSeed(); const l=JSON.parse(localStorage.getItem(RES_KEY)||"[]"); const id=Math.max(0,...l.map(x=>x.id||0))+1; l.push({id,clinicId:r.clinicId,kind:r.kind,name:r.name,sortOrder:r.sortOrder||0}); localStorage.setItem(RES_KEY,JSON.stringify(l)); },
+      async renameResource(id,name){ const l=JSON.parse(localStorage.getItem(RES_KEY)||"[]"); const r=l.find(x=>x.id===id); if(r){r.name=name; localStorage.setItem(RES_KEY,JSON.stringify(l));} },
+      async removeResource(id){ let l=JSON.parse(localStorage.getItem(RES_KEY)||"[]"); l=l.filter(x=>x.id!==id); localStorage.setItem(RES_KEY,JSON.stringify(l)); },
     };
   }
 
   /* ---------- バックエンド確定（Supabase優先・失敗時ローカル） ---------- */
   let backend = makeLocalBackend();   // 既定
   const ready = (async () => {
+    let ok = false;
     if (USE_SUPABASE) {
       try {
         const sb = makeSupabaseBackend();
         await sb.init();
-        backend = sb; backendName = "supabase";
-        return;
+        backend = sb; backendName = "supabase"; ok = true;
       } catch (e) {
         console.warn("[予約システム] Supabase未接続のためローカル同期にフォールバックします（テーブル未作成の可能性）:", e && e.message);
       }
     }
-    await backend.init(); backendName = "local";
+    if (!ok) { await backend.init(); backendName = "local"; }
+    try { _resources = await backend.loadResources(); } catch { _resources = []; }
   })();
+
+  // リソースCRUD（管理画面から呼ぶ）。編集後は再取得して同期通知。
+  async function refreshResources() { try { _resources = await backend.loadResources(); } catch { _resources = []; } }
+  async function addResource(clinicId, kind, name) {
+    const last = resourcesOf(clinicId, kind).slice(-1)[0];
+    await backend.addResource({ clinicId, kind, name, sortOrder: (last ? last.sortOrder : 0) + 1 });
+    await refreshResources(); dispatch({ type: "resources", at: Date.now() });
+  }
+  async function renameResource(id, name) { await backend.renameResource(id, name); await refreshResources(); dispatch({ type: "resources", at: Date.now() }); }
+  async function removeResource(id) { await backend.removeResource(id); await refreshResources(); dispatch({ type: "resources", at: Date.now() }); }
 
   /* ---------- 公開API（UIが呼ぶ） ---------- */
 
@@ -375,6 +418,7 @@ const Store = (() => {
     clinicOfCs, serviceOfCs, menusOfCs, menuById, roomOf, roomName, freeRoom,
     getDays, createReservation, setRoom, findReservation, cancelReservation, updateStatus,
     dayReservations, loadReservations,
+    resourcesOf, refreshResources, addResource, renameResource, removeResource,
     onSync, ready,
     resetDemo() { return backend.resetDemo(); },
   };

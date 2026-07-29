@@ -51,6 +51,20 @@
   .tl-blk .m{ opacity:.92; font-size:10.5px; line-height:1.25; }
   .tl-blk.r1{ background:#0e7490; } .tl-blk.r2{ background:#7c3aed; }
   .tl-now{ position:absolute; height:2px; background:var(--red); z-index:1; }
+  .tl-axis-tabs{ display:inline-flex; gap:4px; }
+  .tl-axis-btn{ font:inherit; font-size:13px; font-weight:700; padding:6px 14px; border:1px solid var(--border); background:#fff; color:var(--sub); border-radius:7px; cursor:pointer; }
+  .tl-axis-btn.on{ background:var(--blue); color:#fff; border-color:var(--blue); }
+  /* リソース設定 */
+  .res-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; margin-top:8px; }
+  .res-card{ background:#fff; border:1px solid var(--border); border-radius:10px; padding:16px; }
+  .res-row{ display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+  .res-name{ flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:7px; font-size:14px; }
+  .res-del{ width:32px; height:32px; flex:0 0 auto; border:1px solid var(--red); color:var(--red); background:#fff; border-radius:7px; font-size:18px; font-weight:700; cursor:pointer; line-height:1; }
+  .res-del:hover{ background:var(--red-light); }
+  .res-add{ display:flex; gap:8px; margin-top:10px; border-top:1px dashed var(--border); padding-top:12px; }
+  .res-add input{ flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:7px; font-size:14px; }
+  .res-plus{ flex:0 0 auto; background:var(--green); color:#fff; border:none; border-radius:7px; padding:8px 14px; font-weight:700; font-size:13px; cursor:pointer; }
+  .res-plus:hover{ filter:brightness(1.05); }
 </style>
 </head>
 <body>
@@ -69,8 +83,8 @@
     <a class="tab" data-tab="list" onclick="showAdminTab('list')">予約一覧</a>
     <a class="tab" data-tab="new" onclick="showAdminTab('new')">電話予約の代理入力</a>
     <a class="tab" data-tab="slots" onclick="showAdminTab('slots')">予約枠の確認</a>
+    <a class="tab" data-tab="resources" onclick="showAdminTab('resources')">リソース設定</a>
     <a class="tab" data-tab="menus" onclick="showAdminTab('menus')">美容メニュー</a>
-    <a class="tab" data-tab="staff" onclick="showAdminTab('staff')">スタッフ</a>
     <a class="tab" data-tab="import" onclick="showAdminTab('import')">CSV取り込み</a>
   </nav>
 </header>
@@ -100,15 +114,17 @@
   <!-- 予約枠の確認 -->
   <div id="view-slots" class="admin-view"></div>
 
+  <!-- リソース設定（部屋/スタッフ/機材） -->
+  <div id="view-resources" class="admin-view"></div>
+
   <!-- 準備中 -->
   <div id="view-menus" class="admin-view"></div>
-  <div id="view-staff" class="admin-view"></div>
   <div id="view-import" class="admin-view"></div>
 </main>
 
 <script>window.__RSV_SUPABASE__ = true;</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="store.js"></script>
+<script src="store.js?v=20260729res"></script>
 <script>
 /* 受付ライブボード（タブ切替式）：患者予約が入った瞬間に日別ボード・予約一覧へ即反映 */
 function esc(s){ return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
@@ -150,8 +166,8 @@ function renderTab(id){
   else if(id==="list") renderList();
   else if(id==="new") renderNew();
   else if(id==="slots") renderSlots();
+  else if(id==="resources") renderResources();
   else if(id==="menus") renderPlaceholder("menus");
-  else if(id==="staff") renderPlaceholder("staff");
   else if(id==="import") renderPlaceholder("import");
 }
 
@@ -220,27 +236,44 @@ function resDurMin(r){
   if(r.menuId){ const m=Store.menuById(r.menuId); if(m&&m.durationMin) return m.durationMin; }
   const s=Store.serviceOfCs(r.csId); return (s&&s.name==="在宅")?60:30;
 }
+let tlAxis="room";
+const AXIS_LABEL={room:"ルーム",staff:"スタッフ",device:"機材"};
+function setTlAxis(k){ tlAxis=k; renderTimeline(); }
 function renderTimeline(){
   const clinic=curClinicObj();
   const rows=clinicRows(curDate).slice().sort((a,b)=>a.time.localeCompare(b.time));
+  const resList=Store.resourcesOf(clinic.id, tlAxis);          // この院×この軸のリソース＝列
   // 表示レンジ（9:00-18:00基準・予約に合わせて拡張）
   let sMin=9*60, eMin=18*60;
   rows.forEach(r=>{ const st=tlToMin(r.time), en=st+resDurMin(r);
     if(st<sMin) sMin=Math.floor(st/60)*60; if(en>eMin) eMin=Math.ceil(en/60)*60; });
   const hours=[]; for(let m=sMin;m<eMin;m+=60) hours.push(m);
-  const rooms=Store.ROOMS;
-  const HEAD=34;                     // ヘッダー行の高さ(px)
-  const hrHtml=hours.map(m=>`<div class="hr">${tlHHMM(m)}</div>`).join("");   // 時刻ラベル付き（軸のみ）
-  const gridHr=hours.map(()=>`<div class="hr"></div>`).join("");             // 空目盛り（各列）
-
-  const head=`<div class="tl-head-cell">時刻</div>`+rooms.map(rm=>`<div class="tl-head-cell">${esc(rm.name)}</div>`).join("");
+  const HEAD=34;
+  const hrHtml=hours.map(m=>`<div class="hr">${tlHHMM(m)}</div>`).join("");
+  const gridHr=hours.map(()=>`<div class="hr"></div>`).join("");
+  const axisTabs=["room","staff","device"].map(k=>`<button class="tl-axis-btn ${tlAxis===k?'on':''}" onclick="setTlAxis('${k}')">${AXIS_LABEL[k]}</button>`).join("");
+  const toolbar=`<div class="tl-toolbar">
+      <button class="secondary small" onclick="shift(-1);renderTimeline()">‹ 前日</button>
+      <input type="date" value="${curDate}" onchange="setDate(this.value);renderTimeline()">
+      <button class="secondary small" onclick="shift(1);renderTimeline()">翌日 ›</button>
+      <span class="day">${esc(clinic.name)}クリニック ／ ${Store.fmtJa(curDate)}</span>
+      <span class="tl-axis-tabs" style="margin-left:auto">${axisTabs}</span>
+    </div>`;
+  const box=document.getElementById("view-timeline");
+  if(!resList.length){
+    box.innerHTML = toolbar + `<div class="card">この院の「${AXIS_LABEL[tlAxis]}」が未登録です。<a onclick="showAdminTab('resources')" style="color:var(--blue);cursor:pointer;font-weight:700">リソース設定</a>から追加してください。</div>`;
+    return;
+  }
+  const head=`<div class="tl-head-cell">時刻</div>`+resList.map(rc=>`<div class="tl-head-cell">${esc(rc.name)}</div>`).join("");
   const axis=`<div class="tl-axis">${hrHtml}</div>`;
-  const cols=rooms.map(rm=>{
-    const blks=rows.filter(r=>Store.roomOf(r)===rm.id).map(r=>{
+  const cols=resList.map((rc,ci)=>{
+    // room軸: 予約のroomOf(1/2..)を列indexにマッピング。staff/device軸は予約への割当が未実装のため空。
+    const colBookings = (tlAxis==="room") ? rows.filter(r=>Store.roomOf(r)===ci+1) : [];
+    const blks=colBookings.map(r=>{
       const st=tlToMin(r.time), dur=resDurMin(r), end=st+dur;
       const top=(st-sMin), h=Math.max(22,dur);
       const svc=Store.serviceOfCs(r.csId), menu=r.menuId?Store.menuById(r.menuId):null;
-      return `<div class="tl-blk ${rm.id===2?'r2':'r1'}" style="top:${top}px;height:${h}px"
+      return `<div class="tl-blk ${ci%2?'r2':'r1'}" style="top:${top}px;height:${h}px"
                 title="${esc(r.name)}様 ${r.time}-${tlHHMM(end)} / ${esc(menu?menu.name:svc.name)}">
         <div class="w">${esc(r.name)} 様${r.channel==="PHONE"?' 📞':''}</div>
         <div class="m">${r.time}-${tlHHMM(end)}・${esc(menu?menu.name:svc.name)}</div>
@@ -248,23 +281,52 @@ function renderTimeline(){
     }).join("");
     return `<div class="tl-col">${gridHr}${blks}</div>`;
   }).join("");
-
   let now="";
   if(curDate===Store.todayStr()){
     const d=new Date(), nm=d.getHours()*60+d.getMinutes();
     if(nm>=sMin && nm<=eMin) now=`<div class="tl-now" style="top:${HEAD+(nm-sMin)}px;left:56px;right:0"></div>`;
   }
-  document.getElementById("view-timeline").innerHTML=`
-    <div class="tl-toolbar">
-      <button class="secondary small" onclick="shift(-1);renderTimeline()">‹ 前日</button>
-      <input type="date" value="${curDate}" onchange="setDate(this.value);renderTimeline()">
-      <button class="secondary small" onclick="shift(1);renderTimeline()">翌日 ›</button>
-      <span class="day">${esc(clinic.name)}クリニック ／ ${Store.fmtJa(curDate)}</span>
-      <span class="muted" style="margin-left:auto">${rows.length}件${clinic.openingNote?`（${esc(clinic.openingNote)}）`:""}</span>
-    </div>
-    <div class="tl-wrap"><div class="tl-grid" style="--cols:${rooms.length};position:relative">${head}${axis}${cols}${now}</div></div>
-    <p class="muted" style="margin-top:10px">診察室ごとの時系列。予約が入ると即反映されます。※現在は「診察室」軸のみ。<b>スタッフ・機材の軸</b>は院ごとのリソース設定（Phase 1後半）で追加します。</p>`;
+  const note = (tlAxis==="room")
+    ? "診察室ごとの時系列。予約が入ると即反映されます。列は「リソース設定」で編集できます。"
+    : `「${AXIS_LABEL[tlAxis]}」の列は「リソース設定」で編集できます。※予約への${AXIS_LABEL[tlAxis]}割当（どの予約が誰／どの機材か）は次段階で実装します。`;
+  box.innerHTML = toolbar +
+    `<div class="tl-wrap"><div class="tl-grid" style="--cols:${resList.length};position:relative">${head}${axis}${cols}${now}</div></div>
+     <p class="muted" style="margin-top:10px">${note}</p>`;
 }
+
+/* ---------------- リソース設定（部屋/スタッフ/機材・＋/−で増減） ---------------- */
+const RES_KIND=[["room","部屋","第1診察室"],["staff","スタッフ","島原医師"],["device","機材","ハイフ機"]];
+function renderResources(){
+  const clinic=curClinicObj();
+  const sections=RES_KIND.map(([kind,label,eg])=>{
+    const items=Store.resourcesOf(clinic.id, kind);
+    const rows=items.map(r=>`<div class="res-row">
+        <input class="res-name" value="${esc(r.name)}" onchange="resRename(${r.id}, this.value)">
+        <button class="res-del" title="削除" onclick="resDelete(${r.id}, ${JSON.stringify(r.name)})">−</button>
+      </div>`).join("") || `<div class="muted" style="padding:6px 2px">未登録</div>`;
+    return `<div class="res-card">
+      <h3 style="margin-top:0">${label}<span class="muted" style="font-weight:400;font-size:12px;margin-left:8px">${items.length}件</span></h3>
+      ${rows}
+      <div class="res-add">
+        <input id="resAdd_${kind}" placeholder="${label}名（例：${eg}）" onkeydown="if(event.key==='Enter')resAdd('${kind}')">
+        <button class="res-plus" onclick="resAdd('${kind}')">＋ 追加</button>
+      </div>
+    </div>`;
+  }).join("");
+  document.getElementById("view-resources").innerHTML=`
+    <h1>リソース設定<span class="muted" style="font-size:15px;font-weight:400;margin-left:8px">${esc(clinic.name)}クリニック</span></h1>
+    <p class="muted">この院の「部屋・スタッフ・機材」を管理します。<b>＋で追加・−で削除</b>、名称は直接編集できます。ここで登録したものが<b>タイムラインの列</b>になります（クリニック切替で院ごとに設定）。</p>
+    <div class="res-grid">${sections}</div>`;
+}
+async function resAdd(kind){
+  const el=document.getElementById('resAdd_'+kind); const name=(el.value||'').trim();
+  if(!name){ el.focus(); return; }
+  el.disabled=true;
+  try{ await Store.addResource(curClinic, kind, name); }catch(e){ alert('追加できませんでした：'+(e&&e.message||'')); }
+  renderResources();
+}
+async function resRename(id,name){ name=(name||'').trim(); if(!name){ renderResources(); return; } try{ await Store.renameResource(id,name); }catch(e){ alert('保存できませんでした'); renderResources(); } }
+async function resDelete(id,name){ if(!confirm(`「${name}」を削除しますか？`)) return; try{ await Store.removeResource(id); }catch(e){ alert('削除できませんでした'); } renderResources(); }
 
 /* ---------------- 予約一覧（全日・全ステータス） ---------------- */
 let listFilter = "ALL";
