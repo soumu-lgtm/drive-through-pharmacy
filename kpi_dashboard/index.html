@@ -203,6 +203,8 @@ async function init(){
     if(exSet.size){const b=O.length;O=O.filter(o=>!exSet.has(o.order_id));if(b-O.length)console.log(`[除外]${b-O.length}件の社員テスト購入を除外`)}
     // order_id+channel+skuで重複除去（完全一致行のみ除去、商品別明細は維持）
     O=(()=>{const seen=new Set();return O.filter(o=>{const k=o.order_id+"|"+o.channel+"|"+(o.sku||o.product_name||"");if(seen.has(k))return false;seen.add(k);return true})})();
+    // 数値ID×#名前の二重登録を除去（同一 channel+order_datetime+sku+total で #名前があれば数値IDを捨てる。Shopify二重計上対策）
+    O=(()=>{const nk=new Set(O.filter(o=>/^#/.test(String(o.order_id))).map(o=>o.channel+"|"+o.order_datetime+"|"+(o.sku||"")+"|"+o.total));return O.filter(o=>!(/^[0-9]+$/.test(String(o.order_id))&&nk.has(o.channel+"|"+o.order_datetime+"|"+(o.sku||"")+"|"+o.total)))})();
     const ds=D.map(d=>d.date).sort();
     if(ds.length){
       const el=id=>document.getElementById(id);
@@ -247,6 +249,8 @@ async function doRefresh() {
     const exSet=new Set(EX.map(e=>e.order_id));
     if(exSet.size){O=O.filter(o=>!exSet.has(o.order_id))}
     O=(()=>{const seen=new Set();return O.filter(o=>{const k=o.order_id+"|"+o.channel+"|"+(o.sku||o.product_name||"");if(seen.has(k))return false;seen.add(k);return true})})();
+    // 数値ID×#名前の二重登録を除去（同一 channel+order_datetime+sku+total で #名前があれば数値IDを捨てる。Shopify二重計上対策）
+    O=(()=>{const nk=new Set(O.filter(o=>/^#/.test(String(o.order_id))).map(o=>o.channel+"|"+o.order_datetime+"|"+(o.sku||"")+"|"+o.total));return O.filter(o=>!(/^[0-9]+$/.test(String(o.order_id))&&nk.has(o.channel+"|"+o.order_datetime+"|"+(o.sku||"")+"|"+o.total)))})();
     renderAll();
     var now=new Date().toLocaleString('ja-JP');
     document.getElementById('syncTs').textContent=`最終更新: ${now}（自動刷新: 30分毎・画面表示中のみ）`;
