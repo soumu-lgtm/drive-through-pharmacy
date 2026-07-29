@@ -311,6 +311,12 @@ const Store = (() => {
         const r = _cache.find(x => x.code === code);
         if (r) { if (kind === "staff") r.staffId = resourceId; else r.deviceId = resourceId; }
       },
+      async reschedule(code, newTime) {
+        const r = _cache.find(x => x.code === code); const slot = r ? `${r.csId}_${r.date}_${newTime}` : null;
+        const { error } = await client.from(TABLE).update({ rtime: newTime, slot_id: slot }).eq("code", code);
+        if (error) throw error;
+        if (r) { r.time = newTime; r.slotId = slot; }
+      },
       /* --- リソース（部屋/スタッフ/機材） --- */
       async loadResources() {
         const { data, error } = await client.from("rsv2_resources").select("*").eq("active", true);
@@ -362,6 +368,7 @@ const Store = (() => {
       async setRoom(updates) { const l = load(); updates.forEach(u=>{ const r=l.find(x=>x.code===u.code); if(r) r.roomId=u.roomId; }); save(l); _cache=l; fire({type:"reservation",at:Date.now()}); },
       async resetDemo() { localStorage.removeItem(LS_KEY); seed(); _cache = load(); fire({ type:"reservation", at: Date.now() }); },
       async assignResource(code, kind, resourceId) { const l=load(); const r=l.find(x=>x.code===code); if(r){ if(kind==="staff") r.staffId=resourceId; else r.deviceId=resourceId; save(l); _cache=l; fire({type:"reservation",at:Date.now()}); } },
+      async reschedule(code, newTime){ const l=load(); const r=l.find(x=>x.code===code); if(r){ r.time=newTime; r.slotId=`${r.csId}_${r.date}_${newTime}`; save(l); _cache=l; fire({type:"reservation",at:Date.now()}); } },
       /* --- リソース（localStorage） --- */
       async loadResources() { resSeed(); try { return JSON.parse(localStorage.getItem(RES_KEY)||"[]"); } catch { return []; } },
       async addResource(r) { resSeed(); const l=JSON.parse(localStorage.getItem(RES_KEY)||"[]"); const id=Math.max(0,...l.map(x=>x.id||0))+1; l.push({id,clinicId:r.clinicId,kind:r.kind,name:r.name,sortOrder:r.sortOrder||0}); localStorage.setItem(RES_KEY,JSON.stringify(l)); },
@@ -434,6 +441,19 @@ const Store = (() => {
     }
     return { ok: true };
   }
+  // 時刻の移動（ドラッグ）。満員・スタッフ/機材の被りは拒否。
+  async function moveReservation(code, newTime) {
+    const res = _cache.find(x => x.code === code && x.status === "CONFIRMED");
+    if (!res) return { ok: false, error: "予約が見つかりません。" };
+    if (newTime === res.time) return { ok: true };
+    const s = _toMin(newTime), e = s + durMin(res);
+    const used = _cache.filter(r => r.status === "CONFIRMED" && r.code !== code && r.csId === res.csId && r.date === res.date && r.time === newTime).length;
+    if (used >= ROOMS.length) return { ok: false, error: "移動先の枠は満員です。" };
+    if (res.staffId && resourceConflict("staff", res.staffId, res.date, s, e, code)) return { ok: false, error: "移動先の時間は担当スタッフが別予約と重複します。" };
+    if (res.deviceId && resourceConflict("device", res.deviceId, res.date, s, e, code)) return { ok: false, error: "移動先の時間は機材が別予約で使用中です。" };
+    try { await backend.reschedule(code, newTime); } catch (e2) { return { ok: false, error: "通信エラーで移動できませんでした。" }; }
+    return { ok: true };
+  }
   // 診察室の切り替え（対象室に別の予約があれば入れ替え）
   async function setRoom(code, targetRoomId) {
     targetRoomId = Number(targetRoomId);
@@ -469,7 +489,7 @@ const Store = (() => {
     CLINICS, MENUS, ROOMS, WD, getBackend: () => backendName,
     todayStr, addDays, fmtJa, weekday,
     clinicOfCs, serviceOfCs, menusOfCs, menuById, roomOf, roomName, freeRoom, durMin, resourceConflict,
-    getDays, createReservation, setRoom, assignResource, findReservation, cancelReservation, updateStatus,
+    getDays, createReservation, setRoom, assignResource, moveReservation, findReservation, cancelReservation, updateStatus,
     dayReservations, loadReservations,
     resourcesOf, refreshResources, addResource, renameResource, removeResource,
     onSync, ready,

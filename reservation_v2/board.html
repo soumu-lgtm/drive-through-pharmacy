@@ -89,7 +89,8 @@
   .bk-plus{ color:var(--blue); cursor:pointer; text-decoration:underline; }
   tr .pt-link{ cursor:pointer; }
   tr .pt-link:hover{ text-decoration:underline; }
-  .tl-blk{ cursor:pointer; }
+  .tl-blk{ cursor:grab; user-select:none; }
+  .tl-blk:active{ cursor:grabbing; }
 </style>
 </head>
 <body>
@@ -152,7 +153,7 @@
 
 <script>window.__RSV_SUPABASE__ = true;</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="store.js?v=20260729asg"></script>
+<script src="store.js?v=20260729drag"></script>
 <script>
 /* 受付ライブボード（タブ切替式）：患者予約が入った瞬間に日別ボード・予約一覧へ即反映 */
 function esc(s){ return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
@@ -232,6 +233,7 @@ async function assignRes(code, kind, val){
 /* ---------------- 予約詳細モーダル（クリックで詳細・割当編集） ---------------- */
 function ageFrom(birth){ try{ const [y,m,d]=birth.split("-").map(Number); const t=new Date(); let a=t.getFullYear()-y; if(t.getMonth()+1<m||(t.getMonth()+1===m&&t.getDate()<d))a--; return a>=0&&a<130?a:null; }catch{ return null; } }
 function openBooking(code){
+  if(_tlDragged) return;                                  // ドラッグ直後のクリックは無視
   const r=Store.loadReservations().find(x=>x.code===code); if(!r) return;
   const clinic=Store.clinicOfCs(r.csId), svc=Store.serviceOfCs(r.csId), menu=r.menuId?Store.menuById(r.menuId):null, cid=clinic.id;
   const dur=Store.durMin(r), end=tlHHMM(tlToMin(r.time)+dur), age=r.birthDate?ageFrom(r.birthDate):null;
@@ -344,6 +346,55 @@ async function submitNew(prefill){
   if(!res.ok){ if(btn){ btn.disabled=false; btn.textContent='この内容で予約する'; } return err(res.error); }
   closeBooking(); afterMutate(); if(curTab==='timeline') renderTimeline();
 }
+
+/* ---------------- タイムライン ドラッグで時刻・リソース変更 ---------------- */
+let _tlDrag=null, _tlDragged=false;
+function columnOfBooking(code){
+  const r=Store.loadReservations().find(x=>x.code===code); if(!r) return -1;
+  if(tlState.axis==='room') return Store.roomOf(r)-1;
+  const rid = tlState.axis==='staff' ? r.staffId : r.deviceId;
+  return tlState.resList.findIndex(x=>Number(x.id)===Number(rid));
+}
+function tlDragStart(ev, code){
+  if(ev.button!==0) return;
+  ev.preventDefault();
+  const blk=ev.currentTarget;
+  _tlDrag={ code, blk, startX:ev.clientX, startY:ev.clientY, origTop:parseInt(blk.style.top)||0, moved:false };
+  document.addEventListener('mousemove', tlDragMove);
+  document.addEventListener('mouseup', tlDragEnd);
+}
+function tlDragMove(ev){
+  if(!_tlDrag) return;
+  const dy=ev.clientY-_tlDrag.startY, dx=ev.clientX-_tlDrag.startX;
+  if(Math.abs(dy)>3||Math.abs(dx)>3) _tlDrag.moved=true;
+  _tlDrag.blk.style.top=(_tlDrag.origTop+dy)+'px';
+  _tlDrag.blk.style.opacity='.7'; _tlDrag.blk.style.zIndex='6';
+}
+async function tlDragEnd(ev){
+  document.removeEventListener('mousemove', tlDragMove);
+  document.removeEventListener('mouseup', tlDragEnd);
+  const d=_tlDrag; _tlDrag=null;
+  if(!d) return;
+  if(!d.moved){ d.blk.style.opacity=''; d.blk.style.zIndex=''; return; }   // 動いてない＝クリック（詳細）
+  _tlDragged=true; setTimeout(()=>{_tlDragged=false;}, 350);
+  const cols=[...document.querySelectorAll('#view-timeline .tl-col')];
+  let newCi=-1; cols.forEach((c,i)=>{ const r=c.getBoundingClientRect(); if(ev.clientX>=r.left && ev.clientX<r.right) newCi=i; });
+  const refCol=cols[Math.max(0,newCi)] || cols[0]; const crect=refCol.getBoundingClientRect();
+  let min=tlState.sMin+Math.round((ev.clientY-crect.top)/30)*30; min=Math.max(tlState.sMin,min);
+  const newTime=tlHHMM(min);
+  const oldCi=columnOfBooking(d.code);
+  // まず列（リソース）を変更 → 次に時刻移動（どちらも被りは拒否）
+  let res={ok:true};
+  if(newCi>=0 && newCi!==oldCi && tlState.resList[newCi]){
+    const rc=tlState.resList[newCi];
+    if(tlState.axis==='room') res=await Store.setRoom(d.code, newCi+1);
+    else if(tlState.axis==='staff') res=await Store.assignResource(d.code,'staff', rc.id);
+    else if(tlState.axis==='device') res=await Store.assignResource(d.code,'device', rc.id);
+  }
+  if(res.ok) res=await Store.moveReservation(d.code, newTime);
+  if(!res.ok) alert(res.error==="COL_MISSING"?"この環境では保存できません（DB列が必要）。":res.error);
+  afterMutate(); renderTimeline();
+}
 function currentCodes(){ return new Set(clinicRows(curDate).map(r=>r.code)); }
 
 function renderBoard(flashCodes){
@@ -436,8 +487,9 @@ function renderTimeline(){
       const top=(st-sMin), h=Math.max(22,dur);
       const svc=Store.serviceOfCs(r.csId), menu=r.menuId?Store.menuById(r.menuId):null;
       return `<div class="tl-blk ${ci%2?'r2':'r1'}" style="top:${top}px;height:${h}px"
+                onmousedown="tlDragStart(event,'${esc(r.code)}')"
                 onclick="event.stopPropagation();openBooking('${esc(r.code)}')"
-                title="${esc(r.name)}様 ${r.time}-${tlHHMM(end)} / ${esc(menu?menu.name:svc.name)}（クリックで詳細）">
+                title="${esc(r.name)}様 ${r.time}-${tlHHMM(end)} / ${esc(menu?menu.name:svc.name)}（クリックで詳細・ドラッグで移動）">
         <div class="w">${esc(r.name)} 様${r.channel==="PHONE"?' 📞':''}</div>
         <div class="m">${r.time}-${tlHHMM(end)}・${esc(menu?menu.name:svc.name)}</div>
       </div>`;
