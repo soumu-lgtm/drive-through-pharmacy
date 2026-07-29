@@ -106,6 +106,10 @@
   tr .pt-link:hover{ text-decoration:underline; }
   .tl-blk{ cursor:grab; user-select:none; }
   .tl-blk:active{ cursor:grabbing; }
+  .tl-blk.dragging{ outline:2px solid var(--blue); box-shadow:0 6px 16px rgba(0,0,0,.28); }
+  .tl-blk.dragging::after{ content:attr(data-drop); position:absolute; top:1px; right:3px; background:rgba(15,23,42,.78); color:#fff; font-size:10px; font-weight:700; padding:1px 5px; border-radius:3px; }
+  #tlGuide{ position:absolute; left:56px; right:0; height:0; border-top:2px dashed var(--blue); z-index:9; pointer-events:none; }
+  #tlGuide .tg-label{ position:absolute; left:2px; top:-10px; background:var(--blue); color:#fff; font-size:11px; font-weight:700; padding:1px 7px; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,.3); }
 </style>
 </head>
 <body>
@@ -389,28 +393,52 @@ function tlDragStart(ev, code){
   if(ev.button!==0) return;
   ev.preventDefault();
   const blk=ev.currentTarget;
-  _tlDrag={ code, blk, startX:ev.clientX, startY:ev.clientY, origTop:parseInt(blk.style.top)||0, moved:false };
+  _tlDrag={ code, blk, startX:ev.clientX, startY:ev.clientY, origTop:parseInt(blk.style.top)||0, moved:false, snapMin:null };
   document.addEventListener('mousemove', tlDragMove);
   document.addEventListener('mouseup', tlDragEnd);
+}
+function snapMinAt(clientY, colEl){
+  const rect=colEl.getBoundingClientRect();
+  let min=tlState.sMin+Math.round(((clientY-rect.top)/tlState.ppm)/30)*30;
+  return Math.max(tlState.sMin, min);
 }
 function tlDragMove(ev){
   if(!_tlDrag) return;
   const dy=ev.clientY-_tlDrag.startY, dx=ev.clientX-_tlDrag.startX;
-  if(Math.abs(dy)>3||Math.abs(dx)>3) _tlDrag.moved=true;
-  _tlDrag.blk.style.top=(_tlDrag.origTop+dy)+'px';
-  _tlDrag.blk.style.opacity='.7'; _tlDrag.blk.style.zIndex='6';
+  if(Math.abs(dy)>3||Math.abs(dx)>3){ _tlDrag.moved=true; _tlDrag.blk.classList.add('dragging'); }
+  if(!_tlDrag.moved) return;
+  // カーソル下の列を特定
+  const cols=[...document.querySelectorAll('#view-timeline .tl-col')];
+  let col=_tlDrag.blk.parentElement;
+  cols.forEach(c=>{ const r=c.getBoundingClientRect(); if(ev.clientX>=r.left && ev.clientX<r.right) col=c; });
+  const min=snapMinAt(ev.clientY, col);
+  const dur=Store.durMin(Store.loadReservations().find(x=>x.code===_tlDrag.code)||{});
+  _tlDrag.snapMin=min; _tlDrag.snapCol=col;
+  // ブロックを30分グリッドにスナップ表示＋ドロップ時刻ラベル
+  _tlDrag.blk.style.top=((min-tlState.sMin)*tlState.ppm)+'px';
+  _tlDrag.blk.style.opacity='.9'; _tlDrag.blk.style.zIndex='8';
+  _tlDrag.blk.setAttribute('data-drop', tlHHMM(min)+'〜'+tlHHMM(min+dur));
+  showDropGuide(min);
 }
+function showDropGuide(min){
+  const grid=document.querySelector('#view-timeline .tl-grid'); if(!grid) return;
+  let g=document.getElementById('tlGuide');
+  if(!g){ g=document.createElement('div'); g.id='tlGuide'; grid.appendChild(g); }
+  g.style.top=(34+(min-tlState.sMin)*tlState.ppm)+'px';
+  g.innerHTML=`<span class="tg-label">${tlHHMM(min)}</span>`;
+  g.style.display='block';
+}
+function hideDropGuide(){ const g=document.getElementById('tlGuide'); if(g) g.remove(); }
 async function tlDragEnd(ev){
   document.removeEventListener('mousemove', tlDragMove);
   document.removeEventListener('mouseup', tlDragEnd);
-  const d=_tlDrag; _tlDrag=null;
+  const d=_tlDrag; _tlDrag=null; hideDropGuide();
   if(!d) return;
-  if(!d.moved){ d.blk.style.opacity=''; d.blk.style.zIndex=''; return; }   // 動いてない＝クリック（詳細）
+  if(!d.moved){ d.blk.style.opacity=''; d.blk.style.zIndex=''; d.blk.classList.remove('dragging'); return; }   // 動いてない＝クリック（詳細）
   _tlDragged=true; setTimeout(()=>{_tlDragged=false;}, 350);
   const cols=[...document.querySelectorAll('#view-timeline .tl-col')];
   let newCi=-1; cols.forEach((c,i)=>{ const r=c.getBoundingClientRect(); if(ev.clientX>=r.left && ev.clientX<r.right) newCi=i; });
-  const refCol=cols[Math.max(0,newCi)] || cols[0]; const crect=refCol.getBoundingClientRect();
-  let min=tlState.sMin+Math.round(((ev.clientY-crect.top)/tlState.ppm)/30)*30; min=Math.max(tlState.sMin,min);
+  const min = (d.snapMin!=null) ? d.snapMin : snapMinAt(ev.clientY, cols[Math.max(0,newCi)]||cols[0]);
   const newTime=tlHHMM(min);
   const oldCi=columnOfBooking(d.code);
   // まず列（リソース）を変更 → 次に時刻移動（どちらも被りは拒否）
