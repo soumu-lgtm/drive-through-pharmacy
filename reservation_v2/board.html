@@ -54,6 +54,16 @@
   .tl-axis-tabs{ display:inline-flex; gap:4px; }
   .tl-axis-btn{ font:inherit; font-size:13px; font-weight:700; padding:6px 14px; border:1px solid var(--border); background:#fff; color:var(--sub); border-radius:7px; cursor:pointer; }
   .tl-axis-btn.on{ background:var(--blue); color:#fff; border-color:var(--blue); }
+  .tl-compact{ font-size:12.5px; color:var(--dark); display:inline-flex; align-items:center; gap:4px; cursor:pointer; }
+  @media print {
+    .admin-header, .bk-modal-overlay { display:none !important; }
+    .admin-view:not(.active){ display:none !important; }
+    .tl-toolbar button, .tl-toolbar input, .tl-compact, .tl-axis-tabs { display:none !important; }
+    .tl-toolbar .day{ font-size:15px; }
+    .tl-wrap{ border:1px solid #999; overflow:visible; }
+    main{ padding:6px; max-width:none; }
+    body{ background:#fff; }
+  }
   /* リソース設定 */
   .res-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; margin-top:8px; }
   .res-card{ background:#fff; border:1px solid var(--border); border-radius:10px; padding:16px; }
@@ -294,7 +304,7 @@ async function bkStatus(code, status){
 function tlColClick(ci, ev){
   if(curClinicObj().openingNote) return;                 // 開業前は不可
   const col=ev.currentTarget; const rect=col.getBoundingClientRect();
-  let min = tlState.sMin + Math.round((ev.clientY - rect.top)/30)*30;   // 30分スナップ
+  let min = tlState.sMin + Math.round(((ev.clientY - rect.top)/tlState.ppm)/30)*30;   // 30分スナップ
   const time = tlHHMM(Math.max(tlState.sMin, min));
   const rc = tlState.resList[ci];
   const prefill = { time };
@@ -380,7 +390,7 @@ async function tlDragEnd(ev){
   const cols=[...document.querySelectorAll('#view-timeline .tl-col')];
   let newCi=-1; cols.forEach((c,i)=>{ const r=c.getBoundingClientRect(); if(ev.clientX>=r.left && ev.clientX<r.right) newCi=i; });
   const refCol=cols[Math.max(0,newCi)] || cols[0]; const crect=refCol.getBoundingClientRect();
-  let min=tlState.sMin+Math.round((ev.clientY-crect.top)/30)*30; min=Math.max(tlState.sMin,min);
+  let min=tlState.sMin+Math.round(((ev.clientY-crect.top)/tlState.ppm)/30)*30; min=Math.max(tlState.sMin,min);
   const newTime=tlHHMM(min);
   const oldCi=columnOfBooking(d.code);
   // まず列（リソース）を変更 → 次に時刻移動（どちらも被りは拒否）
@@ -446,7 +456,8 @@ function resDurMin(r){
   const s=Store.serviceOfCs(r.csId); return (s&&s.name==="在宅")?60:30;
 }
 let tlAxis="room";
-let tlState={ sMin:540, axis:"room", resList:[] };   // 空き枠クリック用に現在の描画状態を保持
+let tlCompact=false;                                  // 縮小表示
+let tlState={ sMin:540, axis:"room", resList:[], ppm:1 };   // 空き枠クリック用に現在の描画状態を保持
 const AXIS_LABEL={room:"ルーム",staff:"スタッフ",device:"機材"};
 function setTlAxis(k){ tlAxis=k; renderTimeline(); }
 function renderTimeline(){
@@ -458,17 +469,19 @@ function renderTimeline(){
   rows.forEach(r=>{ const st=tlToMin(r.time), en=st+resDurMin(r);
     if(st<sMin) sMin=Math.floor(st/60)*60; if(en>eMin) eMin=Math.ceil(en/60)*60; });
   const hours=[]; for(let m=sMin;m<eMin;m+=60) hours.push(m);
-  const HEAD=34;
-  tlState={ sMin, axis:tlAxis, resList };   // 空き枠クリックで参照
-  const hrHtml=hours.map(m=>`<div class="hr">${tlHHMM(m)}</div>`).join("");
-  const gridHr=hours.map(()=>`<div class="hr"></div>`).join("");
+  const HEAD=34, PPM=tlCompact?0.5:1;
+  tlState={ sMin, axis:tlAxis, resList, ppm:PPM };   // 空き枠クリック/ドラッグで参照
+  const hrHtml=hours.map(m=>`<div class="hr" style="height:${60*PPM}px">${tlHHMM(m)}</div>`).join("");
+  const gridHr=hours.map(()=>`<div class="hr" style="height:${60*PPM}px"></div>`).join("");
   const axisTabs=["room","staff","device"].map(k=>`<button class="tl-axis-btn ${tlAxis===k?'on':''}" onclick="setTlAxis('${k}')">${AXIS_LABEL[k]}</button>`).join("");
   const toolbar=`<div class="tl-toolbar">
       <button class="secondary small" onclick="shift(-1);renderTimeline()">‹ 前日</button>
       <input type="date" value="${curDate}" onchange="setDate(this.value);renderTimeline()">
       <button class="secondary small" onclick="shift(1);renderTimeline()">翌日 ›</button>
       <span class="day">${esc(clinic.name)}クリニック ／ ${Store.fmtJa(curDate)}</span>
-      <span class="tl-axis-tabs" style="margin-left:auto">${axisTabs}</span>
+      <label class="tl-compact" style="margin-left:auto"><input type="checkbox" ${tlCompact?'checked':''} onchange="tlCompact=this.checked;renderTimeline()"> 縮小</label>
+      <button class="secondary small no-print" onclick="window.print()">印刷</button>
+      <span class="tl-axis-tabs">${axisTabs}</span>
     </div>`;
   const box=document.getElementById("view-timeline");
   if(!resList.length){
@@ -484,7 +497,7 @@ function renderTimeline(){
       : rows.filter(r=> Number(tlAxis==="staff"?r.staffId:r.deviceId) === Number(rc.id));
     const blks=colBookings.map(r=>{
       const st=tlToMin(r.time), dur=resDurMin(r), end=st+dur;
-      const top=(st-sMin), h=Math.max(22,dur);
+      const top=(st-sMin)*PPM, h=Math.max(16,dur*PPM);
       const svc=Store.serviceOfCs(r.csId), menu=r.menuId?Store.menuById(r.menuId):null;
       return `<div class="tl-blk ${ci%2?'r2':'r1'}" style="top:${top}px;height:${h}px"
                 onmousedown="tlDragStart(event,'${esc(r.code)}')"
@@ -499,7 +512,7 @@ function renderTimeline(){
   let now="";
   if(curDate===Store.todayStr()){
     const d=new Date(), nm=d.getHours()*60+d.getMinutes();
-    if(nm>=sMin && nm<=eMin) now=`<div class="tl-now" style="top:${HEAD+(nm-sMin)}px;left:56px;right:0"></div>`;
+    if(nm>=sMin && nm<=eMin) now=`<div class="tl-now" style="top:${HEAD+(nm-sMin)*PPM}px;left:56px;right:0"></div>`;
   }
   const note = (tlAxis==="room")
     ? "診察室ごとの時系列。予約が入ると即反映されます。列は「リソース設定」で編集できます。"
