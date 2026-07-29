@@ -323,6 +323,8 @@ const Store = (() => {
         if (error) return [];   // テーブル未作成でも予約本体は動かす
         return (data || []).map(r => ({ id: r.id, clinicId: r.clinic_id, kind: r.kind, name: r.name, sortOrder: r.sort_order }));
       },
+      async getNote(clinicId, date) { const { data } = await client.from("rsv2_daily_notes").select("note").eq("clinic_id", clinicId).eq("ndate", date).maybeSingle(); return data ? (data.note||"") : ""; },
+      async saveNote(clinicId, date, note) { const { error } = await client.from("rsv2_daily_notes").upsert({ clinic_id:clinicId, ndate:date, note, updated_at:new Date().toISOString() }, { onConflict:"clinic_id,ndate" }); if (error) throw error; },
       async addResource(r) { const { error } = await client.from("rsv2_resources").insert({ clinic_id:r.clinicId, kind:r.kind, name:r.name, sort_order:r.sortOrder||0 }); if (error) throw error; },
       async renameResource(id, name) { const { error } = await client.from("rsv2_resources").update({ name }).eq("id", id); if (error) throw error; },
       async removeResource(id) { const { error } = await client.from("rsv2_resources").delete().eq("id", id); if (error) throw error; },
@@ -371,6 +373,8 @@ const Store = (() => {
       async reschedule(code, newTime){ const l=load(); const r=l.find(x=>x.code===code); if(r){ r.time=newTime; r.slotId=`${r.csId}_${r.date}_${newTime}`; save(l); _cache=l; fire({type:"reservation",at:Date.now()}); } },
       /* --- リソース（localStorage） --- */
       async loadResources() { resSeed(); try { return JSON.parse(localStorage.getItem(RES_KEY)||"[]"); } catch { return []; } },
+      async getNote(clinicId,date){ try{ return localStorage.getItem(`rsv2.note.${clinicId}.${date}`)||""; }catch{ return ""; } },
+      async saveNote(clinicId,date,note){ try{ localStorage.setItem(`rsv2.note.${clinicId}.${date}`, note); }catch{} },
       async addResource(r) { resSeed(); const l=JSON.parse(localStorage.getItem(RES_KEY)||"[]"); const id=Math.max(0,...l.map(x=>x.id||0))+1; l.push({id,clinicId:r.clinicId,kind:r.kind,name:r.name,sortOrder:r.sortOrder||0}); localStorage.setItem(RES_KEY,JSON.stringify(l)); },
       async renameResource(id,name){ const l=JSON.parse(localStorage.getItem(RES_KEY)||"[]"); const r=l.find(x=>x.id===id); if(r){r.name=name; localStorage.setItem(RES_KEY,JSON.stringify(l));} },
       async removeResource(id){ let l=JSON.parse(localStorage.getItem(RES_KEY)||"[]"); l=l.filter(x=>x.id!==id); localStorage.setItem(RES_KEY,JSON.stringify(l)); },
@@ -403,6 +407,8 @@ const Store = (() => {
   }
   async function renameResource(id, name) { await backend.renameResource(id, name); await refreshResources(); dispatch({ type: "resources", at: Date.now() }); }
   async function removeResource(id) { await backend.removeResource(id); await refreshResources(); dispatch({ type: "resources", at: Date.now() }); }
+  async function getNote(clinicId, date) { try { return await backend.getNote(clinicId, date); } catch { return ""; } }
+  async function saveNote(clinicId, date, note) { try { await backend.saveNote(clinicId, date, note); return { ok:true }; } catch { return { ok:false }; } }
 
   /* ---------- 公開API（UIが呼ぶ） ---------- */
 
@@ -491,7 +497,7 @@ const Store = (() => {
     clinicOfCs, serviceOfCs, menusOfCs, menuById, roomOf, roomName, freeRoom, durMin, resourceConflict,
     getDays, createReservation, setRoom, assignResource, moveReservation, findReservation, cancelReservation, updateStatus,
     dayReservations, loadReservations,
-    resourcesOf, refreshResources, addResource, renameResource, removeResource,
+    resourcesOf, refreshResources, addResource, renameResource, removeResource, getNote, saveNote,
     onSync, ready,
     resetDemo() { return backend.resetDemo(); },
   };

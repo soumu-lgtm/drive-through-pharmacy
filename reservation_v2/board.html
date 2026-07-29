@@ -55,6 +55,11 @@
   .tl-axis-btn{ font:inherit; font-size:13px; font-weight:700; padding:6px 14px; border:1px solid var(--border); background:#fff; color:var(--sub); border-radius:7px; cursor:pointer; }
   .tl-axis-btn.on{ background:var(--blue); color:#fff; border-color:var(--blue); }
   .tl-compact{ font-size:12.5px; color:var(--dark); display:inline-flex; align-items:center; gap:4px; cursor:pointer; }
+  /* 連絡事項 */
+  .day-note{ background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:10px 14px; margin-bottom:16px; }
+  .day-note .dn-label{ font-size:12.5px; font-weight:700; color:#92580b; display:block; margin-bottom:6px; }
+  .day-note textarea{ width:100%; min-height:44px; border:1px solid var(--border); border-radius:7px; padding:8px 10px; font:inherit; font-size:14px; resize:vertical; background:#fff; }
+  .day-note #dnStatus{ font-size:12px; color:var(--green); margin-left:6px; }
   @media print {
     .admin-header, .bk-modal-overlay { display:none !important; }
     .admin-view:not(.active){ display:none !important; }
@@ -134,6 +139,7 @@
       <span class="day" id="dayLabel"></span>
       <span style="margin-left:auto"><button class="small" onclick="resetDemo()">デモ初期化</button></span>
     </div>
+    <div id="dayNote" class="day-note"></div>
     <div class="stat-row" id="stats"></div>
     <div id="board"></div>
   </div>
@@ -163,7 +169,7 @@
 
 <script>window.__RSV_SUPABASE__ = true;</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="store.js?v=20260729drag"></script>
+<script src="store.js?v=20260729note"></script>
 <script>
 /* 受付ライブボード（タブ切替式）：患者予約が入った瞬間に日別ボード・予約一覧へ即反映 */
 function esc(s){ return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
@@ -189,6 +195,7 @@ function setClinic(id){
   renderClinicSwitch();
   prevCodes = currentCodes();
   renderTab(curTab);
+  loadDayNote();
 }
 
 /* ---------------- タブ切替 ---------------- */
@@ -211,8 +218,21 @@ function renderTab(id){
 }
 
 /* ---------------- 日別ボード ---------------- */
-function setDate(d){ curDate = d; renderBoard(); }
-function shift(n){ curDate = Store.addDays(curDate, n); renderBoard(); }
+function setDate(d){ curDate = d; renderBoard(); loadDayNote(); }
+function shift(n){ curDate = Store.addDays(curDate, n); renderBoard(); loadDayNote(); }
+/* 連絡事項（当日メモ・院×日付） */
+async function loadDayNote(){
+  const el=document.getElementById('dayNote'); if(!el) return;
+  const note=await Store.getNote(curClinic, curDate);
+  el.innerHTML=`<span class="dn-label">📌 ${esc(curClinicObj().name)} ${Store.fmtJa(curDate)} の連絡事項</span>
+    <textarea id="dnText" placeholder="当日の申し送り・注意事項を記入（自動保存）" onblur="saveDayNote()">${esc(note||"")}</textarea>
+    <span id="dnStatus" class="muted"></span>`;
+}
+async function saveDayNote(){
+  const t=document.getElementById('dnText'); if(!t) return;
+  const res=await Store.saveNote(curClinic, curDate, t.value);
+  const s=document.getElementById('dnStatus'); if(s){ s.textContent=res.ok?'✓ 保存しました':'保存に失敗'; setTimeout(()=>{ if(s) s.textContent=''; },1600); }
+}
 function clinicRows(date){ return Store.dayReservations(date).filter(r=>inCurClinic(r.csId)); }
 function roomTag(r){ const rm=Store.roomName(r); return rm?`<span class="room-badge ${rm.endsWith("2")?"r2":""}">${esc(rm)}</span>`:'<span class="muted" style="font-size:12px">—</span>'; }
 // 診察室の切替プルダウン（受付が任意に変更／相手がいれば入れ替え）
@@ -735,6 +755,7 @@ Store.ready.then(()=>{
   const brand = document.querySelector(".admin-header .brand small");
   if(brand) brand.textContent = b==="supabase" ? "Supabase リアルタイム同期" : "リアルタイム同期（ローカル）";
   renderTab(curTab);
+  loadDayNote();
 });
 </script>
 </body>
