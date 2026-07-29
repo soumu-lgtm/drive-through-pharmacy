@@ -125,6 +125,25 @@ const Store = (() => {
     return ROOMS.map(r => r.id).find(id => !taken.has(id)) || null;
   }
 
+  /* ---------- スタッフ/機材の割当（被り防止） ---------- */
+  function _toMin(hhmm){ const [h,m]=String(hhmm).split(":").map(Number); return h*60+m; }
+  // 予約の所要分（メニュー基準・無ければ外来30/在宅60）
+  function durMin(r){
+    if(r && r.menuId){ const m=menuById(r.menuId); if(m&&m.durationMin) return m.durationMin; }
+    const s=serviceOfCs(r && r.csId); return (s&&s.name==="在宅")?60:30;
+  }
+  // スタッフ/機材が指定時間帯に別予約で埋まっているか（時間の重なりで判定）
+  function resourceConflict(kind, resourceId, date, startMin, endMin, exceptCode){
+    if(!resourceId) return false;
+    return _cache.some(r=>{
+      if(r.status!=="CONFIRMED" || r.code===exceptCode || r.date!==date) return false;
+      const rid = kind==="staff" ? r.staffId : r.deviceId;
+      if(Number(rid)!==Number(resourceId)) return false;
+      const s=_toMin(r.time), e=s+durMin(r);
+      return startMin<e && s<endMin;
+    });
+  }
+
   /* ---------- 予約キャッシュ（getDays等が同期参照） ---------- */
   let _cache = [];       // 予約の正本（メモリ）。ローカル=localStorageと同期／Supabase=DBと同期
   let _resources = [];   // 院ごとのリソース（部屋/スタッフ/機材）。管理画面で編集
@@ -142,7 +161,8 @@ const Store = (() => {
       csId: o.csId, slotId: `${o.csId}_${o.date}_${o.time}`,
       date: o.date, time: o.time,
       name: o.name, kana: o.kana || "", phone: o.phone, birthDate: o.birthDate || "",
-      roomId: o.roomId ?? null, lineUserId: o.lineUserId || null,
+      roomId: o.roomId ?? null, staffId: o.staffId ?? null, deviceId: o.deviceId ?? null,
+      lineUserId: o.lineUserId || null,
       email: o.email || "", visitType: o.visitType || "", menuId: o.menuId || null,
       note: o.note || "", status: "CONFIRMED", channel: o.channel || "WEB",
       createdAt: o.createdAt || new Date().toISOString(), sentAt: o.sentAt || null,
@@ -221,7 +241,7 @@ const Store = (() => {
     const fromRow = r => ({
       code: r.code, csId: r.cs_id, slotId: r.slot_id, date: r.rdate, time: r.rtime,
       name: r.name, kana: r.kana || "", phone: r.phone, birthDate: r.birth || "", email: r.email || "",
-      roomId: r.room_id ?? null,
+      roomId: r.room_id ?? null, staffId: r.staff_id ?? null, deviceId: r.device_id ?? null,
       visitType: r.visit_type || "", menuId: r.menu_id, note: r.note || "", status: r.status,
       channel: r.channel || "WEB", createdAt: r.created_at, sentAt: r.sent_at,
       lineUserId: r.line_user_id || null,
@@ -229,7 +249,7 @@ const Store = (() => {
     const toRow = res => ({
       code: res.code, cs_id: res.csId, slot_id: res.slotId, rdate: res.date, rtime: res.time,
       name: res.name, kana: res.kana, phone: res.phone, birth: res.birthDate, email: res.email,
-      room_id: res.roomId ?? null,
+      room_id: res.roomId ?? null, staff_id: res.staffId ?? null, device_id: res.deviceId ?? null,
       visit_type: res.visitType, menu_id: res.menuId, note: res.note, status: res.status,
       channel: res.channel, sent_at: res.sentAt, line_user_id: res.lineUserId || null,
     });
@@ -256,9 +276,10 @@ const Store = (() => {
         res.sentAt = Date.now();
         const row = toRow(res);
         let { error } = await client.from(TABLE).insert(row);
-        if (error && /room_id/.test(error.message||"") ) {   // room_id列が無い環境 → 外して再送（予約は通す）
-          delete row.room_id;
-          ({ error } = await client.from(TABLE).insert(row));
+        let tries = 0;   // room_id/staff_id/device_id 列が無い環境 → その列を外して再送（予約は通す）
+        while (error && tries < 3 && /(room_id|staff_id|device_id)/.test(error.message||"")) {
+          ["room_id","staff_id","device_id"].forEach(c => { if (new RegExp(c).test(error.message||"")) delete row[c]; });
+          ({ error } = await client.from(TABLE).insert(row)); tries++;
         }
         if (error) throw error;
         const i = _cache.findIndex(x => x.code === res.code);
@@ -282,6 +303,13 @@ const Store = (() => {
         const { data } = await client.from(TABLE).select("*").eq("status","CONFIRMED");
         _cache = (data || []).map(fromRow);
         dispatch({ type: "reservation", at: Date.now() });
+      },
+      async assignResource(code, kind, resourceId) {
+        const col = kind === "staff" ? "staff_id" : "device_id";
+        const { error } = await client.from(TABLE).update({ [col]: resourceId }).eq("code", code);
+        if (error) throw error;
+        const r = _cache.find(x => x.code === code);
+        if (r) { if (kind === "staff") r.staffId = resourceId; else r.deviceId = resourceId; }
       },
       /* --- リソース（部屋/スタッフ/機材） --- */
       async loadResources() {
@@ -333,6 +361,7 @@ const Store = (() => {
       async setStatus(code, status) { const l = load(); const r = l.find(x=>x.code===code); if (r){ r.status=status; save(l); _cache=l; fire({type:"reservation",at:Date.now()}); } },
       async setRoom(updates) { const l = load(); updates.forEach(u=>{ const r=l.find(x=>x.code===u.code); if(r) r.roomId=u.roomId; }); save(l); _cache=l; fire({type:"reservation",at:Date.now()}); },
       async resetDemo() { localStorage.removeItem(LS_KEY); seed(); _cache = load(); fire({ type:"reservation", at: Date.now() }); },
+      async assignResource(code, kind, resourceId) { const l=load(); const r=l.find(x=>x.code===code); if(r){ if(kind==="staff") r.staffId=resourceId; else r.deviceId=resourceId; save(l); _cache=l; fire({type:"reservation",at:Date.now()}); } },
       /* --- リソース（localStorage） --- */
       async loadResources() { resSeed(); try { return JSON.parse(localStorage.getItem(RES_KEY)||"[]"); } catch { return []; } },
       async addResource(r) { resSeed(); const l=JSON.parse(localStorage.getItem(RES_KEY)||"[]"); const id=Math.max(0,...l.map(x=>x.id||0))+1; l.push({id,clinicId:r.clinicId,kind:r.kind,name:r.name,sortOrder:r.sortOrder||0}); localStorage.setItem(RES_KEY,JSON.stringify(l)); },
@@ -377,9 +406,33 @@ const Store = (() => {
       && r.phone.replace(/-/g,"") === input.phone.replace(/-/g,"") && r.name === input.name);
     if (dup) return { ok: false, error: "同じ日時に既にご予約があります。" };
     if (input.roomId == null) input.roomId = freeRoom(input.csId, input.date, input.time);  // 空き診察室を自動割当
+    // スタッフ・機材の被りチェック（受付が指定した場合）
+    const st = _toMin(input.time), en = st + durMin({ csId: input.csId, menuId: input.menuId });
+    if (input.staffId && resourceConflict("staff", Number(input.staffId), input.date, st, en))
+      return { ok: false, error: "選択したスタッフはその時間帯に別の予約があります。" };
+    if (input.deviceId && resourceConflict("device", Number(input.deviceId), input.date, st, en))
+      return { ok: false, error: "選択した機材はその時間帯に別の予約で使用中です。" };
     const r = mkRes(input);
     try { await backend.insert(r); } catch (e) { return { ok: false, error: "通信エラーで予約できませんでした。時間をおいてお試しください。" }; }
     return { ok: true, reservation: r };
+  }
+  // スタッフ/機材の割当変更（受付ボードから）。被りは拒否。
+  async function assignResource(code, kind, resourceId) {
+    if (kind !== "staff" && kind !== "device") return { ok: false, error: "種別が不正です。" };
+    const res = _cache.find(x => x.code === code && x.status === "CONFIRMED");
+    if (!res) return { ok: false, error: "予約が見つかりません。" };
+    resourceId = resourceId ? Number(resourceId) : null;
+    if (resourceId) {
+      const s = _toMin(res.time), e = s + durMin(res);
+      if (resourceConflict(kind, resourceId, res.date, s, e, code))
+        return { ok: false, error: "その時間帯、この" + (kind === "staff" ? "スタッフ" : "機材") + "は別の予約と重複します。" };
+    }
+    try { await backend.assignResource(code, kind, resourceId); }
+    catch (e) {
+      if (/staff_id|device_id/.test(e && e.message || "")) return { ok: false, error: "COL_MISSING" };
+      return { ok: false, error: "通信エラーで保存できませんでした。" };
+    }
+    return { ok: true };
   }
   // 診察室の切り替え（対象室に別の予約があれば入れ替え）
   async function setRoom(code, targetRoomId) {
@@ -415,8 +468,8 @@ const Store = (() => {
   return {
     CLINICS, MENUS, ROOMS, WD, getBackend: () => backendName,
     todayStr, addDays, fmtJa, weekday,
-    clinicOfCs, serviceOfCs, menusOfCs, menuById, roomOf, roomName, freeRoom,
-    getDays, createReservation, setRoom, findReservation, cancelReservation, updateStatus,
+    clinicOfCs, serviceOfCs, menusOfCs, menuById, roomOf, roomName, freeRoom, durMin, resourceConflict,
+    getDays, createReservation, setRoom, assignResource, findReservation, cancelReservation, updateStatus,
     dayReservations, loadReservations,
     resourcesOf, refreshResources, addResource, renameResource, removeResource,
     onSync, ready,

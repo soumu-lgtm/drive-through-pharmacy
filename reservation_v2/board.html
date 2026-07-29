@@ -65,6 +65,11 @@
   .res-add input{ flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:7px; font-size:14px; }
   .res-plus{ flex:0 0 auto; background:var(--green); color:#fff; border:none; border-radius:7px; padding:8px 14px; font-weight:700; font-size:13px; cursor:pointer; }
   .res-plus:hover{ filter:brightness(1.05); }
+  /* 担当/機材 割当セレクト（日別ボード） */
+  .assign-cell{ white-space:nowrap; }
+  .assign-sel{ font:inherit; font-size:11.5px; padding:3px 5px; border:1px solid var(--border); border-radius:6px; background:#fff; cursor:pointer; max-width:118px; margin:1px 0; display:block; }
+  .assign-sel.staff{ color:#0369a1; border-color:#bae6fd; background:#f0f9ff; }
+  .assign-sel.device{ color:#b45309; border-color:#fde68a; background:#fffbeb; }
 </style>
 </head>
 <body>
@@ -124,7 +129,7 @@
 
 <script>window.__RSV_SUPABASE__ = true;</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="store.js?v=20260729res"></script>
+<script src="store.js?v=20260729asg"></script>
 <script>
 /* 受付ライブボード（タブ切替式）：患者予約が入った瞬間に日別ボード・予約一覧へ即反映 */
 function esc(s){ return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
@@ -187,6 +192,19 @@ async function switchRoom(code, roomId){
   if(!res.ok){ alert(res.error); }
   afterMutate();
 }
+// スタッフ/機材の割当セレクト（受付ボードから任意割当・被りは拒否）
+function resSelect(r, kind){
+  const cur = kind==="staff"?r.staffId:r.deviceId;
+  const list = Store.resourcesOf(curClinic, kind);
+  if(!list.length) return `<span class="muted" style="font-size:11px">${kind==='staff'?'担当':'機材'}未登録</span>`;
+  const opts = `<option value="">${kind==="staff"?'担当…':'機材…'}</option>`+list.map(x=>`<option value="${x.id}" ${Number(cur)===Number(x.id)?'selected':''}>${esc(x.name)}</option>`).join("");
+  return `<select class="assign-sel ${kind}" onchange="assignRes('${esc(r.code)}','${kind}',this.value)">${opts}</select>`;
+}
+async function assignRes(code, kind, val){
+  const res=await Store.assignResource(code, kind, val||null);
+  if(!res.ok){ alert(res.error==="COL_MISSING" ? "この環境では割当を保存できません（DB列の追加が必要）。" : res.error); }
+  afterMutate();
+}
 function currentCodes(){ return new Set(clinicRows(curDate).map(r=>r.code)); }
 
 function renderBoard(flashCodes){
@@ -210,6 +228,7 @@ function renderBoard(flashCodes){
     return `<tr class="${isNew?"flash-new":""}">
       <td style="font-weight:700">${r.time}</td>
       <td>${roomSelect(r)}</td>
+      <td class="assign-cell">${resSelect(r,'staff')}${resSelect(r,'device')}</td>
       <td>${esc(svc.name)}${menu?`<div class="muted" style="font-size:12px">${esc(menu.name)}</div>`:""}</td>
       <td>${esc(r.name)} 様${r.visitType==="FIRST"?'<span class="badge first" style="margin-left:4px">初診</span>':""}${isNew?'<span class="new-tag">NEW</span>':""}</td>
       <td>${r.channel==="WEB"?'<span class="badge web">Web</span>':'<span class="badge phone">電話</span>'}</td>
@@ -219,7 +238,7 @@ function renderBoard(flashCodes){
   }).join("");
   document.getElementById("board").innerHTML = `<div class="card">
     <h2 style="margin-top:0">${esc(clinic.name)}クリニック（${rows.length}件）</h2>
-    <table><thead><tr><th style="width:60px">時刻</th><th style="width:104px">診察室</th><th>内容</th><th>患者</th><th style="width:56px">経路</th><th>電話</th><th style="width:130px">操作</th></tr></thead>
+    <table><thead><tr><th style="width:60px">時刻</th><th style="width:104px">診察室</th><th style="width:132px">担当／機材</th><th>内容</th><th>患者</th><th style="width:56px">経路</th><th>電話</th><th style="width:120px">操作</th></tr></thead>
     <tbody>${trs}</tbody></table>
   </div>`;
 }
@@ -267,8 +286,10 @@ function renderTimeline(){
   const head=`<div class="tl-head-cell">時刻</div>`+resList.map(rc=>`<div class="tl-head-cell">${esc(rc.name)}</div>`).join("");
   const axis=`<div class="tl-axis">${hrHtml}</div>`;
   const cols=resList.map((rc,ci)=>{
-    // room軸: 予約のroomOf(1/2..)を列indexにマッピング。staff/device軸は予約への割当が未実装のため空。
-    const colBookings = (tlAxis==="room") ? rows.filter(r=>Store.roomOf(r)===ci+1) : [];
+    // room軸: 予約のroomOf(1/2..)を列indexにマッピング。staff/device軸: 予約のstaffId/deviceIdで割当。
+    const colBookings = (tlAxis==="room")
+      ? rows.filter(r=>Store.roomOf(r)===ci+1)
+      : rows.filter(r=> Number(tlAxis==="staff"?r.staffId:r.deviceId) === Number(rc.id));
     const blks=colBookings.map(r=>{
       const st=tlToMin(r.time), dur=resDurMin(r), end=st+dur;
       const top=(st-sMin), h=Math.max(22,dur);
