@@ -287,6 +287,63 @@ async function bkStatus(code, status){
   if(status==="CANCELLED"){ closeBooking(); afterMutate(); return; }
   afterMutate(); openBooking(code);
 }
+
+/* ---------------- タイムライン 空き枠クリック → 新規予約 ---------------- */
+function tlColClick(ci, ev){
+  if(curClinicObj().openingNote) return;                 // 開業前は不可
+  const col=ev.currentTarget; const rect=col.getBoundingClientRect();
+  let min = tlState.sMin + Math.round((ev.clientY - rect.top)/30)*30;   // 30分スナップ
+  const time = tlHHMM(Math.max(tlState.sMin, min));
+  const rc = tlState.resList[ci];
+  const prefill = { time };
+  if(tlState.axis==="room") prefill.roomId = ci+1;
+  else if(tlState.axis==="staff") prefill.staffId = rc && rc.id;
+  else if(tlState.axis==="device") prefill.deviceId = rc && rc.id;
+  openNewBooking(prefill);
+}
+function openNewBooking(prefill){
+  const clinic=curClinicObj();
+  const svcOpts=clinic.services.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("");
+  let assignLabel="";
+  if(prefill.roomId){ const rm=Store.ROOMS.find(r=>r.id===prefill.roomId); assignLabel=rm?("診察室："+rm.name):""; }
+  else if(prefill.staffId){ const s=Store.resourcesOf(clinic.id,'staff').find(r=>Number(r.id)===Number(prefill.staffId)); assignLabel=s?("担当："+s.name):""; }
+  else if(prefill.deviceId){ const d=Store.resourcesOf(clinic.id,'device').find(r=>Number(r.id)===Number(prefill.deviceId)); assignLabel=d?("機材："+d.name):""; }
+  document.getElementById('bkModal').innerHTML=`<div class="bk-modal" onclick="event.stopPropagation()">
+    <div class="bk-head"><h2>新規予約（受付）</h2><button class="bk-close" onclick="closeBooking()">×</button></div>
+    <div class="bk-body">
+      <div class="bk-sec"><span class="muted">${esc(clinic.name)}クリニック ／ ${Store.fmtJa(curDate)}${assignLabel?' ／ <b>'+esc(assignLabel)+'</b>':''}</span></div>
+      <div id="nbErr"></div>
+      <div class="stack" style="max-width:none;gap:11px">
+        <label class="field">診療区分<select id="nb_cs">${svcOpts}</select></label>
+        <label class="field">時刻<span class="req">必須</span><input id="nb_time" type="time" value="${prefill.time}" step="900"></label>
+        <label class="field">お名前<span class="req">必須</span><input id="nb_name" placeholder="例）山田 花子"></label>
+        <label class="field">フリガナ<input id="nb_kana" placeholder="例）ヤマダ ハナコ"></label>
+        <label class="field">電話番号<span class="req">必須</span><input id="nb_phone" type="tel" placeholder="例）090-1234-5678"></label>
+        <label class="field">生年月日<input id="nb_birth" type="date"></label>
+        <div class="field">初診・再診<span class="req">必須</span>
+          <div class="radio-row"><label><input type="radio" name="nbvt" value="FIRST">初めて（初診）</label><label><input type="radio" name="nbvt" value="REVISIT">2回目以降（再診）</label></div>
+        </div>
+      </div>
+    </div>
+    <div class="bk-actions"><button id="nbBtn" onclick='submitNew(${JSON.stringify(prefill)})'>この内容で予約する</button><button class="secondary" style="margin-left:auto" onclick="closeBooking()">閉じる</button></div>
+  </div>`;
+  document.getElementById('bkModal').style.display='flex';
+}
+async function submitNew(prefill){
+  const g=id=>document.getElementById(id);
+  const name=(g('nb_name').value||'').trim(), phone=(g('nb_phone').value||'').trim();
+  const time=g('nb_time').value||prefill.time, csId=Number(g('nb_cs').value);
+  const vt=(document.querySelector('input[name=nbvt]:checked')||{}).value||'';
+  const err=(m)=>{ g('nbErr').innerHTML=`<div class="alert">${esc(m)}</div>`; };
+  if(!name||!phone) return err('お名前・電話番号は必須です。');
+  if(!vt) return err('初診・再診を選択してください。');
+  const btn=g('nbBtn'); if(btn){ btn.disabled=true; btn.textContent='登録中…'; }
+  const res=await Store.createReservation({ csId, date:curDate, time, name, phone,
+    kana:(g('nb_kana').value||'').trim(), birthDate:g('nb_birth').value, visitType:vt, channel:'PHONE',
+    roomId:prefill.roomId||null, staffId:prefill.staffId||null, deviceId:prefill.deviceId||null });
+  if(!res.ok){ if(btn){ btn.disabled=false; btn.textContent='この内容で予約する'; } return err(res.error); }
+  closeBooking(); afterMutate(); if(curTab==='timeline') renderTimeline();
+}
 function currentCodes(){ return new Set(clinicRows(curDate).map(r=>r.code)); }
 
 function renderBoard(flashCodes){
@@ -338,6 +395,7 @@ function resDurMin(r){
   const s=Store.serviceOfCs(r.csId); return (s&&s.name==="在宅")?60:30;
 }
 let tlAxis="room";
+let tlState={ sMin:540, axis:"room", resList:[] };   // 空き枠クリック用に現在の描画状態を保持
 const AXIS_LABEL={room:"ルーム",staff:"スタッフ",device:"機材"};
 function setTlAxis(k){ tlAxis=k; renderTimeline(); }
 function renderTimeline(){
@@ -350,6 +408,7 @@ function renderTimeline(){
     if(st<sMin) sMin=Math.floor(st/60)*60; if(en>eMin) eMin=Math.ceil(en/60)*60; });
   const hours=[]; for(let m=sMin;m<eMin;m+=60) hours.push(m);
   const HEAD=34;
+  tlState={ sMin, axis:tlAxis, resList };   // 空き枠クリックで参照
   const hrHtml=hours.map(m=>`<div class="hr">${tlHHMM(m)}</div>`).join("");
   const gridHr=hours.map(()=>`<div class="hr"></div>`).join("");
   const axisTabs=["room","staff","device"].map(k=>`<button class="tl-axis-btn ${tlAxis===k?'on':''}" onclick="setTlAxis('${k}')">${AXIS_LABEL[k]}</button>`).join("");
@@ -377,13 +436,13 @@ function renderTimeline(){
       const top=(st-sMin), h=Math.max(22,dur);
       const svc=Store.serviceOfCs(r.csId), menu=r.menuId?Store.menuById(r.menuId):null;
       return `<div class="tl-blk ${ci%2?'r2':'r1'}" style="top:${top}px;height:${h}px"
-                onclick="openBooking('${esc(r.code)}')"
+                onclick="event.stopPropagation();openBooking('${esc(r.code)}')"
                 title="${esc(r.name)}様 ${r.time}-${tlHHMM(end)} / ${esc(menu?menu.name:svc.name)}（クリックで詳細）">
         <div class="w">${esc(r.name)} 様${r.channel==="PHONE"?' 📞':''}</div>
         <div class="m">${r.time}-${tlHHMM(end)}・${esc(menu?menu.name:svc.name)}</div>
       </div>`;
     }).join("");
-    return `<div class="tl-col">${gridHr}${blks}</div>`;
+    return `<div class="tl-col" onclick="tlColClick(${ci}, event)" title="空き部分をクリックで新規予約">${gridHr}${blks}</div>`;
   }).join("");
   let now="";
   if(curDate===Store.todayStr()){
