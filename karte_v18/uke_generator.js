@@ -67,6 +67,35 @@ const DRUG_CODE_MAP = {
   'losartan50':        { code: '2149040F1020', name: 'ロサルタンカリウム錠50mg' },
 };
 
+// ★完成形: 診療行為コード表（令和8点数はgetVisitFee/BILLING_MASTER・加算はs_procedures実コード）
+const SURCHARGE_CODE = {
+  '時間外': { f: '111000570', r: '112001110' },
+  '休日':   { f: '111000670', r: '112001210' },
+  '深夜':   { f: '111000770', r: '112001310' }
+};
+function surchargeCodeOf(type, isFirst) {
+  const key = Object.keys(SURCHARGE_CODE).find(function (x) { return type && type.indexOf(x) !== -1; });
+  const e = key ? SURCHARGE_CODE[key] : null; return e ? (isFirst ? e.f : e.r) : '9999999';
+}
+// 当院標準加算の名称→診療行為コード（初診/再診）
+const ADDON_CODE = {
+  '機能強化加算':               { f: '111013770', r: '111013770', cat: '13' },
+  '外来感染対策向上加算':        { f: '111014870', r: '112024370', catF: '11', catR: '12' },
+  '連携強化加算':               { f: '111014970', r: '112024470', catF: '11', catR: '12' },
+  '発熱患者等対応加算':          { f: '111702970', r: '112708670', catF: '11', catR: '12' },
+  '電子的診療情報連携体制整備加算': { f: '111704170', r: '112709570', catF: '11', catR: '12' },
+  '外来・在宅ベースアップ評価料':  { f: '180725710', r: '180725810', cat: '80' },
+  'ベースアップ評価料':          { f: '180725710', r: '180725810', cat: '80' },
+  '物価対応料':                 { f: '180819910', r: '180820010', cat: '80' },
+  '外来・在宅物価対応料':        { f: '180819910', r: '180820010', cat: '80' }
+};
+function addonOf(name, isFirst) {
+  const key = Object.keys(ADDON_CODE).find(function (x) { return name && name.indexOf(x) !== -1; });
+  if (!key) return { code: '9999999', cat: '13' };
+  const e = ADDON_CODE[key];
+  return { code: isFirst ? e.f : e.r, cat: e.cat || (isFirst ? (e.catF || '11') : (e.catR || '12')) };
+}
+
 // 保険種別コード
 function getInsuranceTypeCode(insurance) {
   if (insurance.includes('後期高齢者')) return '39'; // 後期高齢者
@@ -133,36 +162,55 @@ function buildUkeText(patientList, reviewOrg, instCode, instName, prefCode, bill
     const isFirst = k.isFirstVisit || false;
     const hasRx = k.prescriptions && k.prescriptions.length > 0;
 
-    // --- SI/IY を収集（各点数・回数=1） ---
-    const si = []; // {cat, code, points}
-    const iy = []; // {code, qty, points}
+    // --- SI/IY を収集（recalcBilling と同一算定：令和8点数＋加算＋除外反映）---
+    const si = [];
+    const iy = [];
+    const exr = k.excludedBillingRows || {};
+    // 基本診察料（令和8: getVisitFee）
+    const vf = (typeof getVisitFee === 'function') ? getVisitFee(isFirst, pd.visitDate) : { points: isFirst ? 291 : 76 };
     if (isFirst) {
-      si.push({ cat: '11', code: '111000110', points: 291 });
+      si.push({ cat: '11', code: '111000110', points: vf.points });
     } else {
-      si.push({ cat: '12', code: '112007410', points: 75 }); // 再診料
-      if (hasRx && !isExternal) si.push({ cat: '12', code: '112011010', points: 52 }); // 外来管理加算(簡易:内服処方時)
+      si.push({ cat: '12', code: '112007410', points: vf.points });          // 再診料(76)
+      if (!exr.gairai) si.push({ cat: '12', code: '112011010', points: 52 }); // 外来管理加算
     }
+    // 時間帯加算（受付時刻から判定・夜間休日診療で重要）
+    try {
+      const at = pd.patient && pd.patient.arrivedAt;
+      if (typeof getTimeSurcharge === 'function' && at && pd.visitDate) {
+        const sc = getTimeSurcharge(new Date(pd.visitDate + 'T' + at));
+        if (sc && sc.points > 0) si.push({ cat: isFirst ? '11' : '12', code: surchargeCodeOf(sc.type, isFirst), points: sc.points });
+      }
+    } catch (e) { /* 時刻不明はスキップ */ }
+    // 処方・調剤・薬剤（recalcBilling同ロジック）
     if (hasRx) {
+      const num = k.prescriptions.length;
       const maxDays = Math.max.apply(null, k.prescriptions.map(function (rx) { return rx.days || k.rxDays || 7; }));
       if (isExternal) {
-        si.push({ cat: '80', code: '120001110', points: k.prescriptions.length >= 7 ? 40 : 68 }); // 処方箋料
+        if (!exr.shohou) si.push({ cat: '80', code: num >= 7 ? '120002710' : '120002910', points: num >= 7 ? 40 : 68 }); // 処方箋料
       } else {
-        si.push({ cat: '80', code: '120002510', points: k.prescriptions.length >= 7 ? 29 : 42 }); // 処方料
-        si.push({ cat: '80', code: '800000001', points: maxDays <= 7 ? 11 : maxDays <= 14 ? 19 : maxDays <= 21 ? 25 : maxDays <= 28 ? 30 : 33 }); // 調剤料
-        k.prescriptions.forEach(function (rx) {
-          const dCode = (rx.drug.code && /^[0-9A-Z]{9,12}$/.test(rx.drug.code)) ? rx.drug.code : ((DRUG_CODE_MAP[rx.drug.id] || {}).code || '9999999999');
-          const days = rx.days || k.rxDays || 7;
-          const yaku = Math.max(1, Math.round((rx.drug.price || 0) * rx.qty * days / 10)); // 薬剤料(点)
-          iy.push({ code: dCode, qty: rx.qty, points: yaku });
-        });
+        if (!exr.shohou) si.push({ cat: '80', code: num >= 7 ? '120002610' : '120001210', points: num >= 7 ? 29 : 42 }); // 処方料
+        if (!exr.chouzai) si.push({ cat: '80', code: '120000710', points: maxDays <= 7 ? 11 : maxDays <= 14 ? 19 : maxDays <= 21 ? 25 : maxDays <= 28 ? 30 : 33 }); // 調剤料(内服)
+        if (!exr.yakuzai) {
+          k.prescriptions.forEach(function (rx) {
+            const dCode = (rx.drug.code && /^[0-9A-Z]{9,12}$/.test(rx.drug.code)) ? rx.drug.code : ((DRUG_CODE_MAP[rx.drug.id] || {}).code || '9999999999');
+            const days = rx.days || k.rxDays || 7;
+            const raw = (rx.drug.price || 0) * rx.qty * days / 10;
+            const yaku = Math.max(1, (typeof goshagochoNyuu === 'function') ? goshagochoNyuu(raw) : Math.round(raw));
+            iy.push({ code: dCode, qty: rx.qty, points: yaku });
+          });
+        }
       }
     }
-    if (k.selectedExams) k.selectedExams.forEach(function (id) {
-      const ex = (typeof examItems !== 'undefined' ? examItems : []).find(function (e) { return e.id === id; });
-      if (ex) si.push({ cat: '60', code: ex.code || '9999999', points: ex.points });
+    // 検査
+    if (k.selectedExams && !exr.exam) k.selectedExams.forEach(function (id) {
+      const exi = (typeof examItems !== 'undefined' ? examItems : []).find(function (e) { return e.id === id; });
+      if (exi) si.push({ cat: '60', code: exi.code || '9999999', points: exi.points });
     });
+    // 追加算定（当院標準加算スタック）: 名称→実コード解決
     if (k.addedBillingItems) k.addedBillingItems.forEach(function (it) {
-      si.push({ cat: it.category || '80', code: it.code || '9999999', points: it.points });
+      const a = addonOf(it.name, isFirst);
+      si.push({ cat: a.cat, code: a.code, points: it.points });
     });
 
     // 総点数 = SI/IY 合計（検算一致を保証）
