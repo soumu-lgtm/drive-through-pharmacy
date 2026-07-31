@@ -95,6 +95,21 @@ function addonOf(name, isFirst) {
   const e = ADDON_CODE[key];
   return { code: isFirst ? e.f : e.r, cat: e.cat || (isFirst ? (e.catF || '11') : (e.catR || '12')) };
 }
+// 傷病名→レセ電傷病名コード解決（傷病名マスタb_diseasesを利用・自動付与）
+function resolveDiseaseCode(d) {
+  if (d && d.code && /^\d{6,7}$/.test(d.code)) return d.code;               // 既にコード保持
+  if (typeof MasterLoader !== 'undefined' && MasterLoader.searchDiseases && d && d.name) {
+    const res = MasterLoader.searchDiseases(d.name, 50) || [];
+    if (res.length) {
+      const exact = res.find(function (x) { return x.name === d.name; });   // 完全一致優先
+      if (exact) return exact.code;
+      res.sort(function (a, b) { return a.name.length - b.name.length; });   // 最短=最も基本的な病名
+      return res[0].code;
+    }
+  }
+  if (d && d.code && DISEASE_CODE_MAP[d.code]) return DISEASE_CODE_MAP[d.code].code;
+  return '0000999'; // 未コード化傷病名（正式プレースホルダ）
+}
 
 // 保険種別コード
 function getInsuranceTypeCode(insurance) {
@@ -161,6 +176,8 @@ function buildUkeText(patientList, reviewOrg, instCode, instName, prefCode, bill
     const isExternal = k.rxModeExternal || false;
     const isFirst = k.isFirstVisit || false;
     const hasRx = k.prescriptions && k.prescriptions.length > 0;
+    // 当院標準加算を自動付与（カルテ本体recalcBillingと同じ・DB患者/前月分にも適用）
+    if (typeof ensureStandardAddons === 'function') ensureStandardAddons(k, isFirst);
 
     // --- SI/IY を収集（recalcBilling と同一算定：令和8点数＋加算＋除外反映）---
     const si = [];
@@ -234,7 +251,7 @@ function buildUkeText(patientList, reviewOrg, instCode, instName, prefCode, bill
     // SY: [1]傷病名コード [2]開始日 [6]主病フラグ(01)
     if (k.selectedDiseases && k.selectedDiseases.length > 0) {
       k.selectedDiseases.forEach(function (d, di) {
-        const dCode = (d.code && /^\d{6,7}$/.test(d.code)) ? d.code : ((DISEASE_CODE_MAP[d.code] || {}).code || '9999999');
+        const dCode = resolveDiseaseCode(d);
         const startDate = (pd.visitDate || billingMonth + '01').replace(/-/g, '');
         const sy = new Array(7).fill(''); sy[0] = 'SY'; sy[1] = dCode; sy[2] = startDate; sy[6] = (di === 0 ? '01' : '');
         lines.push(sy.join(','));

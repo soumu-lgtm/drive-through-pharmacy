@@ -1131,9 +1131,35 @@ function renameBillingMyList() {
 }
 
 // ===== Billing =====
+// 当院標準の毎回加算（clinic_standard／官報令和8点数）。初診/再診で付く加算を自動付与。
+var STD_ADDON_DEFS = {
+  first: [ {name:'機能強化加算', points:80}, {name:'外来・在宅物価対応料', points:4}, {name:'外来・在宅ベースアップ評価料', points:17} ],
+  re:    [ {name:'外来・在宅物価対応料', points:4}, {name:'外来・在宅ベースアップ評価料', points:4} ]
+};
+// カルテ・UKE生成の双方から呼ぶ。医師が外した加算(stdRemoved)は再付与しない。手動項目は温存。
+function ensureStandardAddons(k, isFirst) {
+  if (!k) return;
+  if (!k.addedBillingItems) k.addedBillingItems = [];
+  if (k.stdAddonsOff) return; // この患者は標準加算を付けない（明示オプトアウト）
+  var removed = k.stdRemoved || {};
+  var desired = isFirst ? STD_ADDON_DEFS.first : STD_ADDON_DEFS.re;
+  var desiredNames = desired.map(function(d){ return d.name; });
+  // 受診種別に不要な自動加算を除去（例: 再診で機能強化加算）。手動追加(std無し)は触らない
+  k.addedBillingItems = k.addedBillingItems.filter(function(it){
+    return !(it.std && desiredNames.indexOf(it.name) === -1);
+  });
+  // 不足分を追加（医師が明示的に外したものは除外）
+  desired.forEach(function(d){
+    if (removed[d.name]) return;
+    if (!k.addedBillingItems.find(function(x){ return x.name === d.name; })) {
+      k.addedBillingItems.push({ name:d.name, points:d.points, std:true });
+    }
+  });
+}
 function recalcBilling() {
   const p = patients.find(x => x.id === currentPatientId);
   const k = karteData[currentPatientId];
+  ensureStandardAddons(k, k.isFirstVisit); // 当院標準加算を自動付与
   const isExternal = k.rxModeExternal || false;
   const visitFee = getVisitFee(k.isFirstVisit, selectedDate);
   const shoshinTen = visitFee.points;
@@ -1641,7 +1667,9 @@ function renderAddedBillingList() {
 }
 function removeAddedBilling(i) {
   const k = karteData[currentPatientId];
-  const name = k.addedBillingItems[i].name;
+  const it = k.addedBillingItems[i];
+  const name = it.name;
+  if (it.std) { k.stdRemoved = k.stdRemoved || {}; k.stdRemoved[name] = true; } // 標準加算を外したら再付与しない
   k.addedBillingItems.splice(i,1);
   recalcBilling();
   showToast(name + ' を削除');
