@@ -491,9 +491,16 @@ function populateDoctorSelect(p) {
 function onVisitInfoChange() {}
 
 // ===== Patient Info Tabs (Phase 3) =====
+// バイタルサイン入力欄は常設DOM。表示のみ「バイタル」タブに追従させる
+function syncVitalsInputVisibility() {
+  const w = document.getElementById('vitalsInputWrap');
+  if (w) w.style.display = (currentPatientTab === 'vitals') ? '' : 'none';
+}
+
 function switchPatientTab(tab) {
   currentPatientTab = tab;
   document.querySelectorAll('.patient-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  syncVitalsInputVisibility();
   const p = patients.find(x => x.id === currentPatientId);
   if (p) {
     renderPatientInfoTab(p);
@@ -505,6 +512,7 @@ function switchPatientTab(tab) {
 }
 
 function renderPatientInfoTab(p) {
+  syncVitalsInputVisibility();
   const body = document.getElementById('patientInfoBody');
   let h = '';
   switch (currentPatientTab) {

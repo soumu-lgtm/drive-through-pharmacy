@@ -417,6 +417,10 @@ body.resizing img {
 .bp-group { display: flex; align-items: center; gap: 2px; flex: 1; }
 .bp-group input { width: 45%; }
 .bp-group .slash { color: var(--text-muted); font-size: 14px; }
+/* 左パネル（患者情報）内は幅が狭いため1カラムにして入力値の見切れを防ぐ */
+#vitalsInputWrap .vital-grid { grid-template-columns: 1fr; gap: 2px; }
+#vitalsInputWrap .vital-item label { min-width: 34px; }
+#vitalsInputWrap .vital-item .unit { min-width: 32px; text-align: right; }
 
 /* Disease */
 .disease-search-wrap { position: relative; }
