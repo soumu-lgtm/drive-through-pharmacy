@@ -179,6 +179,35 @@ function isoToMD(iso) {
   return parseInt(parts[1]) + '/' + parseInt(parts[2]);
 }
 
+// ===== 支払方法（要望#6後半） =====
+// 方針（ユーザー確定 2026-08-05）: 一旦スタッフの手入力（選択式）。デジスマ側との連携は行わない。
+// ※ 現状は患者単位で保持する簡易版。受診ごとに分けたい場合はカルテ側へ移す。
+const PAY_METHODS = ['デジスマ', '現金', 'その他'];
+function payMethodCellHtml(p) {
+  const cur = p.payMethod || '';
+  let h = '<select class="pay-select' + (cur ? ' set' : '') + '" onclick="event.stopPropagation()"' +
+          ' onchange="event.stopPropagation();setPayMethod(\'' + p.id + '\',this.value)">';
+  h += '<option value=""' + (cur ? '' : ' selected') + '>-</option>';
+  PAY_METHODS.forEach(m => { h += '<option' + (cur === m ? ' selected' : '') + '>' + esc(m) + '</option>'; });
+  return h + '</select>';
+}
+function setPayMethod(id, v) {
+  const p = patients.find(x => x.id === id);
+  if (!p) return;
+  p.payMethod = v;
+  savePatientToApi(p);
+  renderPatientList();
+  showToast(v ? '支払方法: ' + v : '支払方法をクリア');
+}
+// 患者マスタ送信（項目を落とさないよう常に同じ形で送る）
+function savePatientToApi(p) {
+  postToApi('savePatient', {
+    '患者ID': p.id, '氏名': p.name, 'フリガナ': p.nameKana || '', '生年月日': p.dob || '',
+    '年齢': p.age, '性別': p.sex, '住所': p.address || '', '電話番号': p.phone || '',
+    'アレルギー': (p.allergies || []).join(','), 'メモ': p.memo || '', '支払方法': p.payMethod || ''
+  });
+}
+
 // 患者一覧「前回受付」列（要望#6）
 // 通常患者は prevVisitDate、DB患者は dbVisits から「今回より前の最新来院日」を出す。
 // ※ dbVisits の date は年を持たない "M/D" 形式のため、年跨ぎは判定できない（同年内の比較に留める）。
@@ -214,7 +243,7 @@ function renderPatientList() {
   if (filtered.length === 0) {
     const dbCount = patients.filter(p => p.dbSource).length;
     const dbMsg = dbCount > 0 ? '<br><span style="font-size:12px;">DB患者 ' + dbCount + '名あり → 上部の「DB患者一覧」から参照できます</span>' : '';
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--text-muted);font-size:14px;">この日の受付患者はいません' + dbMsg + '</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:40px;color:var(--text-muted);font-size:14px;">この日の受付患者はいません' + dbMsg + '</td></tr>';
     document.getElementById('listWait').textContent = 0;
     document.getElementById('listActive').textContent = 0;
     document.getElementById('listDone').textContent = 0;
@@ -229,14 +258,14 @@ function renderPatientList() {
       const doctor = visit ? (visit.doctor || '') : '';
       const tests = visit ? [visit.covid ? 'C+' : '', visit.flu ? 'Flu+' : '', visit.strep ? '溶+' : ''].filter(Boolean).join(' ') : '';
       const typeBadge = p.type === '新規' ? '<span class="status-badge" style="background:#dcfce7;color:#16a34a;">新規</span>' : '<span class="status-badge" style="background:#dbeafe;color:#2563eb;">再診</span>';
-      return '<tr onclick="openKarte(\'' + p.id + '\')" style="cursor:pointer;background:#f8faff;"><td>' + (p._origNum||i+1) + '</td><td class="td-status">' + typeBadge + '</td><td class="td-name">' + esc(p.name) + '<div class="sub">DB / ' + esc(p.address || '') + ' / ' + esc(time) + '</div></td><td>' + esc(p.age) + '歳 ' + esc(p.sex) + '</td><td>' + esc(p.insurance) + '</td><td class="td-memo" title="' + esc(p.memo || tests || '') + '">' + esc(p.memo || tests || '-') + '</td><td class="td-lastvisit">' + esc(prevVisitLabel(p)) + '</td><td class="td-lane">' + esc(doctor) + '</td><td class="td-questionnaire">' + esc(p.route || '-') + '</td><td class="td-actions"><button class="action-btn karte-btn" onclick="event.stopPropagation();openKarte(\'' + p.id + '\')">カルテ</button></td></tr>';
+      return '<tr onclick="openKarte(\'' + p.id + '\')" style="cursor:pointer;background:#f8faff;"><td>' + (p._origNum||i+1) + '</td><td class="td-status">' + typeBadge + '</td><td class="td-name">' + esc(p.name) + '<div class="sub">DB / ' + esc(p.address || '') + ' / ' + esc(time) + '</div></td><td>' + esc(p.age) + '歳 ' + esc(p.sex) + '</td><td>' + esc(p.insurance) + '</td><td class="td-memo" title="' + esc(p.memo || tests || '') + '">' + esc(p.memo || tests || '-') + '</td><td class="td-lastvisit">' + esc(prevVisitLabel(p)) + '</td><td class="td-pay">-</td><td class="td-lane">' + esc(doctor) + '</td><td class="td-questionnaire">' + esc(p.route || '-') + '</td><td class="td-actions"><button class="action-btn karte-btn" onclick="event.stopPropagation();openKarte(\'' + p.id + '\')">カルテ</button></td></tr>';
     }
     if (p.status === 'waiting') waitC++; else if (p.status === 'active') activeC++; else if (p.status === 'done') doneC++;
     const statusBadge = p.status === 'active' ? '<span class="status-badge active">診察中</span>' : p.status === 'done' ? '<span class="status-badge done">完了</span>' : '<span class="status-badge waiting">待機</span>';
     const memoStr = (p.memo || '').replace(/\s+/g, ' ').trim();
     const qBadge = p.questionnaire ? '<span class="q-badge received">受信済</span>' : '<span class="q-badge none">-</span>';
     const rowClass = p.status === 'done' ? ' class="status-done-row"' : '';
-    return '<tr' + rowClass + ' onclick="openKarte(\'' + p.id + '\')" style="cursor:pointer;"><td>' + (p._origNum||i+1) + '</td><td class="td-status">' + statusBadge + '</td><td class="td-name">' + esc(p.name) + '<div class="sub">' + esc(p.nameKana||'') + ' / ' + esc(p.id) + ' / ' + esc(p.arrivedAt||'') + '</div></td><td>' + esc(p.age) + '歳 ' + esc(p.sex) + '</td><td>' + esc(p.insurance) + '</td><td class="td-memo" title="' + esc(memoStr) + '">' + esc(memoStr || '-') + '</td><td class="td-lastvisit">' + esc(prevVisitLabel(p)) + '</td><td class="td-lane">L' + esc(p.vehicle.lane) + '</td><td class="td-questionnaire">' + qBadge + '</td><td class="td-actions"><button class="action-btn karte-btn" onclick="event.stopPropagation();openKarte(\'' + p.id + '\')">カルテ</button>' + (p.status === 'waiting' ? '<button class="action-btn call-btn" onclick="event.stopPropagation();callPatientFromList(\'' + p.id + '\')">呼出</button>' : '') + '</td></tr>';
+    return '<tr' + rowClass + ' onclick="openKarte(\'' + p.id + '\')" style="cursor:pointer;"><td>' + (p._origNum||i+1) + '</td><td class="td-status">' + statusBadge + '</td><td class="td-name">' + esc(p.name) + '<div class="sub">' + esc(p.nameKana||'') + ' / ' + esc(p.id) + ' / ' + esc(p.arrivedAt||'') + '</div></td><td>' + esc(p.age) + '歳 ' + esc(p.sex) + '</td><td>' + esc(p.insurance) + '</td><td class="td-memo" title="' + esc(memoStr) + '">' + esc(memoStr || '-') + '</td><td class="td-lastvisit">' + esc(prevVisitLabel(p)) + '</td><td class="td-pay">' + payMethodCellHtml(p) + '</td><td class="td-lane">L' + esc(p.vehicle.lane) + '</td><td class="td-questionnaire">' + qBadge + '</td><td class="td-actions"><button class="action-btn karte-btn" onclick="event.stopPropagation();openKarte(\'' + p.id + '\')">カルテ</button>' + (p.status === 'waiting' ? '<button class="action-btn call-btn" onclick="event.stopPropagation();callPatientFromList(\'' + p.id + '\')">呼出</button>' : '') + '</td></tr>';
   }).join('');
   document.getElementById('listWait').textContent = waitC;
   document.getElementById('listActive').textContent = activeC;
@@ -265,6 +294,7 @@ function openNewPatientModal() {
   document.getElementById('newPatientNo').value = 'P-' + String(patients.length + 1).padStart(5, '0');
   document.querySelector('input[name="newSex"][value="男"]').checked = true;
   document.getElementById('newInsurance').value = '社保3割';
+  document.getElementById('newPayMethod').value = '';   // 要望#6
   // OCR状態をクリア
   clearOcrPreview();
   stopOcrCamera();
@@ -453,6 +483,7 @@ function addNewPatient(andOpen) {
     id: document.getElementById('newPatientNo').value || ('P' + (Date.now() % 100000)),
     name, nameKana: kana, age, sex, insurance: ins, ratio, dob, address,
     zip: zip.trim(), pref, city, street, building,   // 要望#2: 分割項目も保持
+    payMethod: (document.getElementById('newPayMethod') || {}).value || '',   // 要望#6
     phone: document.getElementById('newPhone').value,
     allergies: [], history: [], prevRx: [], prevDays: 0, prevVisitDate: '',
     vehicle: { plate: document.getElementById('newPlate').value || '---', lane: parseInt(document.getElementById('newLane').value) || 1 },
@@ -1544,6 +1575,7 @@ function saveKarteDraft() {
   if (k.selectedExams.length > 0) k.selectedExams.forEach(exId => { const exInfo = examItems.find(e => e.id === exId); if (exInfo) postToApi('saveExam', { 'カルテID': karteId, '患者ID': currentPatientId, '検査名': exInfo.name, '検査コード': exId }); });
   // Supabase二重書き込み（スプシと並行）
   saveToSupabase(p, k, drugs).then(r => { if (r.success) console.log('[Supabase] 一時保存OK'); });
+  saveKarteSnapshot();          // 要望#9: 「直前保存に戻す」用のスナップショット
   showToast('カルテを一時保存しました');
 }
 
@@ -1583,7 +1615,104 @@ function confirmBilling() {
   document.getElementById('examStartBtn').textContent = '診察開始';
   document.getElementById('examStartBtn').classList.remove('active');
   renderWaitingList();
+  saveKarteSnapshot();          // 要望#9: 「直前保存に戻す」用のスナップショット
   showToast(p.name + 'さんの診察を確定しました');
+}
+
+// ===== カルテの取り消し（要望#9） =====
+// 方針（ユーザー確定 2026-08-05）: ①直前保存の状態まで戻す ②完全削除 の2つを用意する。
+// ①のために、保存（一時保存・確定）のたびにカルテ内容のスナップショットを端末に残す。
+function karteKey(pid, date) { return (pid || currentPatientId) + '|' + (date || selectedDate); }
+function loadKarteSnapshots() { try { return JSON.parse(localStorage.getItem('karte_lastSaved') || '{}'); } catch (e) { return {}; } }
+function saveKarteSnapshot() {
+  try {
+    const snaps = loadKarteSnapshots();
+    snaps[karteKey()] = { savedAt: new Date().toISOString(), data: JSON.parse(JSON.stringify(karteData[currentPatientId])) };
+    // 端末の容量を圧迫しないよう、古いものから200件までに保つ
+    const keys = Object.keys(snaps);
+    if (keys.length > 200) {
+      keys.sort((a, b) => (snaps[a].savedAt || '').localeCompare(snaps[b].savedAt || ''));
+      keys.slice(0, keys.length - 200).forEach(k => delete snaps[k]);
+    }
+    localStorage.setItem('karte_lastSaved', JSON.stringify(snaps));
+  } catch (e) { console.warn('カルテスナップショット保存に失敗:', e); }
+}
+function getKarteSnapshot() { return loadKarteSnapshots()[karteKey()] || null; }
+function clearKarteSnapshot() {
+  const snaps = loadKarteSnapshots();
+  delete snaps[karteKey()];
+  try { localStorage.setItem('karte_lastSaved', JSON.stringify(snaps)); } catch (e) {}
+}
+function blankKarte(p) {
+  return {
+    chiefComplaint: '', chiefComplaintSelect: '', findingsHtml: '',
+    vitals: { t: '', bps: '', bpd: '', spo2: '', pulse: '' },
+    selectedDiseases: [], prescriptions: [], rxDays: 7, rxModeExternal: false,
+    isFirstVisit: !(p && p.prevVisitDate),
+    selectedExams: [], addedBillingItems: [], excludedBillingRows: {}
+  };
+}
+function currentOperator() {
+  try { if (typeof authUser !== 'undefined' && authUser && authUser.email) return authUser.email; } catch (e) {}
+  return '不明';
+}
+function openKarteCancelModal() {
+  const p = patients.find(x => x.id === currentPatientId);
+  if (!p) { showToast('患者が選択されていません'); return; }
+  saveCurrentKarte();
+  document.getElementById('karteCancelTarget').innerHTML =
+    '<b>' + esc(selectedDate) + '</b>　' + esc(p.name) + '（' + esc(p.id) + '）のカルテ';
+  const snap = getKarteSnapshot();
+  document.getElementById('karteCancelSnapInfo').textContent = snap
+    ? '直前の保存: ' + new Date(snap.savedAt).toLocaleString('ja-JP')
+    : 'このカルテはまだ保存されていません（戻す先がありません）';
+  document.getElementById('karteDeleteReason').value = '';
+  document.getElementById('karteDeleteNote').value = '';
+  document.getElementById('karteCancelModal').classList.add('show');
+}
+function resetKarteToLastSave() {
+  const snap = getKarteSnapshot();
+  if (!snap) { alert('直前に保存した状態がありません。\n（このカルテはまだ一時保存も確定もされていません）'); return; }
+  if (!confirm('保存後の変更をすべて破棄して、\n' + new Date(snap.savedAt).toLocaleString('ja-JP') + ' の状態に戻します。\nよろしいですか？')) return;
+  karteData[currentPatientId] = JSON.parse(JSON.stringify(snap.data));
+  closeModal('karteCancelModal');
+  renderAllKarte();
+  showToast('直前保存の状態に戻しました');
+}
+function loadKarteDeletionLog() { try { return JSON.parse(localStorage.getItem('karte_deletionLog') || '[]'); } catch (e) { return []; } }
+function deleteKarteCompletely() {
+  const reason = document.getElementById('karteDeleteReason').value;
+  if (!reason) { alert('削除理由を選択してください。'); return; }
+  const p = patients.find(x => x.id === currentPatientId);
+  if (!p) return;
+  const note = document.getElementById('karteDeleteNote').value.trim();
+  if (!confirm(selectedDate + '　' + p.name + 'さんのカルテを完全に削除します。\n記載・処方・傷病名・算定がすべて消えます。\n\n理由: ' + reason)) return;
+  if (!confirm('本当に削除しますか？\nこの操作は元に戻せません。')) return;
+
+  const karteId = 'K-' + currentPatientId + '-' + selectedDate;
+  // 端末内に削除の記録を残す（誰が・いつ・なぜ）
+  try {
+    const log = loadKarteDeletionLog();
+    log.push({ at: new Date().toISOString(), by: currentOperator(), karteId: karteId, patientId: p.id, patientName: p.name, visitDate: selectedDate, reason: reason, note: note });
+    localStorage.setItem('karte_deletionLog', JSON.stringify(log.slice(-500)));
+  } catch (e) { console.warn('削除記録の保存に失敗:', e); }
+
+  // バックエンドへ削除を通知
+  // ※ スプレッドシート(GAS)側は deleteKarte アクションの実装が必要（未実装だと無視される）
+  postToApi('deleteKarte', { 'カルテID': karteId, '患者ID': p.id, '受診日': selectedDate, '削除理由': reason, '詳細': note, '実施者': currentOperator() });
+  if (typeof deleteKarteFromSupabase === 'function') {
+    deleteKarteFromSupabase(p.id, selectedDate, 'nishiharu').then(r => {
+      if (r && r.success) console.log('[削除] Supabase OK', r.deleted);
+      else showToast('Supabaseの削除に失敗しました: ' + ((r && r.error) || '不明'));
+    });
+  }
+
+  karteData[currentPatientId] = blankKarte(p);
+  clearKarteSnapshot();
+  if (p.status === 'done') p.status = 'waiting';
+  closeModal('karteCancelModal');
+  renderAllKarte();
+  showToast('カルテを削除しました');
 }
 
 function postToApi(action, data) { try { fetch(API_URL, { method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'}, body:JSON.stringify({action, data}) }); } catch(e) { console.warn('API error:', e); } }
@@ -1607,6 +1736,7 @@ function openEditPatientModal() {
   document.getElementById('editPhone').value = p.phone || '';
   document.getElementById('editAllergies').value = p.allergies.join(', ');
   document.getElementById('editInsurance').value = p.insurance;
+  document.getElementById('editPayMethod').value = p.payMethod || '';   // 要望#6
   document.getElementById('editPatientModal').classList.add('show');
 }
 function savePatientEdit() {
@@ -1628,8 +1758,9 @@ function savePatientEdit() {
   p.ratio = ins.includes('1割') ? 0.1 : ins.includes('2割') ? 0.2 : ins === '公費' ? 0 : 0.3;
   const a = document.getElementById('editAllergies').value;
   p.allergies = a ? a.split(/[,、]/).map(s => s.trim()).filter(Boolean) : [];
+  p.payMethod = document.getElementById('editPayMethod').value;   // 要望#6
   if (p.dob) { const t = new Date(), b = new Date(p.dob); let age = t.getFullYear()-b.getFullYear(); if (t.getMonth()<b.getMonth()||(t.getMonth()===b.getMonth()&&t.getDate()<b.getDate())) age--; p.age = age; }
-  postToApi('savePatient', { '患者ID': p.id, '氏名': p.name, 'フリガナ': p.nameKana, '生年月日': p.dob, '年齢': p.age, '性別': p.sex, '住所': p.address, '電話番号': p.phone, 'アレルギー': p.allergies.join(','), 'メモ': p.memo || '' });
+  savePatientToApi(p);
   closeModal('editPatientModal'); renderAllKarte(); showToast('患者情報を更新');
 }
 
@@ -1662,11 +1793,14 @@ function openInsuranceModal() {
   else { document.getElementById('iryoPhotoPreview').style.display = 'none'; document.getElementById('iryoUploadText').style.display = ''; document.getElementById('iryoPhotoDeleteBtn').style.display = 'none'; }
   document.getElementById('iryoType').value = p.iryoType || '';
   document.getElementById('iryoHobetsu').value = p.iryoHobetsu || '';
+  insuranceWarnDismissed = false;   // 要望#4: 開くたびに警告を判定し直す
   document.getElementById('iryoRecipientNumber').value = p.iryoRecipientNumber || '';
   document.getElementById('iryoValidFrom').value = p.iryoValidFrom || '';
   document.getElementById('iryoValidTo').value = p.iryoValidTo || '';
   document.getElementById('iryoMemo').value = p.iryoMemo || '';
   document.getElementById('insurancePhotoModal').classList.add('show');
+  updateInsuranceWarn();            // 要望#4
+  if (typeof renderPatientPhotos === 'function') renderPatientPhotos();   // 要望#5
   if (p.insurerNumber) { setTimeout(function() { runInsuranceCalc(); }, 100); }
 }
 
@@ -1716,10 +1850,18 @@ function runInsuranceCalc() {
     else if (result.insuranceCategory === '後期高齢者') document.getElementById('insuranceType').value = '後期高齢者';
     if (result.finalRate === 0 && result.kouhiApplied) document.getElementById('insuranceType').value = '公費';
   }
+  updateInsuranceWarn();   // 要望#4: 自動判定で割合が変わったら警告を判定し直す
 }
 
 function saveInsuranceInfo() {
   const p = patients.find(x => x.id === currentPatientId);
+  // 要望#4: 医療証ありなのに負担割合が残っている場合、保存前にもう一度だけ確認する（自動変更はしない）
+  const warn = insuranceWarnState();
+  if (warn && !insuranceWarnDismissed) {
+    updateInsuranceWarn();
+    if (!confirm('医療証（' + warn.iryo + '）が登録されていますが、負担割合が「' + warn.label + '」のままです。\nこのまま ' + warn.label + ' で保存しますか？\n\n［キャンセル］を押すと画面に戻ります。')) return;
+    insuranceWarnDismissed = true;
+  }
   p.insSymbol = document.getElementById('insSymbol').value;
   p.insNumber = document.getElementById('insNumber').value;
   p.insEdaban = document.getElementById('insEdaban').value;
@@ -1982,6 +2124,42 @@ function clearAllBilling() {
 
 
 // ===== v0.11: 医療証種別→法別番号自動入力 =====
+// ===== 要望#4: 医療証と負担割合の食い違い警告 =====
+// 方針（ユーザー確定 2026-08-05）: 自動では負担割合を変えない。食い違いを警告するだけにする。
+// 医療証の種別によって実際の負担割合は異なる（子ども医療は自治体により一部自己負担、精神通院は1割）ため、
+// 「医療証あり＝一律0割」の自動化は行わない。
+var insuranceWarnDismissed = false;
+function insuranceWarnState() {
+  var typeEl = document.getElementById('iryoType');
+  var ratioEl = document.getElementById('insuranceRatio');
+  if (!typeEl || !ratioEl) return null;
+  var iryo = (typeEl.value || '').trim();
+  var ratio = parseFloat(ratioEl.value);
+  if (!iryo || iryo === 'なし') return null;
+  if (!(ratio > 0)) return null;
+  return { iryo: iryo, ratio: ratio, label: (ratio * 10) + '割' };
+}
+function updateInsuranceWarn() {
+  var banner = document.getElementById('insWarnBanner');
+  if (!banner) return;
+  var st = insuranceWarnState();
+  if (!st || insuranceWarnDismissed) { banner.style.display = 'none'; return; }
+  document.getElementById('insWarnText').innerHTML =
+    '&#9888; 医療証（' + esc(st.iryo) + '）が登録されていますが、負担割合が「' + esc(st.label) + '」のままです';
+  banner.style.display = '';
+}
+function applyKouhiZero() {
+  var ratioEl = document.getElementById('insuranceRatio');
+  if (ratioEl) ratioEl.value = '0';
+  insuranceWarnDismissed = false;
+  updateInsuranceWarn();
+  showToast('負担割合を0割にしました');
+}
+function dismissInsuranceWarn() {
+  insuranceWarnDismissed = true;
+  updateInsuranceWarn();
+}
+
 function onIryoTypeChange(val) {
   var hobetsuMap = {
     '乳幼児医療': '82',
@@ -1995,6 +2173,8 @@ function onIryoTypeChange(val) {
   };
   var code = hobetsuMap[val] || '';
   document.getElementById('iryoHobetsu').value = code;
+  insuranceWarnDismissed = false;   // 要望#4: 医療証を変えたら警告を出し直す
+  updateInsuranceWarn();
 }
 
 // ===== v0.8: 医療証写真・データ管理 =====

@@ -106,6 +106,7 @@
           <th>保険</th>
           <th>患者メモ</th>
           <th>前回受付</th>
+          <th>支払</th>
           <th>レーン</th>
           <th>問診票</th>
           <th>操作</th>
@@ -313,6 +314,8 @@
                 <button class="btn btn-primary" onclick="confirmBilling()">確定</button>
                 <button class="btn btn-outline" onclick="printBilling()">印刷</button>
                 <button class="btn btn-outline btn-clear-billing" id="btnClearBilling" onclick="clearAllBilling()" disabled>算定クリア</button>
+                <!-- 要望#9: カルテ取り消し（直前保存に戻す／完全削除） -->
+                <button class="btn btn-outline btn-karte-undo" onclick="openKarteCancelModal()" title="直前保存に戻す・完全削除">取り消し</button>
               </div>
             </div>
           </div>
@@ -463,6 +466,12 @@
       </select>
     </div>
     <div class="edit-form-row"><label>アレルギー</label><input type="text" id="editAllergies" placeholder="カンマ区切り"></div>
+    <!-- 要望#6: 支払方法（手入力・選択式） -->
+    <div class="edit-form-row"><label>支払方法</label>
+      <select id="editPayMethod">
+        <option value="">未設定</option><option value="デジスマ">デジスマ</option><option value="現金">現金</option><option value="その他">その他</option>
+      </select>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('editPatientModal')">キャンセル</button>
       <button class="btn btn-primary" onclick="savePatientEdit()">保存</button>
@@ -572,6 +581,12 @@
         <option value="社保3割">社保3割</option><option value="国保3割">国保3割</option>
         <option value="後期高齢者1割">後期高齢者1割</option><option value="後期高齢者2割">後期高齢者2割</option><option value="後期高齢者3割">後期高齢者3割</option>
         <option value="公費">公費</option><option value="自費">自費</option>
+      </select>
+    </div>
+    <!-- 要望#6: 支払方法（手入力・選択式） -->
+    <div class="edit-form-row"><label>支払方法</label>
+      <select id="newPayMethod">
+        <option value="">未設定</option><option value="デジスマ">デジスマ</option><option value="現金">現金</option><option value="その他">その他</option>
       </select>
     </div>
     <div class="edit-form-row"><label>車両番号</label><input type="text" id="newPlate" placeholder="名古屋 500 あ 12-34"></div>
@@ -718,6 +733,23 @@
       <div class="edit-form-row"><label>備考</label><textarea id="iryoMemo" rows="2" style="width:100%;font-size:12px;border:1px solid var(--border);border-radius:4px;padding:6px;resize:vertical;" placeholder="自己負担上限額、適用条件等"></textarea></div>
     </fieldset>
 
+    <!-- 要望#5: 写真を複数枚（サーバー保存＋容量の可視化） -->
+    <fieldset style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:10px;">
+      <legend style="font-size:12px;font-weight:600;color:var(--primary);padding:0 6px;">写真（保険証・医療証・検査結果）</legend>
+      <div id="photoStorageBanner"></div>
+      <div id="patientPhotoGrid" class="photo-grid"></div>
+      <div class="photo-add-row">
+        <select id="photoTypeSelect">
+          <option>保険証</option><option>医療証</option><option>検査結果</option><option>その他</option>
+        </select>
+        <label class="photo-add-btn">＋ 写真を追加
+          <input type="file" accept="image/*" capture="environment" style="display:none" onchange="onAddPatientPhoto(this)">
+        </label>
+        <span id="photoCountInfo" class="photo-count"></span>
+      </div>
+      <div id="photoUsageMeter"></div>
+    </fieldset>
+
     <!-- 手動設定（従来互換） -->
     <fieldset style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:10px;">
       <legend style="font-size:12px;font-weight:600;color:var(--text-muted,#666);padding:0 6px;">手動設定</legend>
@@ -725,7 +757,16 @@
       <div class="edit-form-row"><label>有効期限</label><input type="date" id="insuranceExpiry"></div>
       <div class="edit-form-row" style="display:flex;gap:8px;">
         <div style="flex:1;"><label>区分</label><select id="insuranceType"><option value="社保">社保</option><option value="国保">国保</option><option value="後期高齢者">後期高齢者</option><option value="公費">公費</option></select></div>
-        <div style="flex:1;"><label>負担割合</label><select id="insuranceRatio"><option value="0.3">3割</option><option value="0.2">2割</option><option value="0.1">1割</option><option value="0">公費（0割）</option></select></div>
+        <div style="flex:1;"><label>負担割合</label><select id="insuranceRatio" onchange="updateInsuranceWarn()"><option value="0.3">3割</option><option value="0.2">2割</option><option value="0.1">1割</option><option value="0">0割</option></select></div>
+      </div>
+      <!-- 要望#4: 医療証あり×負担割合の食い違いを保存前に警告（自動では変更しない） -->
+      <div id="insWarnBanner" style="display:none;margin-top:10px;background:#fef3c7;border:1px solid #d97706;border-radius:6px;padding:8px 10px;">
+        <div id="insWarnText" style="font-size:12px;font-weight:700;color:#92400e;"></div>
+        <div style="font-size:11px;color:#92400e;margin-top:3px;">このまま保存すると、その負担割合で確定します。</div>
+        <div style="margin-top:6px;display:flex;gap:6px;">
+          <button type="button" class="btn btn-primary" style="font-size:11px;padding:3px 10px;" onclick="applyKouhiZero()">0割にする</button>
+          <button type="button" class="btn btn-outline" style="font-size:11px;padding:3px 10px;" onclick="dismissInsuranceWarn()">このまま保存する</button>
+        </div>
       </div>
     </fieldset>
 
@@ -733,6 +774,51 @@
       <button class="btn btn-outline" onclick="closeModal('insurancePhotoModal')">キャンセル</button>
       <button class="btn btn-outline" onclick="openInsuranceRuleRef()" style="font-size:11px;">ルール参照</button>
       <button class="btn btn-primary" onclick="saveInsuranceInfo()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- カルテ取り消しモーダル（要望#9） -->
+<div class="modal-overlay" id="karteCancelModal">
+  <div class="modal" style="max-width:460px;">
+    <h3>カルテの取り消し <button class="modal-close" onclick="closeModal('karteCancelModal')">&times;</button></h3>
+    <div id="karteCancelTarget" style="background:var(--bg);border-left:3px solid var(--primary);padding:8px 10px;font-size:12px;margin-bottom:12px;"></div>
+
+    <!-- ① 直前保存に戻す -->
+    <div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:10px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:4px;">① 直前に保存した状態に戻す</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;" id="karteCancelSnapInfo"></div>
+      <button class="btn btn-primary" style="font-size:12px;padding:5px 12px;" onclick="resetKarteToLastSave()">直前保存に戻す</button>
+    </div>
+
+    <!-- ② 完全削除 -->
+    <div style="border:1px solid var(--danger);border-radius:8px;padding:12px 14px;">
+      <div style="font-size:13px;font-weight:700;color:var(--danger);margin-bottom:4px;">② カルテを完全に削除する</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">
+        このカルテの記載・処方・傷病名・算定をすべて削除します。<b>元に戻せません。</b>
+      </div>
+      <div class="edit-form-row" style="align-items:flex-start;">
+        <label style="margin-top:6px;font-size:12px;">削除理由<span class="req">*</span></label>
+        <div style="flex:1;">
+          <select id="karteDeleteReason" style="width:100%;margin-bottom:4px;">
+            <option value="">選択してください</option>
+            <option value="患者取り違え">患者取り違え</option>
+            <option value="重複登録">重複登録</option>
+            <option value="受診なし（キャンセル）">受診なし（キャンセル）</option>
+            <option value="テスト入力">テスト入力</option>
+            <option value="その他">その他</option>
+          </select>
+          <input type="text" id="karteDeleteNote" placeholder="詳細（任意）" style="width:100%;">
+        </div>
+      </div>
+      <button class="btn" style="background:var(--danger);color:#fff;font-size:12px;padding:5px 12px;margin-top:6px;" onclick="deleteKarteCompletely()">完全に削除する</button>
+    </div>
+
+    <div style="font-size:10px;color:var(--text-muted);margin-top:10px;">
+      削除の記録（日時・実施者・理由）は端末内の履歴に残ります。
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('karteCancelModal')">閉じる</button>
     </div>
   </div>
 </div>
@@ -832,6 +918,7 @@
 <script src="ocr_ui.js?v=20260805_v29"></script>
 <script src="inventory_stock.js?v=20260728_v22"></script>
 <script src="drug_suggest.js?v=20260703_v12f"></script>
+<script src="patient_photos.js?v=20260805_v29"></script>
 <script src="app.js?v=20260805_v29"></script>
 <script src="uke_generator.js?v=20260805_v29"></script>
 </body>
