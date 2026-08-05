@@ -86,19 +86,25 @@ function shrinkImageFile(file) {
   });
 }
 
-function photoPrefix(patientNo) { return 'patients/' + patientNo; }
+// ★Supabase Storage は日本語などの非ASCIIキーを InvalidKey で拒否する。
+//   そのため種別はASCIIコードでファイル名に埋め込み、表示時に日本語へ戻す。
+const PHOTO_TYPE_CODE = { '保険証': 'hokensho', '医療証': 'iryosho', '検査結果': 'kensa', 'その他': 'other' };
+const PHOTO_CODE_TYPE = { hokensho: '保険証', iryosho: '医療証', kensa: '検査結果', other: 'その他' };
 
-/** ファイル名: <種別>__<YYYYMMDDHHmmss>.jpg  （種別に「__」は使わない） */
+function asciiSafe(s) { return String(s || '').replace(/[^A-Za-z0-9._-]/g, '_'); }
+function photoPrefix(patientNo) { return 'patients/' + asciiSafe(patientNo); }
+
+/** ファイル名: <種別コード>__<YYYYMMDDHHmmss>.jpg */
 function buildPhotoName(type) {
   const d = new Date();
   const p = n => String(n).padStart(2, '0');
   const stamp = d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds());
-  return (type || 'その他') + '__' + stamp + '.jpg';
+  return (PHOTO_TYPE_CODE[type] || 'other') + '__' + stamp + '.jpg';
 }
 function parsePhotoName(name) {
   const m = String(name).match(/^(.+?)__(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})\.jpg$/);
   if (!m) return { type: 'その他', dateLabel: '' };
-  return { type: m[1], dateLabel: m[2] + '/' + m[3] + '/' + m[4] + ' ' + m[5] + ':' + m[6] };
+  return { type: PHOTO_CODE_TYPE[m[1]] || m[1], dateLabel: m[2] + '/' + m[3] + '/' + m[4] + ' ' + m[5] + ':' + m[6] };
 }
 
 /** 患者の写真一覧（署名URL付き） */
