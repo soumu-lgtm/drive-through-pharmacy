@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=1024">
 <title>ドライブスルー診療 電子カルテ v0.15</title>
-<link rel="stylesheet" href="style.css?v=20260804_v12">
+<link rel="stylesheet" href="style.css?v=20260805_v13">
 <!-- CDN: バージョン固定 + SRI(改竄検知) + crossorigin。更新時はハッシュも再計算すること -->
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js" integrity="sha384-GJqSu7vueQ9qN0E9yLPb3Wtpd7OrgK8KmYzC8T1IysG1bcvxvIO4qtYR/D3A991F" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" integrity="sha384-b5Ya4Bq3qCyz39m2ISh+4DxjAIljdeFwK/BsXLuj9gugaNwAcj/ia15fxNZL9Nlx" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -104,7 +104,8 @@
           <th>患者名</th>
           <th>年齢/性別</th>
           <th>保険</th>
-          <th>アレルギー</th>
+          <th>患者メモ</th>
+          <th>前回受付</th>
           <th>レーン</th>
           <th>問診票</th>
           <th>操作</th>
@@ -278,7 +279,16 @@
               <span class="rt-sep"></span>
               <button class="rt-btn" onclick="rtExec('bold')" title="太字" style="font-weight:700;">B</button>
             </div>
-            <div class="richtext-editor" id="findingsEditor" contenteditable="true" data-placeholder="[現病歴]&#10;&#10;[身体所見]&#10;&#10;[A&P]"></div>
+            <!-- 所見テンプレ（要望#11） -->
+            <div class="richtext-tpl-bar">
+              <button class="rt-btn rt-tpl-btn" onclick="insertFindingsTemplate()" title="3項目まとめて挿入">&#128203; 診察テンプレ</button>
+              <button class="rt-btn rt-tpl-btn" onclick="insertFindingsSection('現病歴')">［現病歴］</button>
+              <button class="rt-btn rt-tpl-btn" onclick="insertFindingsSection('身体所見')">［身体所見］</button>
+              <button class="rt-btn rt-tpl-btn" onclick="insertFindingsSection('アセスメント＆プラン')">［アセスメント＆プラン］</button>
+              <span id="findingsSnippetBtns"></span>
+              <button class="rt-btn rt-tpl-btn rt-tpl-add" onclick="addFindingsSnippet()" title="よく使う文面を登録（登録後は右クリックで削除）">＋定型文を登録</button>
+            </div>
+            <div class="richtext-editor" id="findingsEditor" contenteditable="true" data-placeholder="[現病歴]&#10;&#10;[身体所見]&#10;&#10;[アセスメント＆プラン]"></div>
           </div>
           <!-- Resize handle: Findings | Actions -->
           <div class="split-resize-handle" id="resizeSplit" title="ドラッグで幅調整"></div>
@@ -362,17 +372,13 @@
           </div>
         </div>
 
-        <!-- 検査・文書（機能8: 折りたたみ対応） -->
+        <!-- 文書（要望#7: 検査登録は算定メニューの「検査」タブへ一本化したため削除） -->
         <div class="right-section">
           <div class="right-section-title collapsible" onclick="toggleExamSection()" style="cursor:pointer;">
-            <span class="icon">&#128300;</span> 検査・文書
+            <span class="icon">&#128196;</span> 文書
             <span id="examCollapseIcon" style="float:right;font-size:10px;color:var(--text-muted);">&#9660;</span>
           </div>
           <div class="right-section-body" id="examSectionBody">
-            <div class="info-section">
-              <div class="info-section-title">検査登録</div>
-              <ul class="exam-check-list" id="examCheckList"></ul>
-            </div>
             <div class="info-section">
               <div class="info-section-title">文書作成</div>
               <div class="doc-btns">
@@ -413,9 +419,41 @@
     <h3>患者情報の編集 <button class="modal-close" onclick="closeModal('editPatientModal')">&times;</button></h3>
     <div class="edit-form-row"><label>氏名</label><input type="text" id="editName"></div>
     <div class="edit-form-row"><label>フリガナ</label><input type="text" id="editNameKana" placeholder="タナカタロウ"></div>
-    <div class="edit-form-row"><label>生年月日</label><input type="date" id="editDob"></div>
+    <!-- 生年月日: 和暦＋西暦を併設（要望#3） -->
+    <div class="edit-form-row" style="align-items:flex-start;">
+      <label style="margin-top:8px;">生年月日</label>
+      <div class="wareki-grid">
+        <div class="wareki-row">
+          <select id="editWEra" onchange="onWarekiInput('edit')">
+            <option value="">元号</option><option>令和</option><option>平成</option><option>昭和</option><option>大正</option><option>明治</option>
+          </select>
+          <input type="number" id="editWY" min="1" max="64" placeholder="年" oninput="onWarekiInput('edit')"><span class="wareki-unit">年</span>
+          <input type="number" id="editWM" min="1" max="12" placeholder="月" oninput="onWarekiInput('edit')"><span class="wareki-unit">月</span>
+          <input type="number" id="editWD" min="1" max="31" placeholder="日" oninput="onWarekiInput('edit')"><span class="wareki-unit">日</span>
+        </div>
+        <div class="wareki-row">
+          <input type="date" id="editDob" oninput="onDobInput('edit')" onchange="onDobInput('edit')">
+          <span class="wareki-hint">西暦と自動で連動</span>
+        </div>
+      </div>
+    </div>
     <div class="edit-form-row"><label>性別</label><select id="editSex"><option value="男">男</option><option value="女">女</option></select></div>
-    <div class="edit-form-row"><label>住所</label><input type="text" id="editAddress"></div>
+    <!-- 住所: 新規患者登録と同じ構成（要望#2） -->
+    <div class="edit-form-row" style="align-items:flex-start;">
+      <label style="margin-top:8px;">住所</label>
+      <div class="addr-grid">
+        <div class="addr-zip-row">
+          <input type="text" id="editZip" placeholder="460-0001" style="width:120px;" oninput="autoFillAddress(this.value,'editPref','editCity')">
+          <span style="font-size:10px;color:var(--primary);">郵便番号で自動入力</span>
+        </div>
+        <div class="addr-detail-row">
+          <input type="text" id="editPref" placeholder="都道府県" style="width:48%;">
+          <input type="text" id="editCity" placeholder="市区町村" style="width:48%;">
+        </div>
+        <input type="text" id="editStreet" placeholder="番地" style="width:100%;">
+        <input type="text" id="editBuilding" placeholder="建物名・号室" style="width:100%;">
+      </div>
+    </div>
     <div class="edit-form-row"><label>電話番号</label><input type="text" id="editPhone"></div>
     <div class="edit-form-row"><label>保険種別</label>
       <select id="editInsurance">
@@ -487,7 +525,24 @@
         <label class="radio-label"><input type="radio" name="newSex" value="女"> 女性</label>
       </div>
     </div>
-    <div class="edit-form-row"><label>生年月日<span class="req">*</span></label><input type="date" id="newDob"></div>
+    <!-- 生年月日: 和暦＋西暦を併設（要望#3） -->
+    <div class="edit-form-row" style="align-items:flex-start;">
+      <label style="margin-top:8px;">生年月日<span class="req">*</span></label>
+      <div class="wareki-grid">
+        <div class="wareki-row">
+          <select id="newWEra" onchange="onWarekiInput('new')">
+            <option value="">元号</option><option>令和</option><option>平成</option><option>昭和</option><option>大正</option><option>明治</option>
+          </select>
+          <input type="number" id="newWY" min="1" max="64" placeholder="年" oninput="onWarekiInput('new')"><span class="wareki-unit">年</span>
+          <input type="number" id="newWM" min="1" max="12" placeholder="月" oninput="onWarekiInput('new')"><span class="wareki-unit">月</span>
+          <input type="number" id="newWD" min="1" max="31" placeholder="日" oninput="onWarekiInput('new')"><span class="wareki-unit">日</span>
+        </div>
+        <div class="wareki-row">
+          <input type="date" id="newDob" oninput="onDobInput('new')" onchange="onDobInput('new')">
+          <span class="wareki-hint">西暦と自動で連動</span>
+        </div>
+      </div>
+    </div>
     <div class="edit-form-row" style="align-items:flex-start;">
       <label style="margin-top:8px;">住所</label>
       <div class="addr-grid">
@@ -774,10 +829,10 @@
 <script src="billing_revision_2026.js?v=20260602"></script>
 <script src="master_loader.js?v=20260728_v23"></script>
 <script src="auth.js?v=20260609"></script>
-<script src="ocr_ui.js?v=20260703_v12d"></script>
+<script src="ocr_ui.js?v=20260805_v29"></script>
 <script src="inventory_stock.js?v=20260728_v22"></script>
 <script src="drug_suggest.js?v=20260703_v12f"></script>
-<script src="app.js?v=20260804_v28"></script>
-<script src="uke_generator.js?v=20260731_v27"></script>
+<script src="app.js?v=20260805_v29"></script>
+<script src="uke_generator.js?v=20260805_v29"></script>
 </body>
 </html>

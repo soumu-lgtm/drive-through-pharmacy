@@ -249,11 +249,14 @@ function buildUkeText(patientList, reviewOrg, instCode, instName, prefCode, bill
     lines.push(['HO', insurerNum, symbol, number, jitsuNissu, totalPoints, copay].join(','));
 
     // SY: [1]傷病名コード [2]開始日 [6]主病フラグ(01)
+    // 要望#10: カルテで［主］を付けた傷病名を主病にする。未指定のカルテは従来どおり先頭を主病とする。
+    const mainIdx = (k.selectedDiseases || []).findIndex(function (d) { return d && d.main; });
+    const mainPos = mainIdx >= 0 ? mainIdx : 0;
     if (k.selectedDiseases && k.selectedDiseases.length > 0) {
       k.selectedDiseases.forEach(function (d, di) {
         const dCode = resolveDiseaseCode(d);
         const startDate = (pd.visitDate || billingMonth + '01').replace(/-/g, '');
-        const sy = new Array(7).fill(''); sy[0] = 'SY'; sy[1] = dCode; sy[2] = startDate; sy[6] = (di === 0 ? '01' : '');
+        const sy = new Array(7).fill(''); sy[0] = 'SY'; sy[1] = dCode; sy[2] = startDate; sy[6] = (di === mainPos ? '01' : '');
         lines.push(sy.join(','));
       });
     }
