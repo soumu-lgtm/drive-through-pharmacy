@@ -1561,6 +1561,31 @@ function getEditorPlainText() {
   return editor ? editor.innerText : '';
 }
 
+
+// ===== GAS送信のまとめ（2026-08-05）=====
+// 従来は カルテ1本＋処方N本＋傷病名M本＋検査E本＋算定1本を
+// 別々のPOSTで投げており、1回の確定で7〜17往復していた（1往復あたり約1.2秒）。
+// 内容は変えずに1本のPOSTへまとめ、GAS側は saveKarteBundle が同じ保存関数を順に呼ぶ。
+function buildKarteRows(karteId, k) {
+  return {
+    '処方': (k.prescriptions || []).map(rx => ({
+      'カルテID': karteId, '患者ID': currentPatientId,
+      '薬品名': rx.drug.name, '薬品コード': rx.drug.id,
+      '用量': rx.qty, '単位': rx.drug.unit || '錠',
+      '日数': rx.days || k.rxDays, '薬価': rx.drug.price || 0, '備考': rx.note || ''
+    })),
+    '傷病名': (k.selectedDiseases || []).map(d => ({
+      'カルテID': karteId, '患者ID': currentPatientId,
+      '傷病名': d.name, 'ICD10コード': d.code || '',
+      '確定区分': d.status === 'suspected' ? '疑い' : '確定', '主病': d.main ? '主' : ''
+    })),
+    '検査': (k.selectedExams || []).map(exId => {
+      const ex = examItems.find(e => e.id === exId);
+      return ex ? { 'カルテID': karteId, '患者ID': currentPatientId, '検査名': ex.name, '検査コード': exId } : null;
+    }).filter(Boolean)
+  };
+}
+
 function saveKarteDraft() {
   saveCurrentKarte();
   const p = patients.find(x => x.id === currentPatientId);
@@ -1569,10 +1594,10 @@ function saveKarteDraft() {
   const surchargeInfo = getTimeSurcharge(examStartTime);
   const timeSlotLabel = surchargeInfo ? surchargeInfo.type : '通常';
   const plainText = getEditorPlainText();
-  postToApi('saveKarte', { 'カルテID': karteId, '患者ID': currentPatientId, '受診日': selectedDate, '診察開始時刻': examStartTime ? examStartTime.toLocaleTimeString('ja-JP') : '', '主訴': k.chiefComplaint, '所見': plainText, '体温': k.vitals.t, '収縮期血圧': k.vitals.bps, '拡張期血圧': k.vitals.bpd, 'SpO2': k.vitals.spo2, '脈拍': k.vitals.pulse, '初診フラグ': k.isFirstVisit ? 'TRUE' : 'FALSE', '時間区分': timeSlotLabel, 'ステータス': '一時保存' });
-  if (k.prescriptions.length > 0) k.prescriptions.forEach(rx => { postToApi('savePrescription', { 'カルテID': karteId, '患者ID': currentPatientId, '薬品名': rx.drug.name, '薬品コード': rx.drug.id, '用量': rx.qty, '単位': rx.drug.unit||'錠', '日数': rx.days||k.rxDays, '薬価': rx.drug.price||0, '備考': rx.note||'' }); });
-  if (k.selectedDiseases.length > 0) k.selectedDiseases.forEach(d => { postToApi('saveDiagnosis', { 'カルテID': karteId, '患者ID': currentPatientId, '傷病名': d.name, 'ICD10コード': d.code||'', '確定区分': d.status === 'suspected' ? '疑い' : '確定', '主病': d.main ? '主' : '' }); });
-  if (k.selectedExams.length > 0) k.selectedExams.forEach(exId => { const exInfo = examItems.find(e => e.id === exId); if (exInfo) postToApi('saveExam', { 'カルテID': karteId, '患者ID': currentPatientId, '検査名': exInfo.name, '検査コード': exId }); });
+  const draftRows = buildKarteRows(karteId, k);
+  postToApi('saveKarteBundle', Object.assign({
+    'カルテ': { 'カルテID': karteId, '患者ID': currentPatientId, '受診日': selectedDate, '診察開始時刻': examStartTime ? examStartTime.toLocaleTimeString('ja-JP') : '', '主訴': k.chiefComplaint, '所見': plainText, '体温': k.vitals.t, '収縮期血圧': k.vitals.bps, '拡張期血圧': k.vitals.bpd, 'SpO2': k.vitals.spo2, '脈拍': k.vitals.pulse, '初診フラグ': k.isFirstVisit ? 'TRUE' : 'FALSE', '時間区分': timeSlotLabel, 'ステータス': '一時保存' }
+  }, draftRows));
   // Supabase二重書き込み（スプシと並行）
   saveToSupabase(p, k, drugs).then(r => { if (r.success) console.log('[Supabase] 一時保存OK'); });
   saveKarteSnapshot();          // 要望#9: 「直前保存に戻す」用のスナップショット
@@ -1593,10 +1618,7 @@ function confirmBilling() {
   const surchargeInfo = getTimeSurcharge(examStartTime);
   const timeSlotLabel = surchargeInfo ? surchargeInfo.type : '通常';
   const plainText = getEditorPlainText();
-  postToApi('saveKarte', { 'カルテID': karteId, '患者ID': currentPatientId, '受診日': selectedDate, '診察開始時刻': examStartTime ? examStartTime.toLocaleTimeString('ja-JP') : '', '診察終了時刻': new Date().toLocaleTimeString('ja-JP'), '主訴': k.chiefComplaint, '所見': plainText, '体温': k.vitals.t, '収縮期血圧': k.vitals.bps, '拡張期血圧': k.vitals.bpd, 'SpO2': k.vitals.spo2, '脈拍': k.vitals.pulse, '初診フラグ': k.isFirstVisit ? 'TRUE' : 'FALSE', '時間区分': timeSlotLabel, 'ステータス': '確定' });
-  if (k.prescriptions.length > 0) k.prescriptions.forEach(rx => { postToApi('savePrescription', { 'カルテID': karteId, '患者ID': currentPatientId, '薬品名': rx.drug.name, '薬品コード': rx.drug.id, '用量': rx.qty, '単位': rx.drug.unit||'錠', '日数': rx.days||k.rxDays, '薬価': rx.drug.price||0, '備考': rx.note||'' }); });
-  if (k.selectedDiseases.length > 0) k.selectedDiseases.forEach(d => { postToApi('saveDiagnosis', { 'カルテID': karteId, '患者ID': currentPatientId, '傷病名': d.name, 'ICD10コード': d.code||'', '確定区分': d.status === 'suspected' ? '疑い' : '確定', '主病': d.main ? '主' : '' }); });
-  if (k.selectedExams.length > 0) k.selectedExams.forEach(exId => { const exInfo = examItems.find(e => e.id === exId); if (exInfo) postToApi('saveExam', { 'カルテID': karteId, '患者ID': currentPatientId, '検査名': exInfo.name, '検査コード': exId }); });
+  // 送信は saveBilling の値が揃ってから1本にまとめて行う（下部）
   const totalPoints = parseInt(totalEl.textContent) || 0;
   const burdenAmount = parseInt(burdenEl.textContent.replace(/[^0-9]/g, '')) || 0;
   const billingItemsList = [];
@@ -1604,7 +1626,11 @@ function confirmBilling() {
   if (!k.isFirstVisit) billingItemsList.push('外来管理加算 52点');
   if (surchargeInfo) billingItemsList.push(surchargeInfo.type + '加算 ' + surchargeInfo.points + '点');
   if (k.prescriptions.length > 0) billingItemsList.push('処方料・調剤料・薬剤料');
-  postToApi('saveBilling', { 'カルテID': karteId, '患者ID': currentPatientId, '項目名': billingItemsList.join(', '), '合計点数': totalPoints, '負担額': burdenAmount, '負担割合': p.ratio });
+  const confRows = buildKarteRows(karteId, k);
+  postToApi('saveKarteBundle', Object.assign({
+    'カルテ': { 'カルテID': karteId, '患者ID': currentPatientId, '受診日': selectedDate, '診察開始時刻': examStartTime ? examStartTime.toLocaleTimeString('ja-JP') : '', '診察終了時刻': new Date().toLocaleTimeString('ja-JP'), '主訴': k.chiefComplaint, '所見': plainText, '体温': k.vitals.t, '収縮期血圧': k.vitals.bps, '拡張期血圧': k.vitals.bpd, 'SpO2': k.vitals.spo2, '脈拍': k.vitals.pulse, '初診フラグ': k.isFirstVisit ? 'TRUE' : 'FALSE', '時間区分': timeSlotLabel, 'ステータス': '確定' },
+    '算定': { 'カルテID': karteId, '患者ID': currentPatientId, '項目名': billingItemsList.join(', '), '合計点数': totalPoints, '負担額': burdenAmount, '負担割合': p.ratio }
+  }, confRows));
   // Supabase二重書き込み（確定版）
   saveToSupabase(p, k, drugs).then(r => {
     if (r.success) console.log('[Supabase] 確定保存OK visitId=' + r.visitId);
