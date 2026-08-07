@@ -123,6 +123,7 @@ tr:hover td{background:#f8f9fb}
   <button class="tab-btn" onclick="showTab('sns')">SNS分析</button>
   <button class="tab-btn" onclick="showTab('seo')">SEO分析</button>
   <button class="tab-btn" onclick="showTab('channel')">媒体別分析</button>
+  <button class="tab-btn" onclick="showTab('compare')">媒体比較</button>
   <button class="tab-btn" onclick="showTab('history')">最新履歴</button>
   <button class="tab-btn" onclick="showTab('sync')">同期管理</button>
 </div>
@@ -138,6 +139,7 @@ tr:hover td{background:#f8f9fb}
 <div class="tab-content" id="tab-sns"></div>
 <div class="tab-content" id="tab-seo"></div>
 <div class="tab-content" id="tab-channel"></div>
+<div class="tab-content" id="tab-compare"></div>
 <div class="tab-content" id="tab-history"></div>
 <div class="tab-content" id="tab-sync"></div>
 
@@ -215,7 +217,7 @@ function normProd(n){
 
 function showTab(id){
   document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',b.textContent.includes(
-    {dashboard:'ダッシュボード',charts:'グラフ',product:'商品',analytics:'アナリティクス',report:'売上報告',profit:'利益',kpi:'KPI',inventory:'在庫',sns:'SNS',seo:'SEO',channel:'媒体別分析',history:'最新履歴',sync:'同期管理'}[id]||''
+    {dashboard:'ダッシュボード',charts:'グラフ',product:'商品',analytics:'アナリティクス',report:'売上報告',profit:'利益',kpi:'KPI',inventory:'在庫',sns:'SNS',seo:'SEO',channel:'媒体別分析',compare:'媒体比較',history:'最新履歴',sync:'同期管理'}[id]||''
   )));
   document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
@@ -575,6 +577,201 @@ function renderChannel(o){
   }
 }
 
+// ============================================================
+//  媒体比較タブ（2026-08-07）
+//  「媒体別分析」が1媒体ずつ掘り下げるのに対し、こちらは全媒体を同じ軸に載せて
+//  色分けして比べる。どの媒体が伸びていて、構成がどう変わったかを1画面で見る。
+//  ここは全て実データ（kpi_orders）で、サンプル値は使っていない。
+// ============================================================
+function renderCompare(o){
+  const el=document.getElementById('tab-compare'); if(!el)return;
+  const keys=Object.keys(CH_META).filter(k=>o.some(x=>x.channel===k));
+  const col=k=>(CH_META[k]||{}).color||'#888';
+  const nm =k=>(CH_META[k]||{}).name||k;
+  const sumT=a=>a.reduce((s,x)=>s+Number(x.total||0),0);
+  const uniq=a=>new Set(a.map(x=>x.order_id)).size;
+  const today=new Date();
+  const dayStr=n=>{const d=new Date(today);d.setDate(d.getDate()-n);return d.toISOString().slice(0,10)};
+  const s30=dayStr(29), s60=dayStr(59), s90=dayStr(89);
+
+  // ---- 集計 ----
+  const cur={},prev={},curN={},prevN={};
+  keys.forEach(k=>{
+    const c=o.filter(x=>x.channel===k&&x.order_date>=s30);
+    const p=o.filter(x=>x.channel===k&&x.order_date>=s60&&x.order_date<s30);
+    cur[k]=sumT(c); prev[k]=sumT(p); curN[k]=uniq(c); prevN[k]=uniq(p);
+  });
+  const totalCur=keys.reduce((s,k)=>s+cur[k],0), totalPrev=keys.reduce((s,k)=>s+prev[k],0);
+
+  // 月次（13ヶ月）
+  const months=[...new Set(o.map(x=>(x.order_date||'').slice(0,7)).filter(Boolean))].sort().slice(-13);
+  const byMonth={}; keys.forEach(k=>byMonth[k]=months.map(m=>sumT(o.filter(x=>x.channel===k&&(x.order_date||'').startsWith(m)))));
+
+  // 日次90日（7日移動平均）
+  const days=[]; for(let i=89;i>=0;i--)days.push(dayStr(i));
+  const byDay={}; keys.forEach(k=>{
+    const map={}; o.filter(x=>x.channel===k).forEach(x=>{map[x.order_date]=(map[x.order_date]||0)+Number(x.total||0)});
+    const raw=days.map(d=>map[d]||0);
+    byDay[k]=raw.map((_,i)=>{const w=raw.slice(Math.max(0,i-6),i+1);return w.reduce((s,v)=>s+v,0)/w.length});
+  });
+
+  // 日次30日 積み上げ
+  const d30=days.slice(-30);
+  const stack={}; keys.forEach(k=>{
+    const map={}; o.filter(x=>x.channel===k).forEach(x=>{map[x.order_date]=(map[x.order_date]||0)+Number(x.total||0)});
+    stack[k]=d30.map(d=>map[d]||0);
+  });
+
+  // 曜日×媒体
+  const dowName=['日','月','火','水','木','金','土'];
+  const dow={}; keys.forEach(k=>{dow[k]=[0,0,0,0,0,0,0]});
+  o.filter(x=>x.order_date>=s90).forEach(x=>{
+    if(!dow[x.channel])return;
+    const d=new Date((x.order_datetime||x.order_date)+'');
+    if(!isNaN(d))dow[x.channel][d.getDay()]+=Number(x.total||0);
+  });
+
+  const up=v=>v>=0?'var(--green)':'var(--red)';
+  const arr=v=>v>=0?'▲':'▼';
+  let h='';
+
+  // ===== 凡例（全グラフ共通の色） =====
+  h+=`<div class="card" style="margin-bottom:16px">
+    <h2>この画面の色分け（全グラフ共通）／ すべて実データ</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:center">`+
+    keys.map(k=>`<span style="display:inline-flex;align-items:center;gap:6px;font-size:13px">
+      <span style="width:14px;height:14px;background:${col(k)};border-radius:3px;display:inline-block"></span>${nm(k)}</span>`).join('')+
+    `</div>
+    <div style="font-size:11px;color:#888;margin-top:8px">媒体別分析タブと同じ色を使っています。この画面にサンプル値はありません。</div></div>`;
+
+  // ===== 数値サマリー =====
+  const mom=totalPrev?totalCur/totalPrev-1:0;
+  const top=keys.slice().sort((a,b)=>cur[b]-cur[a])[0];
+  const growth=keys.filter(k=>prev[k]>0).map(k=>({k,g:cur[k]/prev[k]-1}));
+  const best=growth.slice().sort((a,b)=>b.g-a.g)[0], worst=growth.slice().sort((a,b)=>a.g-b.g)[0];
+  h+=`<div class="grid grid-4">
+    <div class="card"><h2>全媒体 合計売上（30日）</h2><div class="metric">${yen(Math.round(totalCur))}</div>
+      <div class="metric-sub">前30日比 <b style="color:${up(mom)}">${arr(mom)} ${(mom*100).toFixed(1)}%</b></div></div>
+    <div class="card"><h2>最大の媒体</h2><div class="metric" style="color:${col(top)}">${nm(top)}</div>
+      <div class="metric-sub">${yen(Math.round(cur[top]))}（構成比 ${totalCur?(cur[top]/totalCur*100).toFixed(1):0}%）</div></div>
+    <div class="card"><h2>もっとも伸びた媒体</h2><div class="metric" style="color:${col(best&&best.k)}">${best?nm(best.k):'—'}</div>
+      <div class="metric-sub">${best?`前30日比 <b style="color:var(--green)">▲ ${(best.g*100).toFixed(1)}%</b>`:''}</div></div>
+    <div class="card"><h2>もっとも落ちた媒体</h2><div class="metric" style="color:${col(worst&&worst.k)}">${worst?nm(worst.k):'—'}</div>
+      <div class="metric-sub">${worst?`前30日比 <b style="color:var(--red)">▼ ${(worst.g*100).toFixed(1)}%</b>`:''}</div></div>
+  </div>`;
+
+  // ===== 積み上げ棒 ＋ ドーナツ =====
+  h+=`<div class="grid grid-2">
+    <div class="card"><h2>日次売上の内訳（30日・積み上げ）— 全体の山と、その中身が同時に見えます</h2>
+      <div class="chart-box" style="height:300px"><canvas id="cCmpStack"></canvas></div></div>
+    <div class="card"><h2>売上構成比（直近30日）</h2>
+      <div class="chart-box" style="height:300px"><canvas id="cCmpDonut"></canvas></div></div>
+  </div>`;
+
+  // ===== 月次積み上げ ＋ 構成比推移 =====
+  h+=`<div class="grid grid-2">
+    <div class="card"><h2>月次売上の推移（${months.length}ヶ月・積み上げ）</h2>
+      <div class="chart-box" style="height:300px"><canvas id="cCmpMonth"></canvas></div>
+      <div style="font-size:11px;color:#b45309;margin-top:6px">※ 右端の ${months[months.length-1]} は<b>まだ月の途中</b>です。前月までと同じ高さで比べないでください。</div></div>
+    <div class="card"><h2>構成比の推移（月次・100%積み上げ）— どの媒体のシェアが伸びたか</h2>
+      <div class="chart-box" style="height:300px"><canvas id="cCmpShare"></canvas></div>
+      <div style="font-size:11px;color:#b45309;margin-top:6px">※ 右端の ${months[months.length-1]} は月の途中のため、まだ数日分の偏りが強く出ます。</div></div>
+  </div>`;
+
+  // ===== 重ね折れ線 ＋ バブル =====
+  h+=`<div class="grid grid-2">
+    <div class="card"><h2>媒体別の勢い（90日・7日移動平均を重ねて比較）</h2>
+      <div class="chart-box" style="height:300px"><canvas id="cCmpLines"></canvas></div></div>
+    <div class="card"><h2>ポジショニング（横=注文数 / 縦=客単価 / 円の大きさ=売上）</h2>
+      <div class="chart-box" style="height:300px"><canvas id="cCmpBubble"></canvas></div></div>
+  </div>`;
+
+  // ===== 成長率 横棒 =====
+  h+=`<div class="grid grid-2">
+    <div class="card"><h2>前30日比の伸び（媒体別）</h2>
+      <div class="chart-box" style="height:260px"><canvas id="cCmpGrowth"></canvas></div></div>
+    <div class="card"><h2>曜日 × 媒体の売上（直近90日）— 濃いほど売れている</h2>
+      <div id="cmpHeat" style="overflow-x:auto"></div></div>
+  </div>`;
+
+  el.innerHTML=h;
+
+  // ===== 描画 =====
+  ['cCmpStack','cCmpDonut','cCmpMonth','cCmpShare','cCmpLines','cCmpBubble','cCmpGrowth'].forEach(destroyC);
+  const base={responsive:true,maintainAspectRatio:false,plugins:{datalabels:{display:false},legend:{position:'bottom',labels:{font:{size:10},boxWidth:12,padding:8}}}};
+  const yenTick={ticks:{callback:v=>'¥'+(v/1000).toFixed(0)+'k'}};
+
+  // 日次積み上げ
+  charts.cCmpStack=new Chart(document.getElementById('cCmpStack'),{type:'bar',
+    data:{labels:d30.map(d=>d.slice(5)),datasets:keys.map(k=>({label:nm(k),data:stack[k],backgroundColor:col(k)}))},
+    options:{...base,scales:{x:{stacked:true,ticks:{maxTicksLimit:10,font:{size:9}}},y:{stacked:true,beginAtZero:true,...yenTick}}}});
+
+  // ドーナツ
+  charts.cCmpDonut=new Chart(document.getElementById('cCmpDonut'),{type:'doughnut',
+    data:{labels:keys.map(nm),datasets:[{data:keys.map(k=>cur[k]),backgroundColor:keys.map(col)}]},
+    options:{...base,plugins:{...base.plugins,datalabels:{display:true,color:'#fff',font:{weight:'bold',size:11},
+      formatter:(v)=>totalCur&&v/totalCur>0.04?((v/totalCur)*100).toFixed(0)+'%':''}}}});
+
+  // 月次積み上げ
+  charts.cCmpMonth=new Chart(document.getElementById('cCmpMonth'),{type:'bar',
+    data:{labels:months,datasets:keys.map(k=>({label:nm(k),data:byMonth[k],backgroundColor:col(k)}))},
+    options:{...base,scales:{x:{stacked:true,ticks:{font:{size:9}}},y:{stacked:true,beginAtZero:true,...yenTick}}}});
+
+  // 構成比推移（100%積み上げ）
+  const monthTotals=months.map((_,i)=>keys.reduce((s,k)=>s+byMonth[k][i],0));
+  charts.cCmpShare=new Chart(document.getElementById('cCmpShare'),{type:'bar',
+    data:{labels:months,datasets:keys.map(k=>({label:nm(k),
+      data:byMonth[k].map((v,i)=>monthTotals[i]?v/monthTotals[i]*100:0),backgroundColor:col(k)}))},
+    options:{...base,scales:{x:{stacked:true,ticks:{font:{size:9}}},
+      y:{stacked:true,beginAtZero:true,max:100,ticks:{callback:v=>v+'%'}}}}});
+
+  // 重ね折れ線
+  charts.cCmpLines=new Chart(document.getElementById('cCmpLines'),{type:'line',
+    data:{labels:days.map(d=>d.slice(5)),datasets:keys.map(k=>({label:nm(k),data:byDay[k],
+      borderColor:col(k),backgroundColor:col(k),borderWidth:2,pointRadius:0,tension:.3}))},
+    options:{...base,scales:{x:{ticks:{maxTicksLimit:12,font:{size:9}}},y:{beginAtZero:true,...yenTick}}}});
+
+  // バブル
+  const maxRev=Math.max(...keys.map(k=>cur[k]),1);
+  charts.cCmpBubble=new Chart(document.getElementById('cCmpBubble'),{type:'bubble',
+    data:{datasets:keys.filter(k=>curN[k]>0).map(k=>({label:nm(k),backgroundColor:col(k)+'cc',borderColor:col(k),
+      data:[{x:curN[k],y:Math.round(cur[k]/curN[k]),r:8+26*Math.sqrt(cur[k]/maxRev)}]}))},
+    options:{...base,plugins:{...base.plugins,tooltip:{callbacks:{label:c=>
+      `${c.dataset.label}: 注文${fmt(c.raw.x)}件 / AOV ${yen(c.raw.y)}`}}},
+      layout:{padding:{right:24,top:16}},
+      scales:{x:{title:{display:true,text:'注文数（30日）',font:{size:10}},beginAtZero:true,
+                 suggestedMax:Math.max(...keys.map(k=>curN[k]))*1.18},
+              y:{title:{display:true,text:'客単価 AOV',font:{size:10}},beginAtZero:true,
+                 suggestedMax:Math.max(...keys.filter(k=>curN[k]>0).map(k=>cur[k]/curN[k]))*1.25,...yenTick}}}});
+
+  // 成長率
+  const gs=keys.map(k=>({k,g:prev[k]>0?cur[k]/prev[k]-1:null})).filter(x=>x.g!==null).sort((a,b)=>b.g-a.g);
+  charts.cCmpGrowth=new Chart(document.getElementById('cCmpGrowth'),{type:'bar',
+    data:{labels:gs.map(x=>nm(x.k)),datasets:[{data:gs.map(x=>x.g*100),backgroundColor:gs.map(x=>col(x.k))}]},
+    options:{...base,indexAxis:'y',plugins:{...base.plugins,legend:{display:false},
+      datalabels:{display:true,anchor:'end',align:(c)=>c.dataset.data[c.dataIndex]>=0?'right':'left',
+        color:'#555',font:{size:11,weight:'bold'},formatter:v=>(v>=0?'+':'')+v.toFixed(1)+'%'}},
+      layout:{padding:{left:12,right:44}},
+      scales:{x:{ticks:{callback:v=>v+'%'}},y:{ticks:{font:{size:11}}}}}});
+
+  // 曜日×媒体 ヒートマップ（CSS）
+  const maxDow=Math.max(...keys.map(k=>Math.max(...dow[k])),1);
+  let ht='<table style="width:100%;border-collapse:collapse;font-size:12px"><tr><th style="text-align:left">媒体</th>'+
+    dowName.map(d=>`<th class="num" style="text-align:center">${d}</th>`).join('')+'<th class="num">最も強い曜日</th></tr>';
+  keys.forEach(k=>{
+    const mx=Math.max(...dow[k]);
+    const bestD=dow[k].indexOf(mx);
+    ht+=`<tr><td><span class="badge" style="background:${col(k)}">${nm(k)}</span></td>`+
+      dow[k].map(v=>{
+        const a=maxDow?v/maxDow:0;
+        return `<td class="num" style="text-align:center;background:${col(k)}${Math.round(a*220+15).toString(16).padStart(2,'0')};color:${a>0.45?'#fff':'#555'};font-weight:${a>0.45?700:400}">${v?'¥'+Math.round(v/1000)+'k':'-'}</td>`;
+      }).join('')+
+      `<td class="num" style="font-weight:700;color:${col(k)}">${mx?dowName[bestD]+'曜':'—'}</td></tr>`;
+  });
+  ht+='</table><div style="font-size:11px;color:#888;margin-top:8px">同じ行（媒体）の中で濃さを比べてください。媒体をまたいだ濃さの比較はできません（規模が違うため）。</div>';
+  document.getElementById('cmpHeat').innerHTML=ht;
+}
+
 // ===== 同期管理タブ（2026-08-07 Phase2 Task2.4）=====
 // 更新頻度の変更・DB使用量・ジョブ実行ログ・データ鮮度を1画面に集約する。
 // 頻度の書き込みには service_role キーが要るため、ローカルの sync_server(:3457) 経由で行う。
@@ -827,7 +1024,7 @@ setTimeout(startAutoRefresh, 10000);
 function renderAll(){
   const d=filt(D),o=filt(O,'order_date'),g=filt(G);
   renderDash(d,o);renderCharts(d,o);renderProduct(o);renderGA4(g);
-  renderReport(d,o);renderProfit(d,o);renderKPI(d,o,g,S);renderInv(I);renderSNS(S);renderSEO(filt(SEO),SEO_ART,SEO_QRY);renderHistory(O,SY);renderChannel(O);
+  renderReport(d,o);renderProfit(d,o);renderKPI(d,o,g,S);renderInv(I);renderSNS(S);renderSEO(filt(SEO),SEO_ART,SEO_QRY);renderHistory(O,SY);renderChannel(O);renderCompare(O);
 }
 
 // ===== 1. ダッシュボード =====
