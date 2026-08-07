@@ -123,6 +123,7 @@ tr:hover td{background:#f8f9fb}
   <button class="tab-btn" onclick="showTab('sns')">SNS分析</button>
   <button class="tab-btn" onclick="showTab('seo')">SEO分析</button>
   <button class="tab-btn" onclick="showTab('history')">最新履歴</button>
+  <button class="tab-btn" onclick="showTab('sync')">同期管理</button>
 </div>
 
 <div class="tab-content active" id="tab-dashboard"></div>
@@ -136,6 +137,7 @@ tr:hover td{background:#f8f9fb}
 <div class="tab-content" id="tab-sns"></div>
 <div class="tab-content" id="tab-seo"></div>
 <div class="tab-content" id="tab-history"></div>
+<div class="tab-content" id="tab-sync"></div>
 
 <script>
 const SB='https://vypwgxkqtxuzqfaaeamf.supabase.co',SK='sb_publishable_WVbE1jJE6sBDli7qO-xSJA_GqDqu4OE',H={'apikey':SK};
@@ -180,6 +182,10 @@ const Q={
   excl:    ['kpi_excluded_orders','select=order_id',0],
   sync:    ['kpi_sync_status','select=sync_type,last_sync,record_count,status',0],
   fresh:   ['kpi_freshness','select=source,last_success,last_attempt,last_status,last_rows,stale_after_minutes',0],
+  // 同期管理タブ用（このタブを開いた時だけ取得。合計でも数十KB）
+  cfg:     ['kpi_source_config','select=source,schedule,enabled,mode,notes,updated_at&order=source',0],
+  usage:   ['kpi_usage_monthly','select=month,budget_bytes,used_bytes_out,api_calls,backoff_level,updated_at&order=month.desc&limit=3',0],
+  joblog:  ['kpi_job_log','select=started_at,finished_at,job,status,rows_written,bytes_out,api_calls,duration_ms,error_msg&order=started_at.desc&limit=40',0],
 };
 let FR=[];   // kpi_freshness（鮮度ストリップ用）。SY は従来どおり kpi_sync_status（最新履歴タブが参照）
 const sbQ=k=>sbGet(Q[k][0],Q[k][1],Q[k][2]);
@@ -207,7 +213,7 @@ function normProd(n){
 
 function showTab(id){
   document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',b.textContent.includes(
-    {dashboard:'ダッシュボード',charts:'グラフ',product:'商品',analytics:'アナリティクス',report:'売上報告',profit:'利益',kpi:'KPI',inventory:'在庫',sns:'SNS',seo:'SEO',history:'最新履歴'}[id]||''
+    {dashboard:'ダッシュボード',charts:'グラフ',product:'商品',analytics:'アナリティクス',report:'売上報告',profit:'利益',kpi:'KPI',inventory:'在庫',sns:'SNS',seo:'SEO',history:'最新履歴',sync:'同期管理'}[id]||''
   )));
   document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
@@ -225,6 +231,12 @@ function showTab(id){
       const n=document.getElementById('seoLoading');if(n)n.remove();
       renderSEO(filt(SEO),SEO_ART,SEO_QRY);
     }).catch(()=>{const n=document.getElementById('seoLoading');if(n)n.remove();});
+  }
+  // 同期管理タブも開いたときに取得する（設定・使用量・ジョブログ・鮮度で数十KB）
+  if(id==='sync'){
+    const host=document.getElementById('tab-sync');
+    if(host&&!_syncLoaded)host.innerHTML='<div style="padding:14px;color:#0b5344">同期状況を読み込み中…</div>';
+    loadSync().then(renderSync).catch(e=>showError('同期管理の読み込みに失敗しました → '+e.message));
   }
 }
 
@@ -303,6 +315,176 @@ async function loadSeoDetail(){
     showError('SEO詳細データの取得に失敗しました → '+e.message);
     throw e;
   }
+}
+
+// ===== 同期管理タブ（2026-08-07 Phase2 Task2.4）=====
+// 更新頻度の変更・DB使用量・ジョブ実行ログ・データ鮮度を1画面に集約する。
+// 頻度の書き込みには service_role キーが要るため、ローカルの sync_server(:3457) 経由で行う。
+// ローカルサーバーが起動していない場合は読み取り専用で表示する（値は隠さない）。
+const LOCAL_SYNC='http://127.0.0.1:3457';
+const SCHEDULE_CHOICES=[
+  ['15m','15分'],['30m','30分'],['hourly','1時間'],['3h','3時間'],['6h','6時間'],['12h','12時間'],
+  ['daily@06:30','日次 06:30'],['daily@07:00','日次 07:00'],['daily@21:00','日次 21:00'],
+  ['weekly@mon 07:00','週次 月07:00'],['weekly@mon 07:10','週次 月07:10'],['manual','手動のみ']
+];
+const SRC_LABEL={ec_orders:'EC注文（Shopify/統合一覧）',ga4:'GA4（セッション・流入）',
+  search_console:'Search Console（日次）',seo_articles:'SEO 記事別',seo_queries:'SEO 検索クエリ別',
+  sns:'SNS（IG/TikTok/LINE/Threads）',inventory:'在庫（スプレッドシート）',
+  rakuten_api:'楽天RMS 受注API',amazon_spapi:'Amazon SP-API'};
+let CFG=[],USAGE=[],JOBLOG=[],_localOk=null,_syncLoaded=false;
+
+async function checkLocal(){
+  try{
+    const c=new AbortController();const t=setTimeout(()=>c.abort(),2500);
+    const r=await fetch(LOCAL_SYNC+'/health',{signal:c.signal});clearTimeout(t);
+    _localOk=r.ok;
+  }catch(e){_localOk=false}
+  return _localOk;
+}
+async function loadSync(){
+  [CFG,USAGE,JOBLOG,FR]=await Promise.all([sbQ('cfg'),sbQ('usage'),sbQ('joblog'),sbQ('fresh')]);
+  await checkLocal();
+  _syncLoaded=true;
+}
+async function setSchedule(source,schedule){
+  if(!_localOk){alert('ローカルの同期サーバー(127.0.0.1:3457)が起動していないため変更できません。\nrun_sync_server.bat を起動してください。');return}
+  try{
+    const r=await fetch(`${LOCAL_SYNC}/config?source=${encodeURIComponent(source)}&schedule=${encodeURIComponent(schedule)}`);
+    const j=await r.json();
+    if(!j.ok)throw new Error(j.error||'不明なエラー');
+    CFG=await sbQ('cfg'); renderSync();
+    toast(`${SRC_LABEL[source]||source} の更新頻度を「${schedule}」に保存しました`);
+  }catch(e){ showError(`更新頻度の保存に失敗しました → ${e.message}`); }
+}
+async function runNow(source){
+  if(!_localOk){alert('ローカルの同期サーバー(127.0.0.1:3457)が起動していないため実行できません。');return}
+  toast(`${SRC_LABEL[source]||source} を実行中…`);
+  try{
+    const r=await fetch(`${LOCAL_SYNC}/run?source=${encodeURIComponent(source)}`);
+    const j=await r.json();
+    await loadSync(); renderSync();
+    const res=(j.results||{})[source]||{};
+    toast(j.ok?`${SRC_LABEL[source]||source} 完了（${res.count||0}件）`:`失敗: ${res.error||j.error||''}`);
+  }catch(e){ showError(`即時実行に失敗しました → ${e.message}`); }
+}
+function toast(msg){
+  let el=document.getElementById('kpiToast');
+  if(!el){el=document.createElement('div');el.id='kpiToast';
+    el.style.cssText='position:fixed;right:24px;bottom:24px;background:#1a1c1e;color:#fff;padding:11px 18px;font-size:13px;border-left:4px solid #5fc2ab;border-radius:3px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.2)';
+    document.body.appendChild(el);}
+  el.textContent=msg;el.style.display='';
+  clearTimeout(el._t);el._t=setTimeout(()=>el.style.display='none',3200);
+}
+function renderSync(){
+  const el=document.getElementById('tab-sync');if(!el)return;
+  const now=Date.now();
+  const u=USAGE[0]||{budget_bytes:4294967296,used_bytes_out:0,api_calls:0,backoff_level:0};
+  const budget=Number(u.budget_bytes||4294967296), used=Number(u.used_bytes_out||0);
+  const ratio=budget?used/budget:0;
+  const day=new Date().getDate(), dim=new Date(new Date().getFullYear(),new Date().getMonth()+1,0).getDate();
+  const pace=day?used/day*dim:used;
+  const col=ratio<0.6?'#0e7c66':(ratio<0.85?'#c9821f':'#b5502f');
+  const BO=['通常運転','間隔2倍（節約中）','優先度lowを停止','high以外を停止'];
+
+  let h=`<div style="background:#fff;border:1px solid #e2ddd2;padding:14px 18px;margin-bottom:14px">
+    <div style="font-size:12px;font-weight:800;margin-bottom:8px">ローカル同期サーバー</div>
+    <div style="font-size:12px;color:#555">${_localOk
+      ? '<span style="color:#0e7c66;font-weight:700">接続OK</span>（127.0.0.1:3457）— 頻度の変更と即時実行ができます'
+      : '<span style="color:#b5502f;font-weight:700">未接続</span>（127.0.0.1:3457）— 表示は最新ですが、変更・実行にはローカルの <code>run_sync_server.bat</code> の起動が必要です'}</div></div>`;
+
+  // (b) 使用量メーター
+  h+=`<div style="background:#fff;border:1px solid #e2ddd2;padding:16px 18px;margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px">
+      <div><div style="font-size:11px;color:#8a8578;font-weight:700">今月のSupabase転送量 ／ 月間予算</div>
+        <div style="font-size:30px;font-weight:900;line-height:1.1;color:${col}">
+          ${(used/1048576).toFixed(1)}<span style="font-size:14px;color:#8a8578">MB</span>
+          <span style="font-size:15px;color:#8a8578;font-weight:700"> / ${(budget/1073741824).toFixed(1)}GB</span>
+          <span style="font-size:19px">（${(ratio*100).toFixed(1)}%）</span></div></div>
+      <div style="text-align:right"><div style="font-size:11px;color:#8a8578;font-weight:700">運転状態</div>
+        <span style="display:inline-block;background:${u.backoff_level?'#c9821f':'#0e7c66'};color:#fff;font-size:12px;font-weight:700;padding:4px 12px;border-radius:2px">${BO[u.backoff_level||0]}</span>
+        <div style="font-size:11px;color:#8a8578;margin-top:5px">今月ペース予測 <b style="color:#c9821f">${(pace/1048576).toFixed(0)}MB</b></div></div></div>
+    <div style="height:22px;background:#eceadf;border:1px solid #e2ddd2;position:relative">
+      <div style="height:100%;width:${Math.min(100,ratio*100).toFixed(2)}%;background:${col}"></div>
+      <div style="position:absolute;left:60%;top:0;bottom:0;border-left:1px dashed #a8a294"></div>
+      <div style="position:absolute;left:85%;top:0;bottom:0;border-left:1px dashed #a8a294"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:#a8a294;margin-top:3px">
+      <span>0</span><span>60% 節約開始</span><span>85% 抑制</span><span>100%</span></div>
+    <div style="font-size:11px;color:#8a8578;margin-top:8px">今月のAPI呼出 ${fmt(u.api_calls||0)} 回。この値は同期処理が自分で計測して記録しています（推測値ではありません）。</div>
+  </div>`;
+
+  // (a) 更新頻度設定 ＋ (d) 鮮度
+  const frMap={};(FR||[]).forEach(x=>frMap[x.source]=x);
+  h+=`<div style="background:#fff;border:1px solid #e2ddd2;padding:14px 18px;margin-bottom:14px">
+    <div style="font-size:13px;font-weight:800;margin-bottom:4px">更新頻度とデータ鮮度</div>
+    <div style="font-size:11px;color:#8a8578;margin-bottom:10px">頻度を変えるとローカルのスケジューラが次の巡回（60秒以内）から反映します。コード修正は不要です。</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+    <tr style="background:#1a1c1e;color:#fff"><th style="text-align:left;padding:7px 9px">ソース</th>
+      <th style="text-align:left;padding:7px 9px;width:170px">更新頻度</th>
+      <th style="text-align:left;padding:7px 9px;width:110px">最終成功</th>
+      <th style="text-align:left;padding:7px 9px;width:80px">前回結果</th>
+      <th style="text-align:right;padding:7px 9px;width:70px">件数</th>
+      <th style="padding:7px 9px;width:90px"></th></tr>`;
+  // 頻度の高い順・接続済みを先に並べる（アルファベット順だと計画中のAmazonが先頭に来て読みにくい）
+  const ORDER=['ec_orders','ga4','inventory','search_console','seo_queries','seo_articles','sns','rakuten_api','amazon_spapi'];
+  const cfgSorted=(CFG||[]).slice().sort((a,b)=>{
+    const ia=ORDER.indexOf(a.source), ib=ORDER.indexOf(b.source);
+    return (ia<0?99:ia)-(ib<0?99:ib);
+  });
+  cfgSorted.forEach(c=>{
+    const f=frMap[c.source]||{};
+    const t=f.last_success?new Date(f.last_success).getTime():null;
+    const mins=t?Math.floor((now-t)/60000):null;
+    const stale=(mins===null)||(mins>(f.stale_after_minutes||1440));
+    const ago=mins===null?'未実行':(mins<60?mins+'分前':(mins<1440?Math.floor(mins/60)+'時間前':Math.floor(mins/1440)+'日前'));
+    const st=f.last_status==='ok'?'<span style="background:#0e7c66;color:#fff;padding:2px 7px;border-radius:2px;font-size:10px;font-weight:700">OK</span>'
+      :f.last_status==='error'?'<span style="background:#b5502f;color:#fff;padding:2px 7px;border-radius:2px;font-size:10px;font-weight:700">ERROR</span>'
+      :f.last_status==='skip'?'<span style="border:1.5px solid #8a8578;color:#8a8578;padding:1px 6px;border-radius:2px;font-size:10px;font-weight:700">SKIP</span>'
+      :'<span style="border:1.5px solid #0b5344;color:#0b5344;padding:1px 6px;border-radius:2px;font-size:10px;font-weight:700">未接続</span>';
+    const opts=SCHEDULE_CHOICES.map(([v,l])=>`<option value="${v}"${v===c.schedule?' selected':''}>${l}</option>`).join('');
+    const planned=(c.enabled===false);
+    h+=`<tr${stale&&!planned?' style="background:#f6ecda"':''}>
+      <td style="padding:7px 9px;border-bottom:1px solid #e2ddd2"><b>${SRC_LABEL[c.source]||c.source}</b>
+        <div style="font-size:10px;color:#8a8578">${c.source}${c.notes?' — '+c.notes:''}</div></td>
+      <td style="padding:7px 9px;border-bottom:1px solid #e2ddd2">
+        <select ${(!_localOk||planned)?'disabled':''} onchange="setSchedule('${c.source}',this.value)"
+          style="font-size:12px;padding:3px 6px;border:1px solid #a8a294;border-radius:2px;background:#fff;width:100%">${opts}</select></td>
+      <td style="padding:7px 9px;border-bottom:1px solid #e2ddd2;color:${stale&&!planned?'#c9821f':'#0e7c66'};font-weight:700">${planned?'—':ago}${stale&&!planned?' ⚠':''}</td>
+      <td style="padding:7px 9px;border-bottom:1px solid #e2ddd2">${planned?'<span style="font-size:10px;color:#8a8578">計画</span>':st}</td>
+      <td style="padding:7px 9px;border-bottom:1px solid #e2ddd2;text-align:right">${f.last_rows!=null?fmt(f.last_rows):'—'}</td>
+      <td style="padding:7px 9px;border-bottom:1px solid #e2ddd2;text-align:center">
+        ${planned?'':`<button ${_localOk?'':'disabled'} onclick="runNow('${c.source}')" style="font-size:11px;padding:3px 10px;border:1px solid #0e7c66;background:${_localOk?'#0e7c66':'#ccc'};color:#fff;border-radius:2px;cursor:pointer">今すぐ</button>`}</td></tr>`;
+  });
+  h+=`</table></div>`;
+
+  // (c) ジョブ実行ログ
+  h+=`<div style="background:#fff;border:1px solid #e2ddd2;padding:14px 18px">
+    <div style="font-size:13px;font-weight:800;margin-bottom:4px">ジョブ実行ログ（直近40件）</div>
+    <div style="font-size:11px;color:#8a8578;margin-bottom:10px">成否・件数・所要時間・転送量を毎回記録しています。失敗は握りつぶさず必ずここに残ります。</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+    <tr style="background:#1a1c1e;color:#fff"><th style="text-align:left;padding:6px 9px;width:135px">時刻</th>
+      <th style="text-align:left;padding:6px 9px;width:130px">ジョブ</th><th style="text-align:left;padding:6px 9px;width:70px">結果</th>
+      <th style="text-align:right;padding:6px 9px;width:70px">件数</th><th style="text-align:right;padding:6px 9px;width:70px">所要</th>
+      <th style="text-align:right;padding:6px 9px;width:80px">転送</th><th style="text-align:left;padding:6px 9px">エラー内容</th></tr>`;
+  if(!(JOBLOG||[]).length){
+    h+=`<tr><td colspan="7" style="padding:14px;color:#8a8578">まだ記録がありません（ジョブが1回も走っていません）。</td></tr>`;
+  }
+  (JOBLOG||[]).forEach(j=>{
+    const bad=j.status==='error';
+    const badge=j.status==='ok'?'<span style="background:#0e7c66;color:#fff;padding:2px 7px;border-radius:2px;font-size:10px;font-weight:700">ok</span>'
+      :bad?'<span style="background:#b5502f;color:#fff;padding:2px 7px;border-radius:2px;font-size:10px;font-weight:700">error</span>'
+      :j.status==='skip'?'<span style="border:1.5px solid #8a8578;color:#8a8578;padding:1px 6px;border-radius:2px;font-size:10px">skip</span>'
+      :'<span style="border:1.5px solid #c9821f;color:#c9821f;padding:1px 6px;border-radius:2px;font-size:10px">running</span>';
+    h+=`<tr${bad?' style="background:#fbf1ec"':''}>
+      <td style="padding:6px 9px;border-bottom:1px solid #e2ddd2">${new Date(j.started_at).toLocaleString('ja-JP',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
+      <td style="padding:6px 9px;border-bottom:1px solid #e2ddd2"><code style="font-size:11px">${j.job}</code></td>
+      <td style="padding:6px 9px;border-bottom:1px solid #e2ddd2">${badge}</td>
+      <td style="padding:6px 9px;border-bottom:1px solid #e2ddd2;text-align:right">${j.rows_written?fmt(j.rows_written):'—'}</td>
+      <td style="padding:6px 9px;border-bottom:1px solid #e2ddd2;text-align:right">${j.duration_ms!=null?(j.duration_ms/1000).toFixed(1)+'秒':'—'}</td>
+      <td style="padding:6px 9px;border-bottom:1px solid #e2ddd2;text-align:right">${j.bytes_out?Math.round(j.bytes_out/1024)+' KB':'—'}</td>
+      <td style="padding:6px 9px;border-bottom:1px solid #e2ddd2;font-size:11px;color:${bad?'#b5502f':'#8a8578'};font-weight:${bad?700:400}">${j.error_msg||'正常終了'}</td></tr>`;
+  });
+  h+=`</table></div>`;
+  el.innerHTML=h;
 }
 
 async function init(){
