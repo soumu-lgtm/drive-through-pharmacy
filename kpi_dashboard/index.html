@@ -142,12 +142,47 @@ const SB='https://vypwgxkqtxuzqfaaeamf.supabase.co',SK='sb_publishable_WVbE1jJE6
 let D=[],O=[],G=[],S=[],I=[],SY=[],SEO=[],SEO_ART=[],SEO_QRY=[];
 let dS=null,dE=null,charts={};
 
+// ===== 転送量の自己計測（2026-08-07 Phase1 Task1.3）=====
+// どのクエリが何バイト転送したかを画面で見えるようにする。推測でEgressを語らないため。
+let _bytes=0,_calls=0;
 async function sbGet(t,q='',maxRows=0){
-  if(maxRows<=1000){const r=await fetch(`${SB}/rest/v1/${t}?${q}`,{headers:H,cache:'no-store'});if(!r.ok)throw new Error(`${t}:${r.status}`);return r.json();}
+  if(maxRows<=1000){
+    const r=await fetch(`${SB}/rest/v1/${t}?${q}`,{headers:H,cache:'no-store'});
+    if(!r.ok)throw new Error(`${t}: HTTP ${r.status}`);
+    const txt=await r.text();_bytes+=txt.length;_calls++;return JSON.parse(txt);
+  }
   let all=[],from=0;const pgSize=1000;
-  while(from<maxRows){const hdrs={...H,'Range':from+'-'+(from+pgSize-1)};const r=await fetch(`${SB}/rest/v1/${t}?${q}`,{headers:hdrs,cache:'no-store'});if(!r.ok&&r.status!==206)throw new Error(`${t}:${r.status}`);const d=await r.json();all=all.concat(d);if(d.length<pgSize)break;from+=pgSize;}
+  while(from<maxRows){
+    const hdrs={...H,'Range':from+'-'+(from+pgSize-1)};
+    const r=await fetch(`${SB}/rest/v1/${t}?${q}`,{headers:hdrs,cache:'no-store'});
+    if(!r.ok&&r.status!==206)throw new Error(`${t}: HTTP ${r.status}`);
+    const txt=await r.text();_bytes+=txt.length;_calls++;
+    const d=JSON.parse(txt);all=all.concat(d);if(d.length<pgSize)break;from+=pgSize;
+  }
   return all;
 }
+
+// ===== 取得する列を明示する（select=* をやめる）=====
+// 未使用の列（id / created_at / site_name / bounce_rate 等）まで毎回運んでいたのを止める。
+const Q={
+  // 旧 kpi_daily_summary は「手動の集計更新ボタンでしか更新されない」構造で 2026-07-29 から
+  // 停滞していた。DB内で kpi_orders から再計算される v_kpi_dash_daily に切替える。
+  // これにより概要タブの数字が商品/売上報告/利益タブ（kpi_orders基準）と一致する。
+  daily:   ['v_kpi_dash_daily','select=date,channel,order_count,revenue,discount&order=date.desc&limit=2000',2000],
+  orders:  ['kpi_orders','select=order_id,channel,order_date,order_datetime,product_name,sku,quantity,total,discount,is_subscription,subscription_count,prefecture&order=order_date.desc&limit=5000',5000],
+  ga4:     ['kpi_ga4_metrics','select=date,metric_type,dimension,sessions,users,pageviews,conversions,revenue&order=date.desc&limit=500',0],
+  sns:     ['kpi_sns_metrics','select=date,platform,followers,posts,likes,comments,shares,impressions,reach,extra_json&order=date.desc&limit=300',0],
+  inv:     ['kpi_inventory','select=snapshot_date,sku,product_name,quantity,threshold,is_alert&order=snapshot_date.desc&limit=500',0],
+  seo:     ['kpi_seo_daily','select=date,site_key,active_users,sessions,clicks,impressions,ctr,position,created_at&order=date.asc&limit=5000',5000],
+  // SEOタブを開いたときだけ取得する（合計1.4MBあり、初期表示には不要）
+  seoArt:  ['kpi_seo_articles','select=site_key,url,slug,title,clicks,impressions,ctr,position,period_start,period_end&order=clicks.desc&limit=3000',3000],
+  seoQry:  ['kpi_seo_queries','select=site_key,query,clicks,impressions,ctr,position,period_start,period_end&order=clicks.desc&limit=3000',3000],
+  excl:    ['kpi_excluded_orders','select=order_id',0],
+  sync:    ['kpi_sync_status','select=sync_type,last_sync,record_count,status',0],
+  fresh:   ['kpi_freshness','select=source,last_success,last_attempt,last_status,last_rows,stale_after_minutes',0],
+};
+let FR=[];   // kpi_freshness（鮮度ストリップ用）。SY は従来どおり kpi_sync_status（最新履歴タブが参照）
+const sbQ=k=>sbGet(Q[k][0],Q[k][1],Q[k][2]);
 function fmt(n){return n!=null?Number(n).toLocaleString('ja-JP'):'-'}
 function yen(n){return n!=null?'¥'+Number(n).toLocaleString('ja-JP'):'-'}
 function pct(a,b){return b>0?((a/b)*100).toFixed(1)+'%':'-'}
@@ -176,6 +211,21 @@ function showTab(id){
   )));
   document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
+  // SEO記事別・検索クエリ別（合計約1.4MB）は、SEOタブを開いたときに初めて取得する。
+  // 概要しか見ない大多数のロードで運ばなくて済む。
+  if(id==='seo'&&!_seoLoaded){
+    const host=document.getElementById('tab-seo');
+    if(host&&!document.getElementById('seoLoading')){
+      const n=document.createElement('div');n.id='seoLoading';
+      n.style.cssText='padding:10px 14px;margin:8px 0;background:#e9f1ee;border-left:4px solid #0e7c66;font-size:13px;color:#0b5344';
+      n.textContent='SEO記事別・検索クエリ別データを読み込み中…';
+      host.insertBefore(n,host.firstChild);
+    }
+    loadSeoDetail().then(()=>{
+      const n=document.getElementById('seoLoading');if(n)n.remove();
+      renderSEO(filt(SEO),SEO_ART,SEO_QRY);
+    }).catch(()=>{const n=document.getElementById('seoLoading');if(n)n.remove();});
+  }
 }
 
 function filt(arr,df='date'){return arr.filter(d=>{const v=d[df];if(!v)return false;if(dS&&v<dS)return false;if(dE&&v>dE)return false;return true})}
@@ -183,28 +233,83 @@ function applyFilter(){dS=document.getElementById('startDate').value||null;dE=do
 function resetFilter(){dS=null;dE=null;const ds=D.map(d=>d.date).sort();if(ds.length){document.getElementById('startDate').value=ds[0];document.getElementById('endDate').value=ds[ds.length-1]}renderAll()}
 function destroyC(id){if(charts[id]){charts[id].destroy();delete charts[id]}}
 
+// ===== エラーバナー（2026-08-07）=====
+// これまで取得失敗は console.log か .catch(()=>[]) で握りつぶされ、画面上は
+// 「データが無い」ようにしか見えなかった。何がどう失敗したかを必ず画面に出す。
+function showError(msg){
+  let el=document.getElementById('kpiErrBanner');
+  if(!el){
+    el=document.createElement('div');el.id='kpiErrBanner';
+    el.style.cssText='background:#fbf1ec;border:1px solid #b5502f;border-left:5px solid #b5502f;color:#8f3d22;padding:10px 14px;margin:10px 0;border-radius:4px;font-size:13px;line-height:1.6';
+    const host=document.getElementById('syncTs');
+    if(host&&host.parentNode)host.parentNode.insertBefore(el,host.nextSibling);
+    else document.body.insertBefore(el,document.body.firstChild);
+  }
+  el.innerHTML='<b>⚠ データ取得エラー</b><br>'+msg+
+    '<br><span style="font-size:11px;color:#a06a55">この表示が出ている間、画面の数字は最新ではありません。</span>';
+  el.style.display='';
+}
+function clearError(){const el=document.getElementById('kpiErrBanner');if(el)el.style.display='none'}
+
+// ===== データ鮮度ストリップ（2026-08-07）=====
+// どのデータがいつ時点かを常に見せる。stale_after を超えたソースは琥珀で警告。
+const FRESH_LABEL={ec_orders:'EC注文',ga4:'GA4',search_console:'Search Console',
+  seo_articles:'SEO記事',seo_queries:'SEO クエリ',sns:'SNS',inventory:'在庫',daily_summary:'日次集計'};
+function renderFreshness(rows){
+  const host=document.getElementById('syncTs');if(!host)return;
+  let el=document.getElementById('kpiFresh');
+  if(!el){el=document.createElement('div');el.id='kpiFresh';
+    el.style.cssText='display:flex;flex-wrap:wrap;gap:0;border:1px solid #e2ddd2;background:#fff;margin:8px 0;border-radius:4px;overflow:hidden';
+    host.parentNode.insertBefore(el,host.nextSibling);}
+  const now=Date.now();
+  el.innerHTML='<div style="padding:6px 12px;font-size:10px;font-weight:700;color:#8a8578;letter-spacing:.08em;border-right:1px solid #e2ddd2;display:flex;align-items:center">データ鮮度</div>'+
+    (rows||[]).map(r=>{
+      const t=r.last_success?new Date(r.last_success).getTime():null;
+      const mins=t?Math.floor((now-t)/60000):null;
+      const stale=(mins===null)||(mins>(r.stale_after_minutes||1440));
+      const ago=mins===null?'未実行':(mins<60?mins+'分前':(mins<1440?Math.floor(mins/60)+'時間前':Math.floor(mins/1440)+'日前'));
+      return `<div style="padding:6px 12px;border-right:1px solid #e2ddd2;${stale?'background:#f6ecda':''}">
+        <div style="font-size:10px;color:#8a8578;font-weight:700">${FRESH_LABEL[r.source]||r.source}</div>
+        <div style="font-size:12px;font-weight:800;color:${stale?'#c9821f':'#0e7c66'}">${ago}${stale?' ⚠':''}</div></div>`;
+    }).join('');
+}
+
+// ===== 共通のデータ取得 =====
+// 初期表示に不要な SEO記事/SEOクエリ（合計約1.4MB）は、SEOタブを開いたときに取得する。
+let _seoLoaded=false;
+function applyOrderFilters(EX){
+  const exSet=new Set(EX.map(e=>e.order_id));
+  if(exSet.size){const b=O.length;O=O.filter(o=>!exSet.has(o.order_id));if(b-O.length)console.log(`[除外]${b-O.length}件の社員テスト購入を除外`)}
+  // order_id+channel+skuで重複除去（完全一致行のみ除去、商品別明細は維持）
+  O=(()=>{const seen=new Set();return O.filter(o=>{const k=o.order_id+"|"+o.channel+"|"+(o.sku||o.product_name||"");if(seen.has(k))return false;seen.add(k);return true})})();
+  // 数値ID×#名前の二重登録を除去（同一 channel+order_datetime+sku+total で #名前があれば数値IDを捨てる。Shopify二重計上対策）
+  O=(()=>{const nk=new Set(O.filter(o=>/^#/.test(String(o.order_id))).map(o=>o.channel+"|"+o.order_datetime+"|"+(o.sku||"")+"|"+o.total));return O.filter(o=>!(/^[0-9]+$/.test(String(o.order_id))&&nk.has(o.channel+"|"+o.order_datetime+"|"+(o.sku||"")+"|"+o.total)))})();
+}
+async function loadCore(){
+  var EX=[];
+  [D,O,G,S,I,SEO,EX,SY,FR]=await Promise.all([
+    sbQ('daily'),sbQ('orders'),sbQ('ga4'),sbQ('sns'),sbQ('inv'),sbQ('seo'),sbQ('excl'),sbQ('sync'),sbQ('fresh'),
+  ]);
+  applyOrderFilters(EX);
+  renderFreshness(FR);
+}
+async function loadSeoDetail(){
+  if(_seoLoaded)return;
+  try{
+    [SEO_ART,SEO_QRY]=await Promise.all([sbQ('seoArt'),sbQ('seoQry')]);
+    _seoLoaded=true;
+  }catch(e){
+    // 握りつぶさない。SEOタブに何が失敗したかを出す。
+    showError('SEO詳細データの取得に失敗しました → '+e.message);
+    throw e;
+  }
+}
+
 async function init(){
   try{
-    var EX=[];
-    [D,O,G,S,I,SY,SEO,SEO_ART,SEO_QRY,EX]=await Promise.all([
-      sbGet('kpi_daily_summary','select=*&order=date.desc&limit=2000',2000),
-      sbGet('kpi_orders','select=*&order=order_date.desc&limit=5000',5000),
-      sbGet('kpi_ga4_metrics','select=*&order=date.desc&limit=500'),
-      sbGet('kpi_sns_metrics','select=*&order=date.desc&limit=300'),
-      sbGet('kpi_inventory','select=*&order=snapshot_date.desc&limit=500'),
-      sbGet('kpi_sync_status','select=*'),
-      sbGet('kpi_seo_daily','select=*&order=date.asc&limit=5000',5000),
-      sbGet('kpi_seo_articles','select=*&order=clicks.desc&limit=3000',3000),
-      sbGet('kpi_seo_queries','select=*&order=clicks.desc&limit=3000',3000).catch(()=>[]),
-      sbGet('kpi_excluded_orders','select=order_id'),
-    ]);
-    // 社員テスト購入を除外
-    const exSet=new Set(EX.map(e=>e.order_id));
-    if(exSet.size){const b=O.length;O=O.filter(o=>!exSet.has(o.order_id));if(b-O.length)console.log(`[除外]${b-O.length}件の社員テスト購入を除外`)}
-    // order_id+channel+skuで重複除去（完全一致行のみ除去、商品別明細は維持）
-    O=(()=>{const seen=new Set();return O.filter(o=>{const k=o.order_id+"|"+o.channel+"|"+(o.sku||o.product_name||"");if(seen.has(k))return false;seen.add(k);return true})})();
-    // 数値ID×#名前の二重登録を除去（同一 channel+order_datetime+sku+total で #名前があれば数値IDを捨てる。Shopify二重計上対策）
-    O=(()=>{const nk=new Set(O.filter(o=>/^#/.test(String(o.order_id))).map(o=>o.channel+"|"+o.order_datetime+"|"+(o.sku||"")+"|"+o.total));return O.filter(o=>!(/^[0-9]+$/.test(String(o.order_id))&&nk.has(o.channel+"|"+o.order_datetime+"|"+(o.sku||"")+"|"+o.total)))})();
+    _bytes=0;_calls=0;
+    await loadCore();
+    clearError();
     const ds=D.map(d=>d.date).sort();
     if(ds.length){
       const el=id=>document.getElementById(id);
@@ -213,13 +318,15 @@ async function init(){
       el('endDate').value=maxD;el('endDate').min=ds[0];el('endDate').max=maxD;
       el('dateRangeInfo').textContent=`データ範囲: ${ds[0]} ~ ${maxD}`;
     }
-    const allSyncs=SY.filter(s=>s.last_sync).map(s=>new Date(s.last_sync).getTime());
-    const latestSync=allSyncs.length?new Date(Math.max(...allSyncs)):null;
-    const lt=latestSync?latestSync.toLocaleString('ja-JP'):'未同期';
-    const nextSync=latestSync?new Date(latestSync.getTime()+60*60*1000).toLocaleString('ja-JP',{hour:'2-digit',minute:'2-digit'}):'---';
-    document.getElementById('syncTs').textContent=`最終更新: ${lt}（自動刷新: 30分毎・画面表示中のみ / 次回同期: ${nextSync}頃）`;
+    const ec=(FR||[]).find(s=>s.source==='ec_orders');
+    const lt=ec&&ec.last_success?new Date(ec.last_success).toLocaleString('ja-JP'):'未同期';
+    document.getElementById('syncTs').textContent=
+      `最終更新: ${lt}（自動刷新: 30分毎・画面表示中のみ / 今回の転送 ${(_bytes/1024).toFixed(0)}KB・${_calls}クエリ）`;
     renderAll();
-  }catch(e){document.getElementById('syncTs').textContent='読み込みエラー: '+e.message}
+  }catch(e){
+    showError('初期読み込みに失敗しました → '+e.message);
+    document.getElementById('syncTs').textContent='読み込みエラー: '+e.message;
+  }
 }
 
 // ===== 自動リフレッシュ（Egress節約版: 30分毎＋画面を開いている間のみ） =====
@@ -228,35 +335,41 @@ async function init(){
 var _autoRefreshId = null;
 var _refreshBusy = false;
 var REFRESH_MS = 30 * 60 * 1000; // 30分
-async function doRefresh() {
+// 条件付きリフレッシュ（2026-08-07 Phase1 Task1.3）
+// まず kpi_freshness（約1KB）だけ取得し、前回から更新が無ければ本体を取りに行かない。
+// 30分毎のポーリングが毎回3MBを運んでいたのを、変化が無い限り1KBで済ませる。
+let _lastFreshSig = null;
+async function doRefresh(force) {
   if (_refreshBusy || document.hidden) return;   // 非表示中は通信しない
   _refreshBusy = true;
   try {
-    console.log('[自動リフレッシュ] データ再取得中...');
+    _bytes=0;_calls=0;
+    const fresh = await sbQ('fresh');
+    const sig = (fresh||[]).map(r=>r.source+':'+(r.last_success||'')).sort().join('|');
+    FR = fresh; renderFreshness(FR);
+    if (!force && _lastFreshSig !== null && sig === _lastFreshSig) {
+      document.getElementById('syncTs').textContent =
+        `最終確認: ${new Date().toLocaleString('ja-JP')}（更新なし・${(_bytes/1024).toFixed(1)}KBのみ確認）`;
+      clearError();
+      return;                                    // ← 本体は取りに行かない
+    }
+    _lastFreshSig = sig;
+    console.log('[自動リフレッシュ] 更新を検出。データ再取得中...');
     var EX=[];
-    [D,O,G,S,I,SY,SEO,SEO_ART,SEO_QRY,EX]=await Promise.all([
-      sbGet('kpi_daily_summary','select=*&order=date.desc&limit=2000',2000),
-      sbGet('kpi_orders','select=*&order=order_date.desc&limit=5000',5000),
-      sbGet('kpi_ga4_metrics','select=*&order=date.desc&limit=500'),
-      sbGet('kpi_sns_metrics','select=*&order=date.desc&limit=300'),
-      sbGet('kpi_inventory','select=*&order=snapshot_date.desc&limit=500'),
-      sbGet('kpi_sync_status','select=*'),
-      sbGet('kpi_seo_daily','select=*&order=date.asc&limit=5000',5000),
-      sbGet('kpi_seo_articles','select=*&order=clicks.desc&limit=3000',3000),
-      sbGet('kpi_seo_queries','select=*&order=clicks.desc&limit=3000',3000).catch(()=>[]),
-      sbGet('kpi_excluded_orders','select=order_id'),
+    [D,O,G,S,I,SEO,EX,SY]=await Promise.all([
+      sbQ('daily'),sbQ('orders'),sbQ('ga4'),sbQ('sns'),sbQ('inv'),sbQ('seo'),sbQ('excl'),sbQ('sync'),
     ]);
-    const exSet=new Set(EX.map(e=>e.order_id));
-    if(exSet.size){O=O.filter(o=>!exSet.has(o.order_id))}
-    O=(()=>{const seen=new Set();return O.filter(o=>{const k=o.order_id+"|"+o.channel+"|"+(o.sku||o.product_name||"");if(seen.has(k))return false;seen.add(k);return true})})();
-    // 数値ID×#名前の二重登録を除去（同一 channel+order_datetime+sku+total で #名前があれば数値IDを捨てる。Shopify二重計上対策）
-    O=(()=>{const nk=new Set(O.filter(o=>/^#/.test(String(o.order_id))).map(o=>o.channel+"|"+o.order_datetime+"|"+(o.sku||"")+"|"+o.total));return O.filter(o=>!(/^[0-9]+$/.test(String(o.order_id))&&nk.has(o.channel+"|"+o.order_datetime+"|"+(o.sku||"")+"|"+o.total)))})();
+    applyOrderFilters(EX);
+    if(_seoLoaded){ _seoLoaded=false; await loadSeoDetail(); }  // 既に開いていた時だけ再取得
     renderAll();
+    clearError();
     var now=new Date().toLocaleString('ja-JP');
-    document.getElementById('syncTs').textContent=`最終更新: ${now}（自動刷新: 30分毎・画面表示中のみ）`;
+    document.getElementById('syncTs').textContent=
+      `最終更新: ${now}（自動刷新: 30分毎・画面表示中のみ / 今回の転送 ${(_bytes/1024).toFixed(0)}KB・${_calls}クエリ）`;
     console.log('[自動リフレッシュ] 完了 ' + now);
   } catch(e) {
     console.error('[自動リフレッシュ] エラー:', e);
+    showError('自動更新に失敗しました → '+e.message);   // 握りつぶさない
   } finally { _refreshBusy = false; }
 }
 function startAutoRefresh() { if (!_autoRefreshId && !document.hidden) _autoRefreshId = setInterval(doRefresh, REFRESH_MS); }
